@@ -8,7 +8,7 @@
     nixpkgs_rutorrent.url = "github:bolives-hax/nixpkgs/add-rutorrent-service";
   };
 
-  outputs = { nixpkgs, home-manager, ... }:
+  outputs = { nixpkgs, home-manager, nixpkgs_rutorrent, ... }:
     let
       system = "x86_64-linux";
 
@@ -26,7 +26,12 @@
 
           modules = [
             ./system/bob/configuration.nix
+            ./system/bob/rutorrent.nix
           ];
+
+	  specialArgs = {
+		inherit nixpkgs_rutorrent;
+	  };
         };
 
         deepthought = nixpkgs.lib.nixosSystem {
