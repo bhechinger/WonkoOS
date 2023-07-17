@@ -68,6 +68,8 @@
     docker
     docker-compose
     unifi
+    git
+    lsof
   ];
 
   # Some programs need SUID wrappers, can be configured further or are
@@ -246,4 +248,3 @@
   system.stateVersion = "23.05"; # Did you read the comment?
 
 }
-
