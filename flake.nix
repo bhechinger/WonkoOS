@@ -26,6 +26,8 @@
 
           modules = [
             ./system/bob/configuration.nix
+            ./system/bob/nfs-mounts.nix
+            ./system/bob/media.nix
             ./system/bob/rutorrent.nix
           ];
 

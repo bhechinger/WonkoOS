@@ -8,7 +8,6 @@
   imports =
     [ # Include the results of the hardware scan.
       ./hardware-configuration.nix
-      ./nfs-mounts.nix
     ];
 
   # Making nix ready for flakes.
@@ -90,11 +89,6 @@
 
     unifi.enable = true;
 
-    plex = {
-      enable = true;
-      openFirewall = true;
-    };
-
     postgresql = {
       enable = true;
       package = pkgs.postgresql_15;
@@ -153,45 +147,6 @@
       };
     };
   };
-
-  # Group so everyone has filesystem access to media
-  users.groups.media = {
-    gid = 999;
-  };
-
-  # Jackett service and user
-  users.users.jackett = {
-    createHome = false;
-    extraGroups = [ "media" ];
-  };
-  services.jackett = {
-    enable = true;
-    openFirewall = true;
-  };
-
-  # Sonarr service and user
-  users.users.sonarr = {
-    createHome = false;
-    extraGroups = [ "media" ];
-  };
-  services.sonarr = {
-    enable = true;
-    openFirewall = true;
-  };
-
-  # Radarr service and user
-  users.users.radarr = {
-    createHome = false;
-    extraGroups = [ "media" ];
-  };
-  services.radarr = {
-    enable = true;
-    openFirewall = true;
-  };
-
-  # make plex dependant on the NFS mount being up
-  systemd.services.plex.requires = [ "nfs-Plex.mount" ];
-  systemd.services.plex.after = [ "nfs-Plex.mount" ];
 
 #  security.acme = {
 #    acceptTerms = true;
