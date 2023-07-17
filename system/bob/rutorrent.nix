@@ -18,8 +18,30 @@
       "${nixpkgs_rutorrent}/nixos/modules/services/torrent/rtorrent.nix" # use the fork's instead of upstream's
     ];
 
-  services.rutorrent.enable = true;
-  users.users.rtorrent.isNormalUser = true; # needs to be enabled lest something else be enabled (some mutual exclusion config option)
+  users.groups.rtorrent = {};
+
+  users.users = {
+    rtorrent = {
+      isNormalUser = true;
+      createHome = false;
+      group = "rtorrent";
+      extraGroups = [ "media" ];
+    };
+
+    rutorrent = {
+      createHome = false;
+      extraGroups = [ "media" ];
+    };
+  }; # needs to be enabled lest something else be enabled (some mutual exclusion config option)
+
+  services.rutorrent = {
+    enable = true;
+    hostName = "rutorrent.4amlunch.net";
+    plugins = ["httprpc" "data" "diskspace" "trafic" ];
+
+    nginx.enable = true;
+  };
+
   disabledModules = [ "services/torrent/rtorrent.nix" ]; # avoid conflict with upstream nixpkgs rtorrent service
 }
 
