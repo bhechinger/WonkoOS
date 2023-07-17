@@ -12,10 +12,6 @@
   boot.initrd.kernelModules = [ ];
   boot.kernelModules = [ "kvm-amd" ];
   boot.extraModulePackages = [ ];
-
-  disko.devices = pkgs.callPackage ./disks.nix {
-    disks = [ "/dev/nvme0n1" ];
-  };
 #  fileSystems."/" =
 #    { device = "/dev/disk/by-uuid/cdc76cbd-265c-4bc7-ad6e-567add5ee18b";
 #      fsType = "ext4";

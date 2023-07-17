@@ -2,13 +2,19 @@
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running `nixos-help`).
 
-{ config, pkgs, ... }:
+{ config, pkgs, disko_pkgs, ... }:
 
 {
   imports =
     [ # Include the results of the hardware scan.
       ./hardware-configuration.nix
+      "${disko_pkgs}/module.nix"
     ];
+
+  disko.devices = pkgs.callPackage ./disks.nix {
+#    disks = [ "/dev/nvme0n1" ];
+    disks = [ "/dev/vda" ];
+  };
 
   # Making nix ready for flakes.
   nix.package = pkgs.nixVersions.stable;
