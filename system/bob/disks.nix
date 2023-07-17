@@ -1,4 +1,5 @@
-{ disks ? [ "/dev/nvme0n1" ], ... }: {
+#{ disks ? [ "/dev/nvme0n1" ], ... }: {
+{ disks ? [ "/dev/vda" ], ... }: {
   disko.devices = {
     disk = {
       one = {
@@ -37,12 +38,6 @@
       pool = {
         type = "lvm_vg";
         lvs = {
-          aaa = {
-            size = "1M";
-          };
-          zzz = {
-            size = "1M";
-          };
           root = {
             size = "150M";
             content = {
@@ -56,9 +51,6 @@
           };
           sierra = {
             size = "50G";
-            content = {
-              type = "volume";
-            };
           };
         };
       };
