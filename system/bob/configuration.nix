@@ -2,13 +2,13 @@
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running `nixos-help`).
 
-{ config, pkgs, disko_pkgs, ... }:
+{ config, pkgs, disko_module, ... }:
 
 {
   imports =
     [ # Include the results of the hardware scan.
       ./hardware-configuration.nix
-      "${disko_pkgs}/module.nix"
+      disko_module.nixosModules.default
     ];
 
   disko.devices = pkgs.callPackage ./disks.nix {

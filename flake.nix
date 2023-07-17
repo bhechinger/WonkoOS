@@ -6,10 +6,10 @@
     home-manager.url = "github:nix-community/home-manager";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
     nixpkgs_rutorrent.url = "github:bolives-hax/nixpkgs/add-rutorrent-service";
-    disko_pkgs.url = "github:nix-community/disko";
+    disko_module.url = "github:nix-community/disko";
   };
 
-  outputs = { nixpkgs, home-manager, nixpkgs_rutorrent, disko_pkgs, ... }:
+  outputs = { nixpkgs, home-manager, nixpkgs_rutorrent, disko_module, ... }:
     let
       system = "x86_64-linux";
 
@@ -34,6 +34,7 @@
 
 	  specialArgs = {
 		inherit nixpkgs_rutorrent;
+		inherit disko_module;
 	  };
         };
 
