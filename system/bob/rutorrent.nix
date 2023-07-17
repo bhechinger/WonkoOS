@@ -18,11 +18,16 @@
       "${nixpkgs_rutorrent}/nixos/modules/services/torrent/rtorrent.nix" # use the fork's instead of upstream's
     ];
 
+  # make rTorrent dependant on the NFS mount being up
+  systemd.services.rtorrent = {
+    requires = [ "nfs-Torrents.mount" ];
+    after = [ "nfs-Torrents.mount" ];
+  };
+
   users.groups.rtorrent = {};
 
   users.users = {
     rtorrent = {
-      isNormalUser = true;
       createHome = false;
       group = "rtorrent";
       extraGroups = [ "media" ];
@@ -40,6 +45,11 @@
     plugins = ["httprpc" "data" "diskspace" "trafic" ];
 
     nginx.enable = true;
+  };
+
+  services.rtorrent = {
+    enable = true;
+    downloadDir = "/nfs/Torrents";
   };
 
   disabledModules = [ "services/torrent/rtorrent.nix" ]; # avoid conflict with upstream nixpkgs rtorrent service
