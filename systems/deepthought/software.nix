@@ -202,6 +202,7 @@
       enable = true;
       package = pkgs.wireshark;
     };
+    thunderbird.enable = true;
     #atop.enable = true;
     #calls.enable = true;
     #chromium = {
@@ -216,6 +217,8 @@
     tmux.enable = true;
     dconf.enable = true; # virt-manager requires dconf to remember settings
     virt-manager.enable = true;
+
+    steam.enable = true;
 
     #kdeconnect.enable = true;
 

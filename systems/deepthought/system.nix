@@ -8,6 +8,9 @@
   boot = {
     loader = {
       grub.memtest86.enable = true;
+      grub.extraConfig = ''
+        GRUB_CMDLINE_LINUX_DEFAULT=""
+      '';
       systemd-boot.enable = true;
       efi.canTouchEfiVariables = true;
     };

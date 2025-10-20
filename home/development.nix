@@ -18,6 +18,7 @@
     act
     action-validator
     gcc
+    zed-editor
   ];
 
   programs = {
