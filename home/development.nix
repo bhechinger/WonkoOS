@@ -9,8 +9,8 @@
     autoconf
     automake
     rustup
-    #google-cloud-sdk-gce
-    #(google-cloud-sdk.withExtraComponents [google-cloud-sdk.components.gke-gcloud-auth-plugin])
+    google-cloud-sdk-gce
+    # (google-cloud-sdk.withExtraComponents [google-cloud-sdk.components.gke-gcloud-auth-plugin])
     podman
     podman-compose
     graphviz
@@ -24,6 +24,9 @@
   programs = {
     gh.enable = true;
     go.enable = true;
-    zellij.enable = true;
+    zellij = {
+      enable = true;
+      enableZshIntegration = true;
+    };
   };
 }

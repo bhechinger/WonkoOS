@@ -30,22 +30,11 @@
       };
     };
 
-    #xserver = {
-    #  enable = true;
-    #  xkb.layout = "us";
-    #  videoDrivers = ["nvidia"];
-    #  exportConfiguration = true;
-    #  #deviceSection = "Option \"UseEDID\" \"FALSE\"";
-    #};
-
-    #desktopManager.plasma6.enable = true;
-
     displayManager = {
       sddm = {
         enable = true;
         wayland.enable = true;
       };
-    #  defaultSession = "plasmax11";
     };
 
     printing = {
@@ -64,8 +53,6 @@
     #	    motherboard = "amd";
     #  };
     #};
-
-    #spice-vdagentd.enable = true;
 
     #sunshine = {
     #  enable = true;

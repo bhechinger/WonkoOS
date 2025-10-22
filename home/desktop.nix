@@ -1,8 +1,4 @@
 { pkgs, ... }:
-let
-  browser = "firefox";
-  terminal = "kitty";
-in
 {
   imports = [
     ./hyprland.nix
@@ -33,8 +29,4 @@ in
       size = 24;
     };
   };
-
-  systemd.user.targets.hyprland-session.Unit.Wants = [
-    "xdg-desktop-autostart.target"
-  ];
  }

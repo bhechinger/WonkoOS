@@ -1,8 +1,4 @@
 { pkgs, ... }:
-let
-  browser = "firefox";
-  terminal = "kitty";
-in
 {
   programs = {
     waybar = {
@@ -15,6 +11,7 @@ in
           spacing = 4;
           output = [
             "Virtual-1"
+            "DP-2"
           ];
           modules-left = [
             #"sway/workspaces"

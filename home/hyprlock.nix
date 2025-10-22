@@ -1,10 +1,7 @@
 { pkgs, ... }:
-let
-  browser = "firefox";
-  terminal = "kitty";
-in
 {
   programs = {
+    hyprlock.enable = true;
     hyprlock.settings = {
       general = {
         hide_cursor = true;

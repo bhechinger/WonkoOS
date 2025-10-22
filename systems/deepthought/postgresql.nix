@@ -24,7 +24,7 @@
       ensureDatabases = [ "wonko" "atuin" ];
       authentication = pkgs.lib.mkOverride 10 ''
         #type database  DBuser  auth-method
-	# "local" is for Unix domain socket connections only
+        # "local" is for Unix domain socket connections only
         local   all             all                                     trust
         # IPv4 local connections:
         host    all             all             127.0.0.1/32            trust
