@@ -3,6 +3,9 @@
 {
   environment = {
     systemPackages = with pkgs; [
+      mokutil
+      vulkan-tools
+      dxvk
       home-manager
       #blockbench
       #bluedevil
@@ -36,7 +39,6 @@
       #ventoy
       #vlc
       #vulnix
-      #xdg-desktop-portal-gtk
       #xwaylandvideobridge
       zsh-nix-shell
       #glances
@@ -52,8 +54,6 @@
       #kate
       #libsForQt5.kcalc
       pciutils
-      discord
-      slack
       #franz
       #whatsapp-for-linux
       #signal-desktop
@@ -172,7 +172,6 @@
       #inputs.nix-inspect.packages.x86_64-linux.default
       #nmap
       #dig
-      #gamescope
       #sshpass
       ##keybase
       ##keybase-gui
@@ -182,6 +181,12 @@
   };
 
   programs = {
+    gamescope = {
+      enable = true;
+      args = [
+	"--rt"
+      ];
+    };
     extra-container.enable = true;
     #_1password.enable = true;
     #_1password-gui.enable = true;
@@ -195,7 +200,6 @@
     less.enable = true;
     openvpn3.enable = true;
     starship.enable = true;
-    #steam.enable = true;
     traceroute.enable = true;
     usbtop.enable = true;
     wireshark = {
@@ -218,7 +222,10 @@
     dconf.enable = true; # virt-manager requires dconf to remember settings
     virt-manager.enable = true;
 
-    steam.enable = true;
+    steam = {
+      enable = true;
+      protontricks.enable = true;
+    };
 
     #kdeconnect.enable = true;
 

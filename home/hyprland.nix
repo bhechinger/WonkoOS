@@ -32,7 +32,7 @@ in
         "waybar &"
         #"swaync &"
         #"vicinae server &"
-        # "hyprctl setcursor Bibata-Modern-Ice 24 &"
+        "hyprctl setcursor Bibata-Modern-Ice 24 &"
         "swww-daemon &"
 
         #"hyprlock"
@@ -45,10 +45,14 @@ in
         "[workspace special:chat silent] discord"
         "[workspace special:chat silent] chromium"
         "[workspace special:chat silent] thunderbird"
+        "[workspace special:chat silent] irssi"
+
         "[workspace special:chat2 silent] signal-desktop"
         "[workspace special:chat2 silent] telegram"
+
         "[workspace special:audio silent] ardour8 Default"
         "[workspace special:audio silent] qpwgraph"
+
         "[workspace special:games silent] steam"
         "[workspace special:games silent] r2modman"
       ];

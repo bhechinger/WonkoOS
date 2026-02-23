@@ -15,17 +15,18 @@
       efi.canTouchEfiVariables = true;
     };
     initrd = {
-      availableKernelModules = [ "ahci" "xhci_pci" "virtio_pci" "sr_mod" "virtio_blk" ];
-      kernelModules = [ ];
+      availableKernelModules = [ "ahci" "xhci_pci" "virtio_pci" "sr_mod" "virtio_blk" "firewire_ohci" "firewire_core" ];
+      kernelModules = [ "ahci" "xhci_pci" "virtio_pci" "sr_mod" "virtio_blk" "firewire_ohci" "firewire_core" ];
+      luks.mitigateDMAAttacks = false;
     };
     supportedFilesystems = [ "nfs" ];
-    kernelParams = [ "mitigations=off" "preempt=full" "nohz_full=all" ];
+    kernelParams = [ "mitigations=off" "preempt=full" "nohz_full=all" "threadirqs" ];
     kernelModules = [ "kvm-amd" ];
     extraModulePackages = [ ];
     # kernelPackages = pkgs.linuxPackages_xanmod_latest;
     kernelPackages = pkgs.linuxPackages_6_16;
     zfs = {
-      extraPools = [ "zroot" ];
+      extraPools = [ "zpool" "tank" ];
       devNodes = "/dev/disk/by-partuuid";
     };
   };

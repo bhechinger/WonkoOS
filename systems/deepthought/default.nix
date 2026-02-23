@@ -7,7 +7,7 @@
     inputs.disko.nixosModules.disko
 
     ../hardware/deepthought-new.nix
-    ./zfs.nix
+    #./zfs.nix
     ./networking.nix
     ./users.nix
     ./filesystems.nix

@@ -36,7 +36,7 @@
   };
 
   environment.systemPackages = with pkgs; [
-    ffado
+    #ffado
     alsa-utils
     ardour
     spotify

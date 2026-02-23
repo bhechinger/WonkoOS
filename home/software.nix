@@ -2,6 +2,11 @@
 
 {
   home.packages = with pkgs; [
+    kdePackages.qtsvg
+    kdePackages.dolphin
+    unzip
+    irssi
+    wine64
     blockbench
     kdePackages.bluedevil
     coolercontrol.coolercontrol-liqctld
@@ -42,7 +47,7 @@
     discord
     slack
     prismlauncher
-    gamescope
+    temurin-bin
   ];
 
   programs = {

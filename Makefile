@@ -1,5 +1,5 @@
 # Careful about copy/pasting, Makefiles want tabs!
 # But you're not copy/pasting, are you?
 .PHONY: update
-deepthought-vm:
-	nh os switch -H deepthought-vm .
+deepthought:
+	nh os switch -H deepthought .
