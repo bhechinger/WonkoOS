@@ -48,6 +48,7 @@
     slack
     prismlauncher
     temurin-bin
+    mcpelauncher-ui-qt
   ];
 
   programs = {
@@ -55,5 +56,9 @@
     # thunderbird.enable = true; # This is weird here, need to try again
     chromium.enable = true;
     obs-studio.enable = true;
+  };
+
+  services = {
+    dropbox.enable = true;
   };
 }

@@ -38,15 +38,15 @@ in
         #"hyprlock"
 
         # "${terminal} --gtk-single-instance=true --quit-after-last-window-closed=false --initial-window=false"
-        # "[workspace 1 silent] ${browser}"
-        # "[workspace 2 silent] ${terminal}"
+        "[workspace 1 silent] ${browser}"
+        "[workspace 3 silent] ${terminal}"
 
         "[workspace special:chat silent] slack"
         "[workspace special:chat silent] discord"
         "[workspace special:chat silent] chromium"
-        "[workspace special:chat silent] thunderbird"
-        "[workspace special:chat silent] irssi"
+        "[workspace special:chat silent] kitty --class irssi -T irssi irssi"
 
+        #"[workspace special:chat2 silent] thunderbird"
         "[workspace special:chat2 silent] signal-desktop"
         "[workspace special:chat2 silent] telegram"
 
@@ -54,7 +54,7 @@ in
         "[workspace special:audio silent] qpwgraph"
 
         "[workspace special:games silent] steam"
-        "[workspace special:games silent] r2modman"
+        #"[workspace special:games silent] r2modman"
       ];
 
       input = {
@@ -382,7 +382,8 @@ in
         "workspace special:chat, class:Slack"
         "workspace special:chat, class:discord"
         "workspace special:chat, class:Chromium"
-        "workspace special:chat, class:thunderbird"
+        "workspace special:chat, class:irssi"
+        "workspace special:chat2, class:thunderbird"
         "workspace special:chat2, class:Signal"
         "workspace special:chat2, class:org.telegram.desktop"
         "workspace special:audio, class:Ardour"

@@ -40,6 +40,7 @@
       shellAliases = {
         ll = "ls -l";
         oci = "oci --auth security_token";
+	z = "zeditor .";
       };
 
       initContent = ''
