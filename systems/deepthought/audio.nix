@@ -7,10 +7,6 @@
     enable = true;
     ffado.enable = true;
     soundcardPciId = "08:00.0";
-    #kernel = {
-    #    realtime = true;
-    #    packages = pkgs.linuxPackages_6_8_rt;
-    #};
     rtcqs.enable = true;
     rtirq = {
       resetAll = 1;

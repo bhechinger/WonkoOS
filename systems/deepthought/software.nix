@@ -194,7 +194,7 @@
     #direnv.enable = true;
     #evince.enable = true;
     #firefox.enable = true;
-    git.enable = true;
+    #git.enable = true;
     htop.enable = true;
     iotop.enable = true;
     less.enable = true;

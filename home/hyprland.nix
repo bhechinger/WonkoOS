@@ -44,7 +44,8 @@ in
         "[workspace special:chat silent] slack"
         "[workspace special:chat silent] discord"
         "[workspace special:chat silent] chromium"
-        "[workspace special:chat silent] kitty --class irssi -T irssi irssi"
+        "[workspace special:chat silent] irccloud"
+        #"[workspace special:chat silent] kitty --class irssi -T irssi irssi"
 
         #"[workspace special:chat2 silent] thunderbird"
         "[workspace special:chat2 silent] signal-desktop"
@@ -382,7 +383,7 @@ in
         "workspace special:chat, class:Slack"
         "workspace special:chat, class:discord"
         "workspace special:chat, class:Chromium"
-        "workspace special:chat, class:irssi"
+        "workspace special:chat, class:IRCCloud"
         "workspace special:chat2, class:thunderbird"
         "workspace special:chat2, class:Signal"
         "workspace special:chat2, class:org.telegram.desktop"

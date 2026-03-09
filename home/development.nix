@@ -28,5 +28,9 @@
       enable = true;
       #enableZshIntegration = true;
     };
+    git = {
+      enable = true;
+      lfs.enable = true;
+    };
   };
 }

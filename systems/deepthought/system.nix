@@ -20,11 +20,11 @@
       luks.mitigateDMAAttacks = false;
     };
     supportedFilesystems = [ "nfs" ];
-    kernelParams = [ "mitigations=off" "preempt=full" "nohz_full=all" "threadirqs" ];
+    kernelParams = [ "mitigations=off" "preempt=full" "nohz_full=all" ];
     kernelModules = [ "kvm-amd" ];
     extraModulePackages = [ ];
     # kernelPackages = pkgs.linuxPackages_xanmod_latest;
-    kernelPackages = pkgs.linuxPackages_6_16;
+    kernelPackages = pkgs.linuxPackages_6_18;
     zfs = {
       extraPools = [ "zpool" "tank" ];
       devNodes = "/dev/disk/by-partuuid";

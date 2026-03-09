@@ -31,11 +31,11 @@
     options = [ "fmask=0022" "dmask=0022" ];
   };
 
-  fileSystems."/backups" = {
-    device = "backups";  # Replace with the correct device path after iSCSI login you cloud also do /dev/disk/by-uuid/<UUID-of-device>
-    fsType = "zfs";  # Or the correct filesystem type
-    options = [ "zfsutil" "_netdev" "nofail" ];  # Ensures network is up before mounting and wont fail to boot if it cant connect
-  };
+  #fileSystems."/backups" = {
+  #  device = "backups";  # Replace with the correct device path after iSCSI login you cloud also do /dev/disk/by-uuid/<UUID-of-device>
+  #  fsType = "zfs";  # Or the correct filesystem type
+  #  options = [ "zfsutil" "_netdev" "nofail" ];  # Ensures network is up before mounting and wont fail to boot if it cant connect
+  #};
 
   swapDevices = [{
     device = "/dev/disk/by-id/nvme-WDC_WDS100T2B0C-00PXH0_21281Y459408-part2";
@@ -109,18 +109,18 @@
   };
   #
   # Custom systemd service for logging in to a specific iSCSI target, you can name the service whatever youd like
-  systemd.services.iscsi-login-lingames = {
-    description = "Login to iSCSI target iqn.2004-04.com.qnap:ts-453d:iscsi.basket.5de5ba";
-    after = [ "network.target" "iscsid.service" ];
-    wants = [ "iscsid.service" ];
-    serviceConfig = {
-      ExecStartPre = "${pkgs.openiscsi}/bin/iscsiadm -m discovery -t sendtargets -p basket.4amlunch.net";
-      ExecStart = "${pkgs.openiscsi}/bin/iscsiadm -m node -T iqn.2004-04.com.qnap:ts-453d:iscsi.basket.5de5ba -p basket.4amlunch.net --login";
-      ExecStop = "${pkgs.openiscsi}/bin/iscsiadm -m node -T iqn.2004-04.com.qnap:ts-453d:iscsi.basket.5de5ba -p basket.4amlunch.net --logout";
-      Restart = "on-failure";
-      RemainAfterExit = true;
-    };
-    wantedBy = [ "multi-user.target" ];
-  };
+  #systemd.services.iscsi-login-lingames = {
+  #  description = "Login to iSCSI target iqn.2004-04.com.qnap:ts-453d:iscsi.basket.5de5ba";
+  #  after = [ "network.target" "iscsid.service" ];
+  #  wants = [ "iscsid.service" ];
+  #  serviceConfig = {
+  #    ExecStartPre = "${pkgs.openiscsi}/bin/iscsiadm -m discovery -t sendtargets -p basket.4amlunch.net";
+  #    ExecStart = "${pkgs.openiscsi}/bin/iscsiadm -m node -T iqn.2004-04.com.qnap:ts-453d:iscsi.basket.5de5ba -p basket.4amlunch.net --login";
+  #    ExecStop = "${pkgs.openiscsi}/bin/iscsiadm -m node -T iqn.2004-04.com.qnap:ts-453d:iscsi.basket.5de5ba -p basket.4amlunch.net --logout";
+  #    Restart = "on-failure";
+  #    RemainAfterExit = true;
+  #  };
+  #  wantedBy = [ "multi-user.target" ];
+  #};
 
 }

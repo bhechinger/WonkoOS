@@ -2,6 +2,8 @@
 
 {
   home.packages = with pkgs; [
+    irccloud
+    dig
     kdePackages.qtsvg
     kdePackages.dolphin
     unzip
@@ -9,7 +11,7 @@
     wine64
     blockbench
     kdePackages.bluedevil
-    coolercontrol.coolercontrol-liqctld
+    #coolercontrol.coolercontrol-liqctld
     coolercontrol.coolercontrold
     droidcam
     fluxcd

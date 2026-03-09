@@ -7,7 +7,6 @@
     };
     packages = with pkgs; [
       direnv
-      thefuck
     ];
   };
 
@@ -20,7 +19,7 @@
 
       oh-my-zsh = {
         enable = true;
-        plugins = [ "git" "thefuck" "direnv" ];
+        plugins = [ "git" "direnv" ];
       };
 
       history = {

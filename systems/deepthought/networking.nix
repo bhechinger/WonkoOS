@@ -1,6 +1,11 @@
 { config, lib, pkgs, ... }:
 
 {
+  systemd.network.links."10-primary-trunk" = {
+    matchConfig.MACAddress = "9c:6b:00:c0:c8:58";
+    linkConfig.Name = "primary-trunk";
+  };
+
   networking = {
     hostName = "deepthought";
     hostId = "8425e349";
@@ -8,7 +13,7 @@
     useDHCP = false;
     bridges = {
       "trunk" = {
-        interfaces = [ "enp9s0" ];
+        interfaces = [ "primary-trunk" ];
       };
       #"storage" = {
       #  interfaces = [ "enp5s0" ];
