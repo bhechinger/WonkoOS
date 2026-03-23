@@ -182,12 +182,12 @@ in
 
         # keybindings
         "SUPER, Tab, workspace, previous"
-        "$mainMod, Q, exec, ${terminal}"
-        "$mainMod, C, killactive,"
+        "$mainMod, Return, exec, ${terminal}"
+        "$mainMod, Q, killactive,"
         "$mainMod, M, exit,"
         "$mainMod, E, exec, $fileManager"
         "$mainMod, V, togglefloating,"
-        "$mainMod, R, exec, $menu"
+        "$mainMod, Space, exec, $menu"
         "$mainMod, P, pseudo, # dwindle"
         "$mainMod, J, togglesplit, # dwindle"
         "$mainMod, l, exec, hyprlock"

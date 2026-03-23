@@ -1,7 +1,9 @@
-{ pkgs, ... }:
+{ pkgs, unstable-pkgs, ... }:
 
 {
   home.packages = with pkgs; [
+    unstable-pkgs.mame
+    qbittorrent
     irccloud
     dig
     kdePackages.qtsvg

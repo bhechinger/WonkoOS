@@ -1,8 +1,14 @@
 { inputs, config, lib, pkgs, ... }:
 
 {
+  nixpkgs.config.permittedInsecurePackages = [
+    "qtwebengine-5.15.19"
+  ];
+
   environment = {
     systemPackages = with pkgs; [
+      stremio
+      pkg-config
       mokutil
       vulkan-tools
       dxvk

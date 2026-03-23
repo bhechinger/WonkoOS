@@ -21,7 +21,10 @@
     };
     supportedFilesystems = [ "nfs" ];
     kernelParams = [ "mitigations=off" "preempt=full" "nohz_full=all" ];
-    kernelModules = [ "kvm-amd" ];
+    kernelModules = [ "kvm-amd" "firewire-ohci" ];
+    extraModprobeConfig = ''
+      options firewire-ohci quirks=0x14
+    '';
     extraModulePackages = [ ];
     # kernelPackages = pkgs.linuxPackages_xanmod_latest;
     kernelPackages = pkgs.linuxPackages_6_18;

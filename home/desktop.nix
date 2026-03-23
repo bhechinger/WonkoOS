@@ -40,6 +40,11 @@
     };
   };
 
+  services.kdeconnect = {
+    enable = true;
+    indicator = true;
+  };
+
   fonts.fontconfig.enable = true;
 
   systemd.user.targets.hyprland-session.Unit.Wants = [
