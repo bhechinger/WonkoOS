@@ -3,3 +3,4 @@
 .PHONY: update
 update:
 	nh home switch .
+	hyprctl reload

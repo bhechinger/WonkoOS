@@ -1,6 +1,8 @@
-# WonkoOS-temp
+# WonkoOS
 
-Eventually this will get promoted to not temp status. Maybe. :-P
+This is the NixOS configuration of all (eventually) my machines.
+
+# random notes to ignore
 
 nix --experimental-features "nix-command flakes" run github:nix-community/disko/latest -- --mode destroy,format,mount --flake github:bhechinger/WonkoOS-temp#deepthought
 
