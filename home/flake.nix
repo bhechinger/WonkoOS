@@ -14,19 +14,30 @@
     };
   };
 
-  outputs = { nixpkgs, unstable-nixpkgs, home-manager, ... }:
+  outputs =
+    {
+      nixpkgs,
+      unstable-nixpkgs,
+      home-manager,
+      ...
+    }:
     let
-      lib = nixpkgs.lib;
+      #lib = nixpkgs.lib;
       system = "x86_64-linux";
       pkgs = import nixpkgs {
         inherit system;
-        config = { allowUnfree = true; };
+        config = {
+          allowUnfree = true;
+        };
       };
       unstable-pkgs = import unstable-nixpkgs {
         inherit system;
-        config = { allowUnfree = true; };
+        config = {
+          allowUnfree = true;
+        };
       };
-    in {
+    in
+    {
       homeConfigurations = {
         wonko = home-manager.lib.homeManagerConfiguration {
           inherit pkgs;

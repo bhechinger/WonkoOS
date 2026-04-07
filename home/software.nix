@@ -2,6 +2,7 @@
 
 {
   home.packages = with pkgs; [
+    codex
     unstable-pkgs.mame
     qbittorrent
     irccloud
@@ -51,7 +52,8 @@
     discord
     slack
     prismlauncher
-    temurin-bin
+    #temurin-bin
+    javaPackages.compiler.temurin-bin.jdk-25
     mcpelauncher-ui-qt
   ];
 
@@ -60,6 +62,7 @@
     # thunderbird.enable = true; # This is weird here, need to try again
     chromium.enable = true;
     obs-studio.enable = true;
+    mangohud.enable = true;
   };
 
   services = {

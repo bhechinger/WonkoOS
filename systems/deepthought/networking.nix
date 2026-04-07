@@ -40,5 +40,11 @@
     firewall.enable = false;
   };
 
-  services.openssh.enable = true;
+  services = {
+    openssh.enable = true;
+    zerotierone = {
+      enable = true;
+      joinNetworks = ["a84ac5c10a853bc1"];
+    };
+  };
 }

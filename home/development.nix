@@ -2,6 +2,10 @@
 
 {
   home.packages = with pkgs; [
+    nil
+    nixd
+    just
+    openssl
     fira-code
     glab
     gdb
