@@ -62,7 +62,15 @@
     # thunderbird.enable = true; # This is weird here, need to try again
     chromium.enable = true;
     obs-studio.enable = true;
-    mangohud.enable = true;
+    mangohud = {
+      enable = true;
+      enableSessionWide = true;
+      settings = {
+        full = true;
+	vsync = 0;
+	no_display = true;
+      };
+    };
   };
 
   services = {
