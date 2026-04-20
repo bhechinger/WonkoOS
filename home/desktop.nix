@@ -18,7 +18,6 @@
       wf-recorder
       glib
       wayland
-      direnv
       wofi
       bibata-cursors
 

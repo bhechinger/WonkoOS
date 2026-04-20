@@ -2,6 +2,7 @@
 
 {
   home.packages = with pkgs; [
+    cloc
     nil
     nixd
     just

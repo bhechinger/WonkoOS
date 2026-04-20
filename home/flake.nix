@@ -53,6 +53,7 @@
             ./kubernetes.nix
             ./software.nix
             ./desktop.nix
+	    ./nix_tools.nix
           ];
         };
       };

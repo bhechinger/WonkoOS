@@ -1,6 +1,18 @@
 { inputs, config, lib, pkgs, ... }:
 
 {
+  home.packages = with pkgs; [
+    carla
+    qpwgraph
+    ardour
+    lmms
+    lsp-plugins
+    show-midi
+    audacious
+    pavucontrol
+    qjackctl
+  ];
+
   services = {
     spotifyd = {
       enable = true;

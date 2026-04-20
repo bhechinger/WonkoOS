@@ -2,6 +2,8 @@
 
 {
   home.packages = with pkgs; [
+    rar
+    p7zip
     codex
     unstable-pkgs.mame
     qbittorrent
@@ -26,9 +28,6 @@
     krita
     azahar
     mindustry
-    nix-top
-    nix-web
-    nixos-shell
     nvme-cli
     obexftp
     openobex
@@ -39,14 +38,11 @@
     #usbmuxd2-unstable
     #ventoy
     vlc
-    vulnix
     hyprshot
     poweralertd
     wl-clip-persist
     swww
     r2modman
-    qpwgraph
-    ardour
     telegram-desktop
     signal-desktop
     discord

@@ -32,27 +32,11 @@
   };
 
   environment.systemPackages = with pkgs; [
-    #ffado
     alsa-utils
-    ardour
-    spotify
     alsa-lib
     libjack2
     jack2
-    qjackctl
-    pavucontrol
     jack_capture
     pulseaudioFull
-    audacious
-    qpwgraph
-    show-midi
-    #mopidy
-    #mopidy-bandcamp
-    #mopidy-iris
-    #mopidy-notify
-    #mopidy-spotify
-    #mopidy-soundcloud
-    lmms
-    lsp-plugins
   ];
 }

@@ -1,7 +1,0 @@
-[2026-02-23 19:47:26.322] [info] Using configuration file /home/wonko/.config/waybar/config
-[2026-02-23 19:47:26.323] [info] Discovered appearance 'dark'
-[2026-02-23 19:47:26.333] [info] Using CSS file /nix/store/cz3ww0cif8p9jlvs5v8gjwaipas07w8y-waybar-0.14.0/etc/xdg/waybar/style.css
-[2026-02-23 19:47:26.340] [error] media stopped unexpectedly, is it endless?
-[2026-02-23 19:47:26.460] [info] Bar configured (width: 2560, height: 30) for output: DP-2
-
-(pavucontrol:195984): Gtk-WARNING **: 19:48:12.928: Unknown key gtk-modules in /home/wonko/.config/gtk-4.0/settings.ini

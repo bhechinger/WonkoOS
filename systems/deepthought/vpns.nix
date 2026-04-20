@@ -7,10 +7,10 @@
         config = '' config /home/wonko/.openvpn/vyprvpn/OpenVPN256/USA-Miami.ovpn '';
         autoStart = false;
       };
-      neuralrack = {
-        config = '' config /home/wonko/.openvpn/neuralrack.ovpn '';
-        autoStart = true;
-      };
+      #neuralrack = {
+      #  config = '' config /home/wonko/.openvpn/neuralrack.ovpn '';
+      #  autoStart = true;
+      #};
     };
   };
 }

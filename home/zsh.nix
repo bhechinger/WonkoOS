@@ -6,7 +6,7 @@
       enableZshIntegration = true;
     };
     packages = with pkgs; [
-      direnv
+      nix-direnv
     ];
   };
 

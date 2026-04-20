@@ -1,8 +1,11 @@
 {inputs, pkgs, pkgs-unstable, ...}: {
-  programs.hyprland = {
-    enable = true;
-    withUWSM = true;
-    xwayland.enable = true;
+  programs = {
+    hyprland = {
+      enable = true;
+      withUWSM = true;
+      xwayland.enable = true;
+    };
+    evince.enable = true;
   };
 
   xdg.portal = {
