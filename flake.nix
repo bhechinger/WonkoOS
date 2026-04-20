@@ -35,7 +35,7 @@
        config = { allowUnfree = true; };
       };
 
-      lib = nixpkgs.lib;
+      inherit (nixpkgs) lib;
     in
     {
       nixosConfigurations = {
