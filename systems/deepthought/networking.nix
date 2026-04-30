@@ -1,4 +1,9 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 {
   systemd.network.links."10-primary-trunk" = {
@@ -20,13 +25,18 @@
       #};
     };
     vlans = {
-      internal = { id=420; interface="trunk"; };
+      internal = {
+        id = 420;
+        interface = "trunk";
+      };
     };
     interfaces = {
-      internal.ipv4.addresses = [{
-        address = "10.42.0.10";
-        prefixLength = 24;
-      }];
+      internal.ipv4.addresses = [
+        {
+          address = "10.42.0.10";
+          prefixLength = 24;
+        }
+      ];
       #storage.ipv4.addresses = [{
       #  address = "192.168.99.229";
       #  prefixLength = 24;
@@ -44,7 +54,8 @@
     openssh.enable = true;
     zerotierone = {
       enable = true;
-      joinNetworks = ["a84ac5c10a853bc1"];
+      joinNetworks = [ "a84ac5c10a853bc1" ];
     };
+    cloudflare-warp.enable = true;
   };
 }

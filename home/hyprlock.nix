@@ -1,12 +1,12 @@
-{ pkgs, ... }:
+{ pkgs, unstable-pkgs, ... }:
 {
   programs = {
     hyprlock.enable = true;
+    hyprlock.package = unstable-pkgs.hyprlock;
     hyprlock.settings = {
       general = {
         hide_cursor = true;
         ignore_empty_input = true;
-	screencopy_mode=1;
       };
 
       animations = {

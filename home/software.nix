@@ -2,9 +2,11 @@
 
 {
   home.packages = with pkgs; [
+    ryubing
+    #    mtr
+    mtr-gui
     rar
     p7zip
-    codex
     unstable-pkgs.mame
     qbittorrent
     irccloud
@@ -38,7 +40,6 @@
     #usbmuxd2-unstable
     #ventoy
     vlc
-    hyprshot
     poweralertd
     wl-clip-persist
     swww
@@ -63,9 +64,13 @@
       enableSessionWide = true;
       settings = {
         full = true;
-	vsync = 0;
-	no_display = true;
+        vsync = 0;
+        no_display = true;
       };
+    };
+    hyprshot = {
+      enable = true;
+      saveLocation = "$HOME/Pictures/Screenshots";
     };
   };
 

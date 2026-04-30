@@ -11,6 +11,7 @@
     audacious
     pavucontrol
     qjackctl
+    spotify
   ];
 
   services = {

@@ -35,8 +35,6 @@ in
         "hyprctl setcursor Bibata-Modern-Ice 24 &"
         "swww-daemon &"
 
-        #"hyprlock"
-
         # "${terminal} --gtk-single-instance=true --quit-after-last-window-closed=false --initial-window=false"
         "[workspace 1 silent] ${browser}"
         "[workspace 3 silent] ${terminal}"
@@ -54,7 +52,7 @@ in
         "[workspace special:audio silent] ardour8 Default"
         "[workspace special:audio silent] qpwgraph"
 
-        "[workspace special:games silent] steam"
+        #"[workspace special:games silent] steam"
         #"[workspace special:games silent] r2modman"
       ];
 
@@ -190,7 +188,7 @@ in
         "$mainMod, Space, exec, $menu"
         "$mainMod, P, pseudo, # dwindle"
         "$mainMod, J, togglesplit, # dwindle"
-        #"$mainMod, l, exec, hyprlock"
+        "$mainMod, l, exec, hyprlock"
         "$mainMod, F, fullscreen"
         "$mainMod, left, movefocus, l"
         "$mainMod, right, movefocus, r"
@@ -247,7 +245,6 @@ in
         # "$mainMod SHIFT, D, exec, webcord --enable-features=UseOzonePlatform --ozone-platform=wayland"
         # "$mainMod SHIFT, S, exec, hyprctl dispatch exec '[workspace 5 silent] SoundWireServer'"
         # "$mainMod, Escape, exec, swaylock"
-        # "ALT, Escape, exec, hyprlock"
         # "$mainMod SHIFT, Escape, exec, power-menu"
         # "$mainMod, P, pseudo,"
         # "$mainMod, X, togglesplit,"
@@ -490,7 +487,7 @@ in
 
       monitor = [
         "=,preferred,auto,auto"
-	"Virtual-1,1920x1080@60,0x0,1"
+        "Virtual-1,1920x1080@60,0x0,1"
       ];
 
       xwayland = {

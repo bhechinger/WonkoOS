@@ -7,30 +7,34 @@
   ];
 
   home = {
-    packages = with pkgs; [
-      swww
-      grimblast
-      hyprpicker
-      grim
-      slurp
-      wl-clip-persist
-      cliphist
-      wf-recorder
-      glib
-      wayland
-      wofi
-      bibata-cursors
+    packages =
+      with pkgs;
+      [
+        swww
+        grimblast
+        hyprpicker
+        grim
+        slurp
+        wl-clip-persist
+        cliphist
+        wf-recorder
+        glib
+        wayland
+        wofi
+        bibata-cursors
+        system-config-printer
 
-      fira-code
-      fira-code-symbols
-      font-awesome
-      liberation_ttf
-      mplus-outline-fonts.githubRelease
-      noto-fonts
-      noto-fonts-cjk-sans
-      noto-fonts-color-emoji
-      proggyfonts
-    ] ++ builtins.filter lib.attrsets.isDerivation (builtins.attrValues pkgs.nerd-fonts);
+        fira-code
+        fira-code-symbols
+        font-awesome
+        liberation_ttf
+        mplus-outline-fonts.githubRelease
+        noto-fonts
+        noto-fonts-cjk-sans
+        noto-fonts-color-emoji
+        proggyfonts
+      ]
+      ++ builtins.filter lib.attrsets.isDerivation (builtins.attrValues pkgs.nerd-fonts);
 
     pointerCursor = {
       package = pkgs.bibata-cursors;
@@ -49,4 +53,4 @@
   systemd.user.targets.hyprland-session.Unit.Wants = [
     "xdg-desktop-autostart.target"
   ];
- }
+}

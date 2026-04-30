@@ -1,4 +1,10 @@
-{ inputs, config, lib, pkgs, ... }:
+{
+  inputs,
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 {
   #nixpkgs.config.permittedInsecurePackages = [
@@ -49,11 +55,11 @@
       enable = true;
       args = [
         "-f"
-	"-W 2560"
-	"-H 1440"
-	"--mangoapp"
-	"--adaptive-sync"
-	"--rt"
+        "-W 2560"
+        "-H 1440"
+        "--mangoapp"
+        "--adaptive-sync"
+        "--rt"
       ];
     };
     extra-container.enable = true;
@@ -103,13 +109,13 @@
 
     zsh = {
       enable = true;
-    #  syntaxHighlighting.enable = true;
-    #  autosuggestions.enable = true;
-    #  ohMyZsh = {
-    #    enable = true;
-    #    plugins = [ "git" ];
-    #  };
-    #  #enableCompletetion = false; # so we can use zsh-autocomplete
+      #  syntaxHighlighting.enable = true;
+      #  autosuggestions.enable = true;
+      #  ohMyZsh = {
+      #    enable = true;
+      #    plugins = [ "git" ];
+      #  };
+      #  #enableCompletetion = false; # so we can use zsh-autocomplete
     };
 
     nh = {

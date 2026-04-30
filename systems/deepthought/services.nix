@@ -1,4 +1,10 @@
-{ inputs, config, lib, pkgs, ... }:
+{
+  inputs,
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 {
   services = {
@@ -41,6 +47,9 @@
       enable = true;
       drivers = [
         pkgs.hplipWithPlugin
+        pkgs.brlaser
+        pkgs.brgenml1lpr
+        pkgs.brgenml1cupswrapper
       ];
     };
 

@@ -19,7 +19,10 @@
 
       oh-my-zsh = {
         enable = true;
-        plugins = [ "git" "direnv" ];
+        plugins = [
+          "git"
+          "direnv"
+        ];
       };
 
       history = {
@@ -39,7 +42,7 @@
       shellAliases = {
         ll = "ls -l";
         oci = "oci --auth security_token";
-	z = "zeditor .";
+        z = "zeditor .";
       };
 
       initContent = ''

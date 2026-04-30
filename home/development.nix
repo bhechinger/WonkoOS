@@ -1,7 +1,9 @@
-{ pkgs, ... }:
+{ pkgs, unstable-pkgs, ... }:
 
 {
   home.packages = with pkgs; [
+    unstable-pkgs.codex
+    unstable-pkgs.zed-editor
     cloc
     nil
     nixd
@@ -14,7 +16,7 @@
     autoconf
     automake
     rustup
-    (google-cloud-sdk.withExtraComponents [google-cloud-sdk.components.gke-gcloud-auth-plugin])
+    (google-cloud-sdk.withExtraComponents [ google-cloud-sdk.components.gke-gcloud-auth-plugin ])
     podman
     podman-compose
     graphviz
@@ -22,7 +24,6 @@
     act
     action-validator
     gcc
-    zed-editor
     k8sgpt
   ];
 
