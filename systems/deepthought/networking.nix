@@ -44,9 +44,9 @@
     };
     defaultGateway = "10.42.0.1";
     nameservers = [ "10.42.0.1" ];
-    #extraHosts = ''
-    #  192.168.99.30 basket.4amlunch.net basket
-    #'';
+    extraHosts = ''
+      10.42.0.30 basket.4amlunch.net basket
+    '';
     firewall.enable = false;
   };
 

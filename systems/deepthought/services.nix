@@ -8,6 +8,7 @@
 
 {
   services = {
+    pcscd.enable = true;
     #keybase.enable = true;
     #flatpak.enable = true;
 

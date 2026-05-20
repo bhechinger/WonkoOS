@@ -25,9 +25,11 @@
     action-validator
     gcc
     k8sgpt
+    skopeo
   ];
 
   programs = {
+    asciinema.enable = true;
     gh.enable = true;
     go.enable = true;
     zellij = {
