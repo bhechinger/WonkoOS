@@ -31,6 +31,7 @@
       };
     };
     interfaces = {
+      internal.useDHCP = true;
       internal.ipv4.addresses = [
         {
           address = "10.42.0.10";
@@ -43,6 +44,10 @@
       #}];
     };
     defaultGateway = "10.42.0.1";
+    dhcpcd.extraConfig = ''
+      interface internal
+        ipv6only
+    '';
     nameservers = [ "10.42.0.1" ];
     extraHosts = ''
       10.42.0.30 basket.4amlunch.net basket

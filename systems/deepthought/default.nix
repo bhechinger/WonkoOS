@@ -6,7 +6,7 @@
     inputs.musnix.nixosModules.musnix
     inputs.disko.nixosModules.disko
 
-    ../hardware/deepthought-new.nix
+    ../hardware/deepthought.nix
     #./zfs.nix
     ./networking.nix
     ./users.nix
