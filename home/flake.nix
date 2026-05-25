@@ -12,6 +12,8 @@
       url = "github:nix-community/home-manager/release-25.11";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    auto-splice.url = "github:zenith-network/auto-splice";
   };
 
   outputs =
@@ -19,6 +21,7 @@
       nixpkgs,
       unstable-nixpkgs,
       home-manager,
+      auto-splice,
       ...
     }:
     let
@@ -43,6 +46,7 @@
           inherit pkgs;
           extraSpecialArgs = {
             inherit unstable-pkgs;
+            inherit auto-splice;
           };
           modules = [
             ./home.nix
@@ -54,6 +58,7 @@
             ./software.nix
             ./desktop.nix
             ./nix_tools.nix
+            ./zenith.nix
           ];
         };
       };

@@ -56,6 +56,6 @@
       enable = true;
       joinNetworks = [ "a84ac5c10a853bc1" ];
     };
-    cloudflare-warp.enable = true;
+    #cloudflare-warp.enable = true;
   };
 }

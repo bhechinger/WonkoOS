@@ -2,6 +2,7 @@
 
 {
   home.packages = with pkgs; [
+    chiaki-ng
     ryubing
     #    mtr
     mtr-gui
