@@ -54,6 +54,7 @@
     # kernelPackages = pkgs.linuxPackages_xanmod_latest;
     kernelPackages = pkgs.linuxPackages_6_18;
     zfs = {
+      forceImportRoot = false;
       extraPools = [
         "zpool"
         "tank"
