@@ -63,6 +63,7 @@
     firefox = {
       enable = true;
       configPath = "${config.xdg.configHome}/mozilla/firefox";
+      policies.SearchEngines.Default = "DuckDuckGo";
     };
     # thunderbird.enable = true; # This is weird here, need to try again
     chromium.enable = true;
