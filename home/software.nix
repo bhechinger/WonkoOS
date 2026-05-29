@@ -1,4 +1,9 @@
-{ pkgs, unstable-pkgs, ... }:
+{
+  pkgs,
+  config,
+  unstable-pkgs,
+  ...
+}:
 
 {
   home.packages = with pkgs; [
@@ -57,7 +62,7 @@
   programs = {
     firefox = {
       enable = true;
-      configPath = ".mozilla/firefox";
+      configPath = "${config.xdg.configHome}/mozilla/firefox";
     };
     # thunderbird.enable = true; # This is weird here, need to try again
     chromium.enable = true;

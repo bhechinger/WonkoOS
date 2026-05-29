@@ -9,4 +9,6 @@ in
 
     stateVersion = "25.11";
   };
+
+  manual.manpages.enable = false;
 }
