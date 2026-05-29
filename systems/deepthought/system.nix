@@ -1,10 +1,12 @@
-{ inputs, config, lib, pkgs, ... }:
+{
+  inputs,
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 {
-  nix = {
-    settings.experimental-features = [ "nix-command" "flakes" ];
-  };
-
   boot = {
     loader = {
       grub.memtest86.enable = true;
@@ -15,13 +17,36 @@
       efi.canTouchEfiVariables = true;
     };
     initrd = {
-      availableKernelModules = [ "ahci" "xhci_pci" "virtio_pci" "sr_mod" "virtio_blk" "firewire_ohci" "firewire_core" ];
-      kernelModules = [ "ahci" "xhci_pci" "virtio_pci" "sr_mod" "virtio_blk" "firewire_ohci" "firewire_core" ];
+      availableKernelModules = [
+        "ahci"
+        "xhci_pci"
+        "virtio_pci"
+        "sr_mod"
+        "virtio_blk"
+        "firewire_ohci"
+        "firewire_core"
+      ];
+      kernelModules = [
+        "ahci"
+        "xhci_pci"
+        "virtio_pci"
+        "sr_mod"
+        "virtio_blk"
+        "firewire_ohci"
+        "firewire_core"
+      ];
       luks.mitigateDMAAttacks = false;
     };
     supportedFilesystems = [ "nfs" ];
-    kernelParams = [ "mitigations=off" "preempt=full" "nohz_full=all" ];
-    kernelModules = [ "kvm-amd" "firewire-ohci" ];
+    kernelParams = [
+      "mitigations=off"
+      "preempt=full"
+      "nohz_full=all"
+    ];
+    kernelModules = [
+      "kvm-amd"
+      "firewire-ohci"
+    ];
     extraModprobeConfig = ''
       options firewire-ohci quirks=0x14
     '';
@@ -29,7 +54,10 @@
     # kernelPackages = pkgs.linuxPackages_xanmod_latest;
     kernelPackages = pkgs.linuxPackages_6_18;
     zfs = {
-      extraPools = [ "zpool" "tank" ];
+      extraPools = [
+        "zpool"
+        "tank"
+      ];
       devNodes = "/dev/disk/by-partuuid";
     };
   };
@@ -59,6 +87,10 @@
     #  options = "--delete-older-than 7d";
     #};
     settings = {
+      experimental-features = [
+        "nix-command"
+        "flakes"
+      ];
       substituters = [
         "https://hyprland.cachix.org"
         "https://install.determinate.systems"
@@ -77,7 +109,7 @@
   nixpkgs.config = {
     allowUnfree = true;
     permittedInsecurePackages = [
-     "electron-25.9.0"
+      "electron-25.9.0"
     ];
     packageOverrides = pkgs: {
       xsaneGimp = pkgs.xsane.override { gimpSupport = true; };
@@ -92,11 +124,11 @@
     };
     etc = {
       "fuse.conf" = {
-      text = ''
-# add user_allow_other for s3fs
-user_allow_other
-      '';
-      mode = "0644";
+        text = ''
+          # add user_allow_other for s3fs
+          user_allow_other
+        '';
+        mode = "0644";
       };
     };
   };
