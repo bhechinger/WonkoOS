@@ -34,9 +34,6 @@
   environment.systemPackages = with pkgs; [
     alsa-utils
     alsa-lib
-    libjack2
-    jack2
-    jack_capture
     pulseaudioFull
   ];
 }
