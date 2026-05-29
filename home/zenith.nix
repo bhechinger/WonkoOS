@@ -2,6 +2,6 @@
 
 {
   home.packages = [
-    auto-splice.packages.${pkgs.system}.auto-splice
+    auto-splice.packages.${pkgs.stdenv.hostPlatform.system}.auto-splice
   ];
 }

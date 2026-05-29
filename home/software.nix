@@ -43,7 +43,6 @@
     vlc
     poweralertd
     wl-clip-persist
-    swww
     r2modman
     telegram-desktop
     signal-desktop
@@ -56,7 +55,10 @@
   ];
 
   programs = {
-    firefox.enable = true;
+    firefox = {
+      enable = true;
+      configPath = ".mozilla/firefox";
+    };
     # thunderbird.enable = true; # This is weird here, need to try again
     chromium.enable = true;
     obs-studio.enable = true;

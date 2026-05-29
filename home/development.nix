@@ -2,6 +2,7 @@
 
 {
   home.packages = with pkgs; [
+    act
     unstable-pkgs.codex
     unstable-pkgs.zed-editor
     cloc

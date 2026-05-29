@@ -8,6 +8,7 @@ in
     "xdg-desktop-autostart.target"
   ];
 
+  wayland.windowManager.hyprland.configType = "hyprlang";
   wayland.windowManager.hyprland = {
     enable = true;
     package = null;
@@ -20,6 +21,11 @@ in
     systemd.enable = true;
     settings = {
       "debug:disable_logs" = false;
+      "$mainMod" = "SUPER";
+      "$shiftMod" = "SHIFT";
+      "$fileManager" = "dolphin";
+      "$menu" = "wofi --show drun";
+
       # autostart
       exec-once = [
         # "hash dbus-update-activation-environment 2>/dev/null"
@@ -71,9 +77,6 @@ in
       };
 
       general = {
-        "$mainMod" = "SUPER";
-        "$fileManager" = "dolphin";
-        "$menu" = "wofi --show drun";
         layout = "dwindle";
         gaps_in = 0;
         gaps_out = 2;
@@ -81,7 +84,6 @@ in
         "col.active_border" = "rgb(98971A) rgb(CC241D) 45deg";
         "col.inactive_border" = "0x00000000";
         # border_part_of_window = false;
-        no_border_on_floating = false;
       };
 
       misc = {
@@ -92,7 +94,6 @@ in
         animate_manual_resizes = false;
         enable_swallow = true;
         focus_on_activate = true;
-        new_window_takes_over_fullscreen = 2;
         middle_click_paste = false;
       };
 
@@ -101,7 +102,6 @@ in
         special_scale_factor = 1.0;
         split_width_multiplier = 1.0;
         use_active_for_splits = true;
-        pseudotile = "yes";
         preserve_split = "yes";
       };
 
@@ -131,7 +131,6 @@ in
         shadow = {
           enabled = true;
 
-          ignore_window = true;
           offset = "0 2";
           range = 20;
           render_power = 3;
@@ -187,7 +186,7 @@ in
         "$mainMod, V, togglefloating,"
         "$mainMod, Space, exec, $menu"
         "$mainMod, P, pseudo, # dwindle"
-        "$mainMod, J, togglesplit, # dwindle"
+        "$mainMod, J, layoutmsg, togglesplit # dwindle"
         "$mainMod, l, exec, hyprlock"
         "$mainMod, F, fullscreen"
         "$mainMod, left, movefocus, l"
@@ -377,20 +376,20 @@ in
 
       # windowrule
       windowrule = [
-        "workspace special:chat, class:Slack"
-        "workspace special:chat, class:discord"
-        "workspace special:chat, class:Chromium"
-        "workspace special:chat, class:IRCCloud"
-        "workspace special:chat2, class:thunderbird"
-        "workspace special:chat2, class:Signal"
-        "workspace special:chat2, class:org.telegram.desktop"
-        "workspace special:audio, class:Ardour"
-        "workspace special:audio, class:org.rncbc.qpwgraph"
-        "workspace special:games, class:steam"
-        "suppressevent activate, class:steam"
-        "workspace special:games, class:r2modman"
-        "suppressevent maximize, class:.*"
-        "nofocus,class:^$,title:^$,xwayland:1,floating:1,fullscreen:0,pinned:0"
+        "workspace special:chat, match:class Slack"
+        "workspace special:chat, match:class discord"
+        "workspace special:chat, match:class Chromium"
+        "workspace special:chat, match:class IRCCloud"
+        "workspace special:chat2, match:class thunderbird"
+        "workspace special:chat2, match:class Signal"
+        "workspace special:chat2, match:class org.telegram.desktop"
+        "workspace special:audio, match:class Ardour"
+        "workspace special:audio, match:class org.rncbc.qpwgraph"
+        "workspace special:games, match:class steam"
+        "suppress_event activate, match:class steam"
+        "workspace special:games, match:class r2modman"
+        "suppress_event maximize, match:class .*"
+        "no_focus on, match:class ^$, match:title ^$, match:xwayland 1, match:float 1, match:fullscreen 0, match:pin 0"
 
         # "float,class:^(Viewnior)$"
         # "float,class:^(imv)$"
@@ -473,9 +472,9 @@ in
       ];
 
       layerrule = [
-        "dimaround, vicinae"
-        "dimaround, rofi"
-        "dimaround, swaync-control-center"
+        "dim_around on, match:namespace vicinae"
+        "dim_around on, match:namespace rofi"
+        "dim_around on, match:namespace swaync-control-center"
       ];
 
       # No gaps when only
