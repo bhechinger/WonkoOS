@@ -1,4 +1,5 @@
-{inputs, pkgs, pkgs-unstable, ...}: {
+{ pkgs, ... }:
+{
   programs = {
     hyprland = {
       enable = true;

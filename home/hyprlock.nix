@@ -1,4 +1,4 @@
-{ pkgs, unstable-pkgs, ... }:
+{ unstable-pkgs, ... }:
 {
   programs = {
     hyprlock.enable = true;
