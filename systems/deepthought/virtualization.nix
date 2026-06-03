@@ -1,14 +1,21 @@
-{ inputs, config, lib, pkgs, ... }:
+{
+  inputs,
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 {
   virtualisation = {
     containers.enable = true;
     docker = {
-        autoPrune.enable = true;
-        enable = true;
-        #enableNvidia = true;
-        storageDriver = "zfs";
+      autoPrune.enable = true;
+      enable = true;
+      #enableNvidia = true;
+      storageDriver = "zfs";
     };
+    podman.enable = true;
     libvirtd = {
       enable = true;
       qemu = {

@@ -23,7 +23,7 @@
         wofi
         bibata-cursors
         system-config-printer
-	yubioath-flutter
+        yubioath-flutter
 
         fira-code
         fira-code-symbols

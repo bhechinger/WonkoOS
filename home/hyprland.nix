@@ -55,7 +55,7 @@ in
         "[workspace special:chat2 silent] signal-desktop"
         "[workspace special:chat2 silent] telegram"
 
-        "[workspace special:audio silent] ardour8 Default"
+        "[workspace special:audio silent] ardour9 Default"
         "[workspace special:audio silent] qpwgraph"
 
         #"[workspace special:games silent] steam"
@@ -187,7 +187,7 @@ in
         "$mainMod, Space, exec, $menu"
         "$mainMod, P, pseudo, # dwindle"
         "$mainMod, J, layoutmsg, togglesplit # dwindle"
-        "$mainMod, l, exec, hyprlock"
+        "$mainMod, l, exec, lock-screen"
         "$mainMod, F, fullscreen"
         "$mainMod, left, movefocus, l"
         "$mainMod, right, movefocus, r"

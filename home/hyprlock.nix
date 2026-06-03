@@ -1,5 +1,46 @@
-{ unstable-pkgs, ... }:
+{ pkgs, unstable-pkgs, ... }:
+let
+  lockScreen = pkgs.writeShellScriptBin "lock-screen" ''
+    if pgrep -x hyprlock >/dev/null; then
+      exit 0
+    fi
+
+    exec hyprlock
+  '';
+in
 {
+  home.packages = [ lockScreen ];
+
+  services.hypridle = {
+    enable = true;
+    package = unstable-pkgs.hypridle;
+    systemdTarget = "hyprland-session.target";
+    settings = {
+      general = {
+        after_sleep_cmd = "hyprctl dispatch dpms on";
+        ignore_dbus_inhibit = false;
+        lock_cmd = "${lockScreen}/bin/lock-screen";
+      };
+
+      listener = [
+        {
+          timeout = 600;
+          on-timeout = "pgrep -x hyprlock >/dev/null && hyprctl dispatch dpms off";
+          on-resume = "hyprctl dispatch dpms on";
+        }
+        {
+          timeout = 1200;
+          on-timeout = "${lockScreen}/bin/lock-screen";
+        }
+        {
+          timeout = 1800;
+          on-timeout = "hyprctl dispatch dpms off";
+          on-resume = "hyprctl dispatch dpms on";
+        }
+      ];
+    };
+  };
+
   programs = {
     hyprlock.enable = true;
     hyprlock.package = unstable-pkgs.hyprlock;

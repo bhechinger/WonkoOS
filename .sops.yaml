@@ -1,0 +1,5 @@
+keys:
+  - &yubikey 1095C1E7CE8B8EBCCA52E07F8167F649B348E6CE
+creation_rules:
+  - path_regex: home/secrets/.*\.sops$
+    pgp: *yubikey

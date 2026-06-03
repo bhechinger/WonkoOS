@@ -27,6 +27,7 @@
     gcc
     k8sgpt
     skopeo
+    circleci-cli
   ];
 
   programs = {

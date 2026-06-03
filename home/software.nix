@@ -1,19 +1,15 @@
 {
   pkgs,
   config,
-  unstable-pkgs,
   ...
 }:
 
 {
   home.packages = with pkgs; [
-    chiaki-ng
-    ryubing
-    #    mtr
+    fastfetch
     mtr-gui
     rar
     p7zip
-    unstable-pkgs.mame
     qbittorrent
     irccloud
     dig
@@ -22,7 +18,6 @@
     unzip
     irssi
     wine64
-    blockbench
     kdePackages.bluedevil
     #coolercontrol.coolercontrol-liqctld
     coolercontrol.coolercontrold
@@ -35,7 +30,6 @@
     krename
     krita
     azahar
-    mindustry
     nvme-cli
     obexftp
     openobex
@@ -48,15 +42,13 @@
     vlc
     poweralertd
     wl-clip-persist
-    r2modman
     telegram-desktop
     signal-desktop
     discord
     slack
-    prismlauncher
-    #temurin-bin
-    javaPackages.compiler.temurin-bin.jdk-25
-    mcpelauncher-ui-qt
+    age
+    bubblewrap
+    sops
   ];
 
   programs = {
@@ -68,15 +60,6 @@
     # thunderbird.enable = true; # This is weird here, need to try again
     chromium.enable = true;
     obs-studio.enable = true;
-    mangohud = {
-      enable = true;
-      enableSessionWide = true;
-      settings = {
-        full = true;
-        vsync = 0;
-        no_display = true;
-      };
-    };
     hyprshot = {
       enable = true;
       saveLocation = "$HOME/Pictures/Screenshots";

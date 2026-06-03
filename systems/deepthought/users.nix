@@ -1,8 +1,19 @@
-{ inputs, config, lib, pkgs, ... }:
+{
+  inputs,
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 {
   security.pam.loginLimits = [
-    { domain = "wonko"; item = "nofile"; type = "hard"; value = "524288"; }
+    {
+      domain = "wonko";
+      item = "nofile";
+      type = "hard";
+      value = "524288";
+    }
   ];
 
   users.users = {
@@ -10,6 +21,7 @@
       isNormalUser = true;
       description = "Brian Hechinger";
       shell = pkgs.zsh;
+      linger = true;
       extraGroups = [
         "wheel"
         "audio"
@@ -21,8 +33,8 @@
         "onepassword"
         "onepassword-cli"
         "qemu-libvirtd"
-	"lp"
-	"scanner"
+        "lp"
+        "scanner"
       ];
       openssh.authorizedKeys.keys = [
         "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDCjP0bzRDkAIZAp6uLfmmp99FKq0TxIAdAlI5d7tcJYtUyf4nt8NXC+gbnowkh57m43vgimKl9YmGwmX3X+zEnBJV0orcCqP0wTe10xSBhii8gSeKxmyAmfwHN+t4TDPDC3pXamGYDR22N+2RD6oXjIW44Z7SdFhTGIHwlRUDTCYv4D3QaFTfBKvaqOl0D+qFzJwwR0gVIp/mnNlPOzzl6VoM4u0m4fpWcuq0lHZnjSlNJsE8x4/uOh9zCXbi58Vha8POIhh2WPkpAONP4UbVPkyI22EWSxJbOuFsDeKL/DkCvfnCDBJpOd9l6HUmwZ0pHXb1lON+H61+wKlQcBFRPdlWs8KgpCJq11kuRD4pTB7HfH195uytcV02vcy2Ye2YLaOKC+sI0SP5xz99CYeR9sxCe3zg3OoRjQqO5J+fMVb0xQvWr549I42KqP4jlXS0Jgb8XX/nTuu64AK4zi4eX97GQIOoA9W+T6kliInGZWBjpMv2tOHh6B8D4OtZHJuT9jaeE/hvDLW1iFb+wQG8x6FNmeaFu/5+3sliAHJbxzaxRT9S6okYo3bR+lRE2dlKYn3QWLeOn/yRacFQapA+Cl14OqyxxP9iU9BOg7XJcvIAl22cFXaK3zm/4iy36UNjbu+zRuv/dXBytAEc1C7CsRqoiGhJhjrzRQ3ogTCfITw== wonko@4mlunch.net"

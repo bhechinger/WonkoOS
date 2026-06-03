@@ -14,6 +14,11 @@
     };
 
     auto-splice.url = "github:zenith-network/auto-splice";
+
+    sops-nix = {
+      url = "github:Mic92/sops-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -22,6 +27,7 @@
       unstable-nixpkgs,
       home-manager,
       auto-splice,
+      sops-nix,
       ...
     }:
     let
@@ -47,6 +53,7 @@
           extraSpecialArgs = {
             inherit unstable-pkgs;
             inherit auto-splice;
+            inherit sops-nix;
           };
           modules = [
             ./home.nix
@@ -59,6 +66,8 @@
             ./desktop.nix
             ./nix_tools.nix
             ./zenith.nix
+            ./games.nix
+            ./circleci-runner.nix
           ];
         };
       };
