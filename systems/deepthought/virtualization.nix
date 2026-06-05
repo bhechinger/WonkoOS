@@ -1,8 +1,4 @@
 {
-  inputs,
-  config,
-  lib,
-  pkgs,
   ...
 }:
 
@@ -15,7 +11,9 @@
       #enableNvidia = true;
       storageDriver = "zfs";
     };
-    podman.enable = true;
+    podman = {
+      enable = true;
+    };
     libvirtd = {
       enable = true;
       qemu = {

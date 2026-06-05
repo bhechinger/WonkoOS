@@ -49,6 +49,7 @@
     age
     bubblewrap
     sops
+    gimp
   ];
 
   programs = {
