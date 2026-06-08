@@ -1,4 +1,10 @@
-{ inputs, config, lib, pkgs, ... }:
+{
+  inputs,
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 {
   security.rtkit.enable = true;
@@ -6,7 +12,7 @@
   musnix = {
     enable = true;
     ffado.enable = true;
-    soundcardPciId = "08:00.0";
+    soundcardPciId = "06:00.0";
     rtcqs.enable = true;
     rtirq = {
       resetAll = 1;
@@ -28,6 +34,20 @@
       pulse.enable = true;
       jack.enable = true;
       socketActivation = true;
+      wireplumber.extraConfig."51-saffire-headroom" = {
+        "monitor.alsa.rules" = [
+          {
+            matches = [
+              {
+                "node.name" = "~alsa_(input|output).firewire-0x00130e0401c04de0.*";
+              }
+            ];
+            actions.update-props = {
+              "api.alsa.headroom" = 1024;
+            };
+          }
+        ];
+      };
     };
   };
 

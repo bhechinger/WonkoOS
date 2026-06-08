@@ -50,6 +50,8 @@
     bubblewrap
     sops
     gimp
+    inxi
+    mesa-demos
   ];
 
   programs = {
