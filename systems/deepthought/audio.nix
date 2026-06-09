@@ -72,6 +72,13 @@
     };
   };
 
+  systemd.services."user@".serviceConfig = {
+    LimitMEMLOCK = "infinity";
+    LimitRTPRIO = 95;
+    LimitNICE = "-11";
+    RestrictRealtime = false;
+  };
+
   environment.systemPackages = with pkgs; [
     alsa-utils
     alsa-lib
