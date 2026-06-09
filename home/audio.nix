@@ -1,27 +1,10 @@
-{
-  inputs,
-  config,
-  lib,
-  pkgs,
-  ...
-}:
-let
-  ardourPipewire = pkgs.symlinkJoin {
-    name = "ardour-pipewire";
-    paths = [ pkgs.ardour ];
-    buildInputs = [ pkgs.makeWrapper ];
-    postBuild = ''
-      wrapProgram $out/bin/ardour9 \
-        --prefix LD_LIBRARY_PATH : ${pkgs.pipewire.jack}/lib
-    '';
-  };
-in
-
+{ pkgs, ... }:
 {
   home.packages = with pkgs; [
     carla
     qpwgraph
-    ardourPipewire
+    ardour
+    rnnoise-plugin.lv2
     lmms
     lsp-plugins
     show-midi
