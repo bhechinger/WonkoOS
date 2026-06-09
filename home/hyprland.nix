@@ -55,7 +55,7 @@ in
         "[workspace special:chat2 silent] signal-desktop"
         "[workspace special:chat2 silent] telegram"
 
-        "[workspace special:audio silent] ${pkgs.pipewire.jack}/bin/pw-jack ${pkgs.ardour}/bin/ardour9 /home/wonko/Default"
+        "[workspace special:audio silent] ardour9 /home/wonko/Default"
         "[workspace special:audio silent] qpwgraph"
 
         #"[workspace special:games silent] steam"

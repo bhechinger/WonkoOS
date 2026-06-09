@@ -1,9 +1,20 @@
 { pkgs, ... }:
+let
+  ardourPipewire = pkgs.symlinkJoin {
+    name = "ardour-pipewire";
+    paths = [ pkgs.ardour ];
+    buildInputs = [ pkgs.makeWrapper ];
+    postBuild = ''
+      wrapProgram $out/bin/ardour9 \
+        --prefix LD_LIBRARY_PATH : ${pkgs.pipewire.jack}/lib
+    '';
+  };
+in
 {
   home.packages = with pkgs; [
     carla
     qpwgraph
-    ardour
+    ardourPipewire
     pipewire.jack
     rnnoise-plugin.lv2
     lmms
@@ -14,20 +25,65 @@
     spotify
   ];
 
-  home.file.".local/share/applications/ardour9.desktop".text = ''
-    [Desktop Entry]
-    Name=Ardour
-    Comment=Ardour Digital Audio Workstation
-    Exec=${pkgs.pipewire.jack}/bin/pw-jack ${pkgs.ardour}/bin/ardour9 /home/wonko/Default
-    Icon=ardour9
-    Terminal=false
-    MimeType=application/x-ardour;
-    Type=Application
-    Categories=AudioVideo;Audio;AudioEditing;X-Recorders;X-Multitrack;X-Jack;
-    StartupWMClass=Ardour
-    X-NSM-Capable=true
-    X-NSM-Exec=${pkgs.pipewire.jack}/bin/pw-jack ${pkgs.ardour}/bin/ardour9
-  '';
+  xdg.configFile."pipewire/pipewire.conf.d/10-null-sink.conf" = {
+    force = true;
+    text = ''
+      context.objects = [
+          {   factory = adapter
+              args = {
+                 factory.name     = support.null-audio-sink
+                 node.name        = "System Sounds"
+                 node.description = "System Sounds"
+                 media.class      = Audio/Sink
+                 object.linger    = true
+                 audio.position   = [ FL FR ]
+                 monitor.channel-volumes = true
+              }
+          }
+          {   factory = adapter
+              args = {
+                 factory.name     = support.null-audio-sink
+                 node.name        = "Games"
+                 node.description = "Games"
+                 media.class      = Audio/Sink
+                 object.linger    = true
+                 audio.position   = [ FL FR ]
+                 monitor.channel-volumes = true
+              }
+          }
+          {   factory = adapter
+              args = {
+                 factory.name     = support.null-audio-sink
+                 node.name        = "Music"
+                 node.description = "Music"
+                 media.class      = Audio/Sink
+                 object.linger    = true
+                 audio.position   = [ FL FR ]
+                 monitor.channel-volumes = true
+              }
+          }
+      ]
+    '';
+  };
+
+  xdg.configFile."pipewire/pipewire.conf.d/11-null-source.conf" = {
+    force = true;
+    text = ''
+      context.objects = [
+          {   factory = adapter
+              args = {
+                 factory.name     = support.null-audio-sink
+                 node.name        = "Ardour"
+                 node.description = "Ardour"
+                 media.class      = Audio/Source/Virtual
+                 object.linger    = true
+                 audio.position   = [ FL FR ]
+                 monitor.channel-volumes = true
+              }
+          }
+      ]
+    '';
+  };
 
   services = {
     spotifyd = {
