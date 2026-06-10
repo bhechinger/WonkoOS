@@ -10,66 +10,8 @@ let
     '';
   };
 
-  battletechGamesRule = ''
-    stream.rules = [
-      {
-        matches = [
-          {
-            application.name = "BattleTech"
-            media.class = "Stream/Output/Audio"
-          }
-          {
-            node.name = "BattleTech"
-            media.class = "Stream/Output/Audio"
-          }
-          {
-            application.process.binary = "BattleTech"
-            media.class = "Stream/Output/Audio"
-          }
-        ]
-        actions = {
-          update-props = {
-            target.object = "Games"
-            node.dont-move = true
-            state.restore-target = false
-          }
-        }
-      }
-    ]
-  '';
-
-  saffireClockRule = ''
-    monitor.alsa.rules = [
-      {
-        matches = [
-          {
-            node.name = "alsa_output.firewire-0x00130e0401c04de0.multichannel-output"
-          }
-        ]
-        actions = {
-          update-props = {
-            priority.driver = 3000
-            priority.session = 3000
-          }
-        }
-      }
-      {
-        matches = [
-          {
-            node.name = "alsa_input.firewire-0x00130e0401c04de0.multichannel-input"
-          }
-          {
-            node.name = "alsa_input.usb-HD_Web_Camera_HD_Web_Camera_Ucamera001-02.mono-fallback"
-          }
-        ]
-        actions = {
-          update-props = {
-            priority.driver = 100
-          }
-        }
-      }
-    ]
-  '';
+  battletechGamesRule = builtins.readFile ./wireplumber/battletech-games.conf;
+  saffireClockRule = builtins.readFile ./wireplumber/saffire-clock.conf;
 
 in
 {
@@ -159,62 +101,12 @@ in
 
   xdg.configFile."pipewire/pipewire.conf.d/10-null-sink.conf" = {
     force = true;
-    text = ''
-      context.objects = [
-          {   factory = adapter
-              args = {
-                 factory.name     = support.null-audio-sink
-                 node.name        = "System Sounds"
-                 node.description = "System Sounds"
-                 media.class      = Audio/Sink
-                 object.linger    = true
-                 audio.position   = [ FL FR ]
-                 monitor.channel-volumes = true
-              }
-          }
-          {   factory = adapter
-              args = {
-                 factory.name     = support.null-audio-sink
-                 node.name        = "Games"
-                 node.description = "Games"
-                 media.class      = Audio/Sink
-                 object.linger    = true
-                 audio.position   = [ FL FR ]
-                 monitor.channel-volumes = true
-              }
-          }
-          {   factory = adapter
-              args = {
-                 factory.name     = support.null-audio-sink
-                 node.name        = "Music"
-                 node.description = "Music"
-                 media.class      = Audio/Sink
-                 object.linger    = true
-                 audio.position   = [ FL FR ]
-                 monitor.channel-volumes = true
-              }
-          }
-      ]
-    '';
+    text = builtins.readFile ./pipewire/10-null-sink.conf;
   };
 
   xdg.configFile."pipewire/pipewire.conf.d/11-null-source.conf" = {
     force = true;
-    text = ''
-      context.objects = [
-          {   factory = adapter
-              args = {
-                 factory.name     = support.null-audio-sink
-                 node.name        = "Ardour"
-                 node.description = "Ardour"
-                 media.class      = Audio/Source/Virtual
-                 object.linger    = true
-                 audio.position   = [ FL FR ]
-                 monitor.channel-volumes = true
-              }
-          }
-      ]
-    '';
+    text = builtins.readFile ./pipewire/11-null-source.conf;
   };
 
   xdg.configFile."wireplumber/wireplumber.conf.d/51-saffire-clock.conf".text = saffireClockRule;
