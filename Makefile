@@ -1,9 +1,13 @@
-.PHONY: update
-boot:
+.PHONY: update hugepages-inputs
+
+hugepages-inputs:
+	./scripts/generate_hugepages_inputs.sh
+
+boot: hugepages-inputs
 	nh os boot -H deepthought .
 
-switch:
+switch: hugepages-inputs
 	nh os switch -H deepthought .
 
-build:
+build: hugepages-inputs
 	nh os build -H deepthought .

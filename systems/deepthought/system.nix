@@ -3,6 +3,9 @@
   ...
 }:
 
+let
+  hugepages = import ../../common/hugepages.nix (import ./hugepages-inputs.nix);
+in
 {
   boot = {
     loader = {
@@ -36,9 +39,7 @@
     };
     supportedFilesystems = [ "nfs" ];
     kernel = {
-      sysctl = {
-        "vm.nr_hugepages" = 45;
-      };
+      sysctl = hugepages.sysctl;
     };
     kernelParams = [
       "mitigations=off"
@@ -94,6 +95,11 @@
       experimental-features = [
         "nix-command"
         "flakes"
+      ];
+      trusted-users = [
+        "root"
+        "wonko"
+        "@wheel"
       ];
       substituters = [
         "https://hyprland.cachix.org"
