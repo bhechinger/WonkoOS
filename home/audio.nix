@@ -1,4 +1,4 @@
-{ pkgs, config, ... }:
+{ pkgs, ... }:
 let
   ardourPipewire = pkgs.symlinkJoin {
     name = "ardour-pipewire";
@@ -142,6 +142,28 @@ in
       Type=Application
       Version=1.0
     '';
+  };
+
+  xdg.desktopEntries."org.rncbc.qpwgraph" = {
+    name = "qpwgraph";
+    genericName = "PipeWire Graph Viewer";
+    comment = "qpwgraph is a PipeWire graph Qt GUI interface";
+    exec = "qpwgraph -d";
+    icon = "org.rncbc.qpwgraph";
+    terminal = false;
+    startupNotify = true;
+    categories = [
+      "AudioVideo"
+      "Audio"
+      "Video"
+      "Midi"
+      "X-Alsa"
+      "X-PipeWire"
+      "Qt"
+    ];
+    settings = {
+      Keywords = "PipeWire;MIDI;ALSA;JACK;Qt;";
+    };
   };
 
   systemd.user.services.ardour-default = {
