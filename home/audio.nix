@@ -11,8 +11,8 @@ let
   };
 
   battletechGamesRule = builtins.readFile ./wireplumber/battletech-games.conf;
-  firefoxToArdourRule = builtins.readFile ./wireplumber/firefox-to-ardour.conf;
-  firefoxToArdourScript = builtins.readFile ./wireplumber/firefox-to-ardour.lua;
+  routeToArdourRule = builtins.readFile ./wireplumber/route-to-ardour.conf;
+  routeToArdourScript = builtins.readFile ./wireplumber/route-to-ardour.lua;
   saffireClockRule = builtins.readFile ./wireplumber/saffire-clock.conf;
 
 in
@@ -111,10 +111,9 @@ in
     text = builtins.readFile ./pipewire/11-null-source.conf;
   };
 
-  xdg.dataFile."wireplumber/scripts/firefox-to-ardour.lua".text = firefoxToArdourScript;
+  xdg.dataFile."wireplumber/scripts/route-to-ardour.lua".text = routeToArdourScript;
 
-  xdg.configFile."wireplumber/wireplumber.conf.d/50-firefox-to-ardour.conf".text =
-    firefoxToArdourRule;
+  xdg.configFile."wireplumber/wireplumber.conf.d/50-route-to-ardour.conf".text = routeToArdourRule;
   xdg.configFile."wireplumber/wireplumber.conf.d/51-saffire-clock.conf".text = saffireClockRule;
 
   # I don't know why all three of these are required, but it doesn't work without them.

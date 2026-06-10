@@ -30,7 +30,26 @@ local function is_firefox_node(node)
     or props["application.process.binary"] == "firefox"
 end
 
-local function firefox_output_channel(port)
+local function is_spotify_node(node)
+  local props = node.properties
+
+  return props["application.name"] == "spotify"
+    or props["node.name"] == "spotify"
+    or props["application.process.binary"] == ".spotify-wrapped"
+    or props["application.process.binary"] == "spotify"
+end
+
+local function route_for_node(node)
+  if is_firefox_node(node) then
+    return "Firefox"
+  elseif is_spotify_node(node) then
+    return "Music"
+  end
+
+  return nil
+end
+
+local function output_route(port)
   if port.properties["port.direction"] ~= "out" then
     return nil
   end
@@ -40,15 +59,16 @@ local function firefox_output_channel(port)
     return nil
   end
 
-  if not is_firefox_node(node) then
+  local bus = route_for_node(node)
+  if not bus then
     return nil
   end
 
   local channel = port.properties["audio.channel"]
   if channel == "FL" then
-    return "1"
+    return bus, "1"
   elseif channel == "FR" then
-    return "2"
+    return bus, "2"
   end
 
   return nil
@@ -75,15 +95,15 @@ local function create_link(output_port, input_port)
     ["link.input.port"] = input_port.properties["object.id"],
     ["object.id"] = nil,
     ["object.linger"] = true,
-    ["node.description"] = "firefox to ardour routing",
+    ["node.description"] = "browser/media to ardour routing",
   })
 
   link:activate(1)
 end
 
-local function each_ardour_firefox_input(channel, callback)
+local function each_ardour_input(bus, channel, callback)
   for port in ports:iterate {
-    Constraint { "port.alias", "equals", "ardour:Firefox/audio_in " .. channel },
+    Constraint { "port.alias", "equals", "ardour:" .. bus .. "/audio_in " .. channel },
     Constraint { "port.direction", "equals", "in" },
   } do
     callback(port)
@@ -126,24 +146,26 @@ local function remove_route(output_alias, input_alias)
   end)
 end
 
-local function ensure_firefox_to_ardour(port)
-  local channel = firefox_output_channel(port)
-  if not channel then
+local function ensure_to_ardour(port)
+  local bus, channel = output_route(port)
+  if not bus or not channel then
     return
   end
 
-  each_ardour_firefox_input(channel, function(input_port)
+  each_ardour_input(bus, channel, function(input_port)
     create_link(port, input_port)
   end)
 end
 
 local function ensure_routes()
   for port in ports:iterate() do
-    ensure_firefox_to_ardour(port)
+    ensure_to_ardour(port)
   end
 
   remove_route("Firefox:output_FL", "System Sounds:playback_FL")
   remove_route("Firefox:output_FR", "System Sounds:playback_FR")
+  remove_route("spotify:output_FL", "Music:playback_FL")
+  remove_route("spotify:output_FR", "Music:playback_FR")
 end
 
 nodes:connect("object-added", ensure_routes)
