@@ -35,6 +35,11 @@
       luks.mitigateDMAAttacks = false;
     };
     supportedFilesystems = [ "nfs" ];
+    kernel = {
+      sysctl = {
+        "vm.nr_hugepages" = 45;
+      };
+    };
     kernelParams = [
       "mitigations=off"
       "preempt=full"

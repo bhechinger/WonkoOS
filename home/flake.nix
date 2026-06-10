@@ -68,6 +68,7 @@
             ./zenith.nix
             ./games.nix
             ./circleci-runner.nix
+            ./gamedev.nix
           ];
         };
       };

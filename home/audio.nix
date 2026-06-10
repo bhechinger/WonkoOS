@@ -85,6 +85,26 @@ in
     '';
   };
 
+  xdg.configFile."wireplumber/wireplumber.conf.d/52-battletech-games.conf".text = ''
+    stream.rules = [
+      {
+        matches = [
+          {
+            application.process.binary = "BattleTech"
+            media.class = "Stream/Output/Audio"
+          }
+        ]
+        actions = {
+          update-props = {
+            target.object = "Games"
+            node.dont-move = true
+            state.restore-target = false
+          }
+        }
+      }
+    ]
+  '';
+
   services = {
     spotifyd = {
       enable = true;
