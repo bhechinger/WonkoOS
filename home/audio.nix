@@ -56,6 +56,41 @@ let
     ]
   '';
 
+  pulseDirectStreamsRule = ''
+    stream.rules = [
+      {
+        matches = [
+          {
+            application.name = "Firefox"
+            media.class = "Stream/Output/Audio"
+          }
+          {
+            application.process.binary = "firefox"
+            media.class = "Stream/Output/Audio"
+          }
+          {
+            application.name = "spotify"
+            media.class = "Stream/Output/Audio"
+          }
+          {
+            application.process.binary = ".spotify-wrapped"
+            media.class = "Stream/Output/Audio"
+          }
+          {
+            application.process.binary = "spotify"
+            media.class = "Stream/Output/Audio"
+          }
+        ]
+        actions = {
+          update-props = {
+            node.autoconnect = false
+            state.restore-target = false
+          }
+        }
+      }
+    ]
+  '';
+
 in
 {
   home.packages = with pkgs; [
@@ -186,10 +221,10 @@ in
   xdg.configFile."wireplumber/wireplumber.conf.d/52-battletech-games.conf".text = battletechGamesRule;
   xdg.configFile."pipewire/client.conf.d/53-ardour-native-direct-streams.conf".text =
     nativeDirectStreamsRule;
+  xdg.configFile."pipewire/pipewire-pulse.conf.d/53-ardour-pulse-direct-streams.conf".text =
+    pulseDirectStreamsRule;
 
   xdg.configFile."wireplumber/scripts/89-ardour-default-routing.lua".text = ''
-    local lutils = require ("linking-utils")
-
     local nodes = ObjectManager {
       Interest {
         type = "node",
@@ -277,8 +312,19 @@ in
         or props["application.process.binary"] == "firefox"
     end
 
+    local function is_spotify_stream_props(props)
+      return props["application.name"] == "spotify"
+        or props["node.name"] == "spotify"
+        or props["application.process.binary"] == ".spotify-wrapped"
+        or props["application.process.binary"] == "spotify"
+    end
+
     local function is_firefox_stream(node)
       return is_firefox_stream_props(node.properties)
+    end
+
+    local function is_spotify_stream(node)
+      return is_spotify_stream_props(node.properties)
     end
 
     local function is_native_output_stream(node)
@@ -294,7 +340,7 @@ in
 
       if is_firefox_stream(node) then
         return "System"
-      elseif application_name == "spotify" or node_name == "spotify" or media_role == "Music" then
+      elseif is_spotify_stream(node) or application_name == "spotify" or node_name == "spotify" or media_role == "Music" then
         return "Music"
       end
 
@@ -311,7 +357,7 @@ in
         return nil
       end
 
-      if not is_native_output_stream(node) and not is_firefox_stream(node) then
+      if not is_native_output_stream(node) and not is_firefox_stream(node) and not is_spotify_stream(node) then
         return nil
       end
 
@@ -348,24 +394,6 @@ in
       end
     end
 
-    SimpleEventHook {
-      name = "custom/skip-firefox-default-target",
-      before = "linking/find-defined-target",
-      interests = {
-        EventInterest {
-          Constraint { "event.type", "=", "select-target" },
-        },
-      },
-      execute = function(event)
-        local _, _, _, si_props = lutils:unwrap_select_target_event(event)
-
-        if si_props["media.class"] == "Stream/Output/Audio"
-          and si_props["client.api"] == "pipewire-pulse"
-          and is_firefox_stream_props(si_props) then
-          event:stop_processing()
-        end
-      end
-    }:register()
 
     ports:connect("object-added", ensure_routes)
     links:connect("object-added", ensure_routes)
