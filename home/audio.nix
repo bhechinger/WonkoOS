@@ -9,6 +9,33 @@ let
         --prefix LD_LIBRARY_PATH : ${pkgs.pipewire.jack}/lib
     '';
   };
+  battletechGamesRule = ''
+    stream.rules = [
+      {
+        matches = [
+          {
+            application.name = "BattleTech"
+            media.class = "Stream/Output/Audio"
+          }
+          {
+            node.name = "BattleTech"
+            media.class = "Stream/Output/Audio"
+          }
+          {
+            application.process.binary = "BattleTech"
+            media.class = "Stream/Output/Audio"
+          }
+        ]
+        actions = {
+          update-props = {
+            target.object = "Games"
+            node.dont-move = true
+            state.restore-target = false
+          }
+        }
+      }
+    ]
+  '';
 in
 {
   home.packages = with pkgs; [
@@ -24,6 +51,29 @@ in
     pavucontrol
     spotify
   ];
+
+  systemd.user.services.ardour-default = {
+    Unit = {
+      Description = "Ardour Default session";
+      Wants = [
+        "pipewire.service"
+        "wireplumber.service"
+      ];
+      After = [
+        "pipewire.service"
+        "wireplumber.service"
+      ];
+      PartOf = [ "hyprland-session.target" ];
+    };
+
+    Service = {
+      ExecStart = "${ardourPipewire}/bin/ardour9 /home/wonko/Default";
+      Restart = "on-failure";
+      RestartSec = 5;
+    };
+
+    Install.WantedBy = [ "hyprland-session.target" ];
+  };
 
   xdg.configFile."pipewire/pipewire.conf.d/10-null-sink.conf" = {
     force = true;
@@ -85,25 +135,11 @@ in
     '';
   };
 
-  xdg.configFile."wireplumber/wireplumber.conf.d/52-battletech-games.conf".text = ''
-    stream.rules = [
-      {
-        matches = [
-          {
-            application.process.binary = "BattleTech"
-            media.class = "Stream/Output/Audio"
-          }
-        ]
-        actions = {
-          update-props = {
-            target.object = "Games"
-            node.dont-move = true
-            state.restore-target = false
-          }
-        }
-      }
-    ]
-  '';
+  xdg.configFile."pipewire/client.conf.d/52-battletech-games.conf".text = battletechGamesRule;
+
+  xdg.configFile."pipewire/pipewire-pulse.conf.d/52-battletech-games.conf".text = battletechGamesRule;
+
+  xdg.configFile."wireplumber/wireplumber.conf.d/52-battletech-games.conf".text = battletechGamesRule;
 
   services = {
     spotifyd = {
