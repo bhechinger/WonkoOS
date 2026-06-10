@@ -90,6 +90,42 @@ local function each_ardour_firefox_input(channel, callback)
   end
 end
 
+local function each_matching_port(alias, direction, callback)
+  for port in ports:iterate {
+    Constraint { "port.alias", "equals", alias },
+    Constraint { "port.direction", "equals", direction },
+  } do
+    callback(port)
+  end
+end
+
+local function remove_link(link)
+  local removed = pcall(function()
+    link:remove()
+  end)
+
+  if not removed then
+    pcall(function()
+      link:request_destroy()
+    end)
+  end
+end
+
+local function remove_route(output_alias, input_alias)
+  each_matching_port(output_alias, "out", function(output_port)
+    each_matching_port(input_alias, "in", function(input_port)
+      for link in links:iterate {
+        Constraint { "link.output.node", "equals", output_port.properties["node.id"] },
+        Constraint { "link.output.port", "equals", output_port.properties["object.id"] },
+        Constraint { "link.input.node", "equals", input_port.properties["node.id"] },
+        Constraint { "link.input.port", "equals", input_port.properties["object.id"] },
+      } do
+        remove_link(link)
+      end
+    end)
+  end)
+end
+
 local function ensure_firefox_to_ardour(port)
   local channel = firefox_output_channel(port)
   if not channel then
@@ -105,6 +141,9 @@ local function ensure_routes()
   for port in ports:iterate() do
     ensure_firefox_to_ardour(port)
   end
+
+  remove_route("Firefox:output_FL", "System Sounds:playback_FL")
+  remove_route("Firefox:output_FR", "System Sounds:playback_FR")
 end
 
 nodes:connect("object-added", ensure_routes)
