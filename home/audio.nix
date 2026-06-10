@@ -9,6 +9,7 @@ let
         --prefix LD_LIBRARY_PATH : ${pkgs.pipewire.jack}/lib
     '';
   };
+
   battletechGamesRule = ''
     stream.rules = [
       {
@@ -36,6 +37,7 @@ let
       }
     ]
   '';
+
   ardourDefaultRelink = pkgs.writeShellScript "ardour-default-relink" ''
     set -u
 
@@ -192,10 +194,9 @@ in
     '';
   };
 
+  # I don't know why all three of these are required, but it doesn't work without them.
   xdg.configFile."pipewire/client.conf.d/52-battletech-games.conf".text = battletechGamesRule;
-
   xdg.configFile."pipewire/pipewire-pulse.conf.d/52-battletech-games.conf".text = battletechGamesRule;
-
   xdg.configFile."wireplumber/wireplumber.conf.d/52-battletech-games.conf".text = battletechGamesRule;
 
   services = {

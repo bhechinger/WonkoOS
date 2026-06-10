@@ -101,6 +101,7 @@
 
           clock = {
             timezone = "Europe/Lisbon";
+            format = "{:%Y-%m-%d %H:%M}";
             tooltip-format = "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>";
             format-alt = "{:%Y-%m-%d}";
           };
@@ -120,13 +121,27 @@
             critical-threshold = 80;
             # "format-critical" = "{temperatureC}°C {icon}";
             format = "{temperatureC}°C {icon}";
-            format-icons = ["" "" ""];
+            format-icons = [
+              ""
+              ""
+              ""
+            ];
           };
 
           backlight = {
             # "device" = "acpi_video1";
             format = "{percent}% {icon}";
-            format-icons = ["" "" "" "" "" "" "" "" ""];
+            format-icons = [
+              ""
+              ""
+              ""
+              ""
+              ""
+              ""
+              ""
+              ""
+              ""
+            ];
           };
 
           battery = {
@@ -142,7 +157,13 @@
             format-alt = "{time} {icon}";
             # "format-good" = ""; // An empty format will hide the module
             # "format-full" = "";
-            format-icons = ["" "" "" "" ""];
+            format-icons = [
+              ""
+              ""
+              ""
+              ""
+              ""
+            ];
           };
 
           #power-profiles-daemon = {
@@ -182,22 +203,24 @@
               phone = "";
               portable = "";
               car = "";
-              default = ["" "" ""];
+              default = [
+                ""
+                ""
+                ""
+              ];
             };
             on-click = "pavucontrol";
           };
 
           "custom/media" = {
-            format = "{icon} {text}";
-            return-type = "json";
-            max-length = 40;
-            format-icons = {
-              spotify = "";
-              default = "🎜";
-            };
-            escape = true;
-            exec = "$HOME/.config/waybar/mediaplayer.py 2> /dev/null"; # Script in resources folder
-            # exec" = "$HOME/.config/waybar/mediaplayer.py --player spotify 2> /dev/null" // Filter player based on name
+            format = " {}";
+            exec = "${pkgs.playerctl}/bin/playerctl --player=spotify metadata --format '{{artist}} - {{title}}'";
+            exec-if = "${pkgs.playerctl}/bin/playerctl --player=spotify status";
+            interval = 5;
+            max-length = 60;
+            tooltip = false;
+            on-click = "${pkgs.playerctl}/bin/playerctl --player=spotify play-pause";
+            on-click-right = "${pkgs.playerctl}/bin/playerctl --player=spotify next";
           };
 
           #"custom/power" = {
