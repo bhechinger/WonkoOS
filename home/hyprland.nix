@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ ... }:
 let
   browser = "firefox";
   terminal = "kitty";
