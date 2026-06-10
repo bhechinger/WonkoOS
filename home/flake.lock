@@ -216,6 +216,27 @@
         "type": "github"
       }
     },
+    "home-manager_2": {
+      "inputs": {
+        "nixpkgs": [
+          "spotify-midi-control",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1781102921,
+        "narHash": "sha256-RnV6ngnudMp9tmfl9Wyrjnk84NkkzbJpuJKQ7bp0wHE=",
+        "owner": "nix-community",
+        "repo": "home-manager",
+        "rev": "74887eaee2995bbdba1f0fbd64e43c1d14a86eca",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "repo": "home-manager",
+        "type": "github"
+      }
+    },
     "nix": {
       "inputs": {
         "flake-parts": "flake-parts_2",
@@ -328,6 +349,22 @@
         "url": "https://flakehub.com/f/NixOS/nixpkgs/0"
       }
     },
+    "nixpkgs_4": {
+      "locked": {
+        "lastModified": 1780749050,
+        "narHash": "sha256-3av0pIjlOWQ6rDbNOmpUSvbNnJkGORQKKjb4LtCZsIY=",
+        "owner": "nixos",
+        "repo": "nixpkgs",
+        "rev": "a799d3e3886da994fa307f817a6bc705ae538eeb",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nixos",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "auto-splice": "auto-splice",
@@ -335,6 +372,7 @@
         "home-manager": "home-manager",
         "nixpkgs": "nixpkgs_3",
         "sops-nix": "sops-nix",
+        "spotify-midi-control": "spotify-midi-control",
         "unstable-nixpkgs": "unstable-nixpkgs"
       }
     },
@@ -376,6 +414,26 @@
       "original": {
         "owner": "Mic92",
         "repo": "sops-nix",
+        "type": "github"
+      }
+    },
+    "spotify-midi-control": {
+      "inputs": {
+        "home-manager": "home-manager_2",
+        "nixpkgs": "nixpkgs_4"
+      },
+      "locked": {
+        "lastModified": 1781104153,
+        "narHash": "sha256-umzCnJF4KZ+eTf0Rjs8JdbMR/2Nc1wqTjvvf9cgI4NE=",
+        "owner": "bhechinger",
+        "repo": "spotify-midi-control",
+        "rev": "bd3b5e718281b4212593f83052a8cbed502e9c8d",
+        "type": "github"
+      },
+      "original": {
+        "owner": "bhechinger",
+        "ref": "modernization",
+        "repo": "spotify-midi-control",
         "type": "github"
       }
     },

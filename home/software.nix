@@ -48,7 +48,7 @@
     discord
     slack
     age
-    bubblewrap
+    #bubblewrap
     sops
     gimp
     inxi

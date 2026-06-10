@@ -19,6 +19,8 @@
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    spotify-midi-control.url = "github:bhechinger/spotify-midi-control/modernization";
   };
 
   outputs =
@@ -28,6 +30,7 @@
       home-manager,
       auto-splice,
       sops-nix,
+      spotify-midi-control,
       ...
     }:
     let
@@ -54,8 +57,10 @@
             inherit unstable-pkgs;
             inherit auto-splice;
             inherit sops-nix;
+            inherit spotify-midi-control;
           };
           modules = [
+            spotify-midi-control.homeManagerModules.default
             ./home.nix
             ./zsh.nix
             ./atuin.nix

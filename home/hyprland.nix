@@ -55,7 +55,7 @@ in
         "[workspace special:chat2 silent] signal-desktop"
         "[workspace special:chat2 silent] telegram"
 
-        "[workspace special:audio silent] qpwgraph"
+        "[workspace special:audio silent] qpwgraph -d"
 
         #"[workspace special:games silent] steam"
         #"[workspace special:games silent] r2modman"
