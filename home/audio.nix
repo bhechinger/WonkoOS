@@ -10,46 +10,6 @@ let
     '';
   };
 
-  ardourRelink = pkgs.writeShellScript "ardour-relink" ''
-    set -u
-
-    pw_link=${pkgs.pipewire}/bin/pw-link
-
-    link() {
-      "$pw_link" "$1" "$2" 2>/dev/null || true
-    }
-
-    unlink() {
-      "$pw_link" -d "$1" "$2" 2>/dev/null || true
-    }
-
-    while true; do
-      link "System Sounds:monitor_FL" "ardour:System/audio_in 1"
-      link "System Sounds:monitor_FR" "ardour:System/audio_in 2"
-      link "Games:monitor_FL" "ardour:Games/audio_in 1"
-      link "Games:monitor_FR" "ardour:Games/audio_in 2"
-      link "Music:monitor_FL" "ardour:Music/audio_in 1"
-      link "Music:monitor_FR" "ardour:Music/audio_in 2"
-      link "alsa_input.firewire-0x00130e0401c04de0.multichannel-input:capture_AUX0" "ardour:Mic/audio_in 1"
-      link "Midi-Bridge:nanoKONTROL2: _ CTRL (capture)" "ardour:MIDI Control In"
-      link "Midi-Bridge:nanoKONTROL2: _ CTRL (capture)" "spotify-midi-control:input_1"
-      link "ardour:Master/audio_out 1" "alsa_output.firewire-0x00130e0401c04de0.multichannel-output:playback_FL"
-      link "ardour:Master/audio_out 2" "alsa_output.firewire-0x00130e0401c04de0.multichannel-output:playback_FR"
-
-      link "Firefox:output_FL" "ardour:System/audio_in 1"
-      link "Firefox:output_FR" "ardour:System/audio_in 2"
-      unlink "Firefox:output_FL" "System Sounds:playback_FL"
-      unlink "Firefox:output_FR" "System Sounds:playback_FR"
-
-      link "spotify:output_FL" "ardour:Music/audio_in 1"
-      link "spotify:output_FR" "ardour:Music/audio_in 2"
-      unlink "spotify:output_FL" "Music:playback_FL"
-      unlink "spotify:output_FR" "Music:playback_FR"
-
-      sleep 2
-    done
-  '';
-
   battletechGamesRule = ''
     stream.rules = [
       {
@@ -192,35 +152,6 @@ in
       RestartSec = 5;
       SuccessExitStatus = "SIGINT";
       TimeoutStopSec = 120;
-    };
-
-    Install.WantedBy = [ "hyprland-session.target" ];
-  };
-
-  systemd.user.services.ardour-relink = {
-    Unit = {
-      Description = "Keep Ardour's default PipeWire links in place";
-      Wants = [
-        "pipewire.service"
-        "wireplumber.service"
-        "ardour-default.service"
-      ];
-      After = [
-        "pipewire.service"
-        "wireplumber.service"
-        "ardour-default.service"
-      ];
-      PartOf = [
-        "hyprland-session.target"
-        "pipewire.service"
-        "wireplumber.service"
-      ];
-    };
-
-    Service = {
-      ExecStart = "${ardourRelink}";
-      Restart = "always";
-      RestartSec = 1;
     };
 
     Install.WantedBy = [ "hyprland-session.target" ];
