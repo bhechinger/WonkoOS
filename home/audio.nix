@@ -38,16 +38,11 @@ let
     ]
   '';
 
-  directStreamsRule = ''
+  nativeDirectStreamsRule = ''
     stream.rules = [
       {
         matches = [
           {
-            application.name = "Firefox"
-            media.class = "Stream/Output/Audio"
-          }
-          {
-            application.name = "spotify"
             media.class = "Stream/Output/Audio"
           }
         ]
@@ -55,7 +50,6 @@ let
           update-props = {
             node.autoconnect = false
             state.restore-target = false
-            node.dont-move = true
           }
         }
       }
@@ -190,14 +184,18 @@ in
   xdg.configFile."pipewire/client.conf.d/52-battletech-games.conf".text = battletechGamesRule;
   xdg.configFile."pipewire/pipewire-pulse.conf.d/52-battletech-games.conf".text = battletechGamesRule;
   xdg.configFile."wireplumber/wireplumber.conf.d/52-battletech-games.conf".text = battletechGamesRule;
-
-  xdg.configFile."pipewire/client.conf.d/53-ardour-direct-streams.conf".text = directStreamsRule;
-  xdg.configFile."pipewire/pipewire-pulse.conf.d/53-ardour-direct-streams.conf".text =
-    directStreamsRule;
-  xdg.configFile."wireplumber/wireplumber.conf.d/53-ardour-direct-streams.conf".text =
-    directStreamsRule;
+  xdg.configFile."pipewire/client.conf.d/53-ardour-native-direct-streams.conf".text =
+    nativeDirectStreamsRule;
 
   xdg.configFile."wireplumber/scripts/89-ardour-default-routing.lua".text = ''
+    local lutils = require ("linking-utils")
+
+    local nodes = ObjectManager {
+      Interest {
+        type = "node",
+      }
+    }
+
     local ports = ObjectManager {
       Interest {
         type = "port",
@@ -217,10 +215,6 @@ in
       { "Games:monitor_FR", "ardour:Games/audio_in 2" },
       { "Music:monitor_FL", "ardour:Music/audio_in 1" },
       { "Music:monitor_FR", "ardour:Music/audio_in 2" },
-      { "Firefox:output_FL", "ardour:System/audio_in 1" },
-      { "Firefox:output_FR", "ardour:System/audio_in 2" },
-      { "spotify:output_FL", "ardour:Music/audio_in 1" },
-      { "spotify:output_FR", "ardour:Music/audio_in 2" },
       { "alsa_input.firewire-0x00130e0401c04de0.multichannel-input:capture_AUX0", "ardour:Mic/audio_in 1" },
       { "Midi-Bridge:nanoKONTROL2: _ CTRL (capture)", "ardour:MIDI Control In" },
       { "ardour:Master/audio_out 1", "alsa_output.firewire-0x00130e0401c04de0.multichannel-output:playback_FL" },
@@ -271,14 +265,112 @@ in
       end)
     end
 
+    local function lookup_node(node_id)
+      return nodes:lookup {
+        Constraint { "object.id", "equals", node_id },
+      }
+    end
+
+    local function is_firefox_stream_props(props)
+      return props["application.name"] == "Firefox"
+        or props["node.name"] == "Firefox"
+        or props["application.process.binary"] == "firefox"
+    end
+
+    local function is_firefox_stream(node)
+      return is_firefox_stream_props(node.properties)
+    end
+
+    local function is_native_output_stream(node)
+      return node.properties["media.class"] == "Stream/Output/Audio"
+        and node.properties["client.api"] ~= "pipewire-pulse"
+        and node.properties["client.api"] ~= "jack"
+    end
+
+    local function direct_stream_bus(node)
+      local application_name = node.properties["application.name"] or ""
+      local node_name = node.properties["node.name"] or ""
+      local media_role = node.properties["media.role"] or ""
+
+      if is_firefox_stream(node) then
+        return "System"
+      elseif application_name == "spotify" or node_name == "spotify" or media_role == "Music" then
+        return "Music"
+      end
+
+      return "System"
+    end
+
+    local function target_for_direct_stream(port)
+      if port.properties["port.direction"] ~= "out" then
+        return nil
+      end
+
+      local node = lookup_node(port.properties["node.id"])
+      if not node then
+        return nil
+      end
+
+      if not is_native_output_stream(node) and not is_firefox_stream(node) then
+        return nil
+      end
+
+      local channel = port.properties["audio.channel"]
+      local bus = direct_stream_bus(node)
+
+      if channel == "FL" then
+        return "ardour:" .. bus .. "/audio_in 1"
+      elseif channel == "FR" then
+        return "ardour:" .. bus .. "/audio_in 2"
+      end
+
+      return nil
+    end
+
+    local function ensure_direct_stream_route(port)
+      local input_alias = target_for_direct_stream(port)
+      if not input_alias then
+        return
+      end
+
+      each_matching_port(input_alias, "in", function(input_port)
+        create_link(port, input_port)
+      end)
+    end
+
     local function ensure_routes()
       for _, route in ipairs(routes) do
         ensure_route(route[1], route[2])
       end
+
+      for port in ports:iterate() do
+        ensure_direct_stream_route(port)
+      end
     end
+
+    SimpleEventHook {
+      name = "custom/skip-firefox-default-target",
+      before = "linking/find-defined-target",
+      interests = {
+        EventInterest {
+          Constraint { "event.type", "=", "select-target" },
+        },
+      },
+      execute = function(event)
+        local _, _, _, si_props = lutils:unwrap_select_target_event(event)
+
+        if si_props["media.class"] == "Stream/Output/Audio"
+          and si_props["client.api"] == "pipewire-pulse"
+          and is_firefox_stream_props(si_props) then
+          event:stop_processing()
+        end
+      end
+    }:register()
 
     ports:connect("object-added", ensure_routes)
     links:connect("object-added", ensure_routes)
+    nodes:connect("object-added", ensure_routes)
+    nodes:activate()
     ports:activate()
     links:activate()
     ensure_routes()
