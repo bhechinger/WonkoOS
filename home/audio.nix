@@ -11,7 +11,23 @@ let
   };
 
   battletechGamesRule = builtins.readFile ./wireplumber/battletech-games.conf;
-  audiofireFfadoRule = builtins.readFile ./pipewire/audiofire-ffado.conf;
+  audiofireFfadoTestConfig = ./pipewire/audiofire-ffado-test.conf;
+  audiofireFfadoTestEnv = ''
+    export PIPEWIRE_RUNTIME_DIR="$XDG_RUNTIME_DIR/pipewire-audiofire-test"
+    export PIPEWIRE_REMOTE=pipewire-0
+  '';
+  audiofireFfadoTestWpctl = pkgs.writeShellScriptBin "audiofire-ffado-test-wpctl" ''
+    ${audiofireFfadoTestEnv}
+    exec ${pkgs.wireplumber}/bin/wpctl "$@"
+  '';
+  audiofireFfadoTestPwCli = pkgs.writeShellScriptBin "audiofire-ffado-test-pw-cli" ''
+    ${audiofireFfadoTestEnv}
+    exec ${pkgs.pipewire}/bin/pw-cli "$@"
+  '';
+  audiofireFfadoTestPwTop = pkgs.writeShellScriptBin "audiofire-ffado-test-pw-top" ''
+    ${audiofireFfadoTestEnv}
+    exec ${pkgs.pipewire}/bin/pw-top "$@"
+  '';
   routeToArdourRule = builtins.readFile ./wireplumber/route-to-ardour.conf;
   routeToArdourScript = builtins.readFile ./wireplumber/route-to-ardour.lua;
   saffireClockRule = builtins.readFile ./wireplumber/saffire-clock.conf;
@@ -23,6 +39,9 @@ in
     qpwgraph
     ardourPipewire
     pipewire.jack
+    audiofireFfadoTestWpctl
+    audiofireFfadoTestPwCli
+    audiofireFfadoTestPwTop
     rnnoise-plugin.lv2
     lmms
     lsp-plugins
@@ -102,6 +121,30 @@ in
     Install.WantedBy = [ "hyprland-session.target" ];
   };
 
+  systemd.user.services.audiofire-ffado-test = {
+    Unit = {
+      Description = "Isolated PipeWire FFADO test instance for AudioFire";
+      After = [ "pipewire.service" ];
+    };
+
+    Service = {
+      Type = "simple";
+      RuntimeDirectory = "pipewire-audiofire-test";
+      RuntimeDirectoryMode = "0700";
+      Environment = [
+        "PIPEWIRE_RUNTIME_DIR=%t/pipewire-audiofire-test"
+        "PIPEWIRE_REMOTE=pipewire-0"
+      ];
+      ExecStart = "${pkgs.pipewire}/bin/pipewire -c ${audiofireFfadoTestConfig}";
+      Restart = "on-failure";
+      RestartSec = 2;
+      LimitMEMLOCK = "infinity";
+      LimitRTPRIO = 95;
+      LimitNICE = "-11";
+      RestrictRealtime = false;
+    };
+  };
+
   xdg.configFile."pipewire/pipewire.conf.d/10-null-sink.conf" = {
     force = true;
     text = builtins.readFile ./pipewire/10-null-sink.conf;
@@ -111,8 +154,6 @@ in
     force = true;
     text = builtins.readFile ./pipewire/11-null-source.conf;
   };
-
-  xdg.configFile."pipewire/pipewire.conf.d/51-audiofire-ffado.conf".text = audiofireFfadoRule;
 
   xdg.dataFile."wireplumber/scripts/route-to-ardour.lua".text = routeToArdourScript;
 
