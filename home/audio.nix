@@ -11,6 +11,7 @@ let
   };
 
   battletechGamesRule = builtins.readFile ./wireplumber/battletech-games.conf;
+  audiofireFfadoRule = builtins.readFile ./pipewire/audiofire-ffado.conf;
   routeToArdourRule = builtins.readFile ./wireplumber/route-to-ardour.conf;
   routeToArdourScript = builtins.readFile ./wireplumber/route-to-ardour.lua;
   saffireClockRule = builtins.readFile ./wireplumber/saffire-clock.conf;
@@ -110,6 +111,8 @@ in
     force = true;
     text = builtins.readFile ./pipewire/11-null-source.conf;
   };
+
+  xdg.configFile."pipewire/pipewire.conf.d/51-audiofire-ffado.conf".text = audiofireFfadoRule;
 
   xdg.dataFile."wireplumber/scripts/route-to-ardour.lua".text = routeToArdourScript;
 

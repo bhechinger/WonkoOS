@@ -50,6 +50,9 @@ in
       "kvm-amd"
       "firewire-ohci"
     ];
+    blacklistedKernelModules = [
+      "snd_fireworks"
+    ];
     extraModprobeConfig = ''
       options firewire-ohci quirks=0x14
     '';
