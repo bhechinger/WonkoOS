@@ -72,7 +72,7 @@
             ./nix_tools.nix
             ./zenith.nix
             ./games.nix
-            ./circleci-runner.nix
+            # ./circleci-runner.nix
             ./gamedev.nix
           ];
         };
