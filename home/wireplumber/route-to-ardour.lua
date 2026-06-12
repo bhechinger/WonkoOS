@@ -22,6 +22,12 @@ local function lookup_node(node_id)
   }
 end
 
+local function lookup_port(port_id)
+  return ports:lookup {
+    Constraint { "object.id", "equals", port_id },
+  }
+end
+
 local function is_firefox_node(node)
   local props = node.properties
 
@@ -146,15 +152,45 @@ local function remove_route(output_alias, input_alias)
   end)
 end
 
-local function ensure_to_ardour(port)
-  local bus, channel = output_route(port)
+local function link_is_expected_route(output_port, input_port)
+  local bus, channel = output_route(output_port)
   if not bus or not channel then
+    return false
+  end
+
+  return input_port.properties["port.alias"] == "ardour:" .. bus .. "/audio_in " .. channel
+end
+
+local function remove_unwanted_firefox_links(port)
+  if port.properties["port.direction"] ~= "out" then
     return
   end
 
-  each_ardour_input(bus, channel, function(input_port)
-    create_link(port, input_port)
-  end)
+  local node = lookup_node(port.properties["node.id"])
+  if not node or not is_firefox_node(node) then
+    return
+  end
+
+  for link in links:iterate {
+    Constraint { "link.output.node", "equals", port.properties["node.id"] },
+    Constraint { "link.output.port", "equals", port.properties["object.id"] },
+  } do
+    local input_port = lookup_port(link.properties["link.input.port"])
+    if not input_port or not link_is_expected_route(port, input_port) then
+      remove_link(link)
+    end
+  end
+end
+
+local function ensure_to_ardour(port)
+  local bus, channel = output_route(port)
+  if bus and channel then
+    each_ardour_input(bus, channel, function(input_port)
+      create_link(port, input_port)
+    end)
+  end
+
+  remove_unwanted_firefox_links(port)
 end
 
 local function ensure_routes()
