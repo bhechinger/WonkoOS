@@ -14,8 +14,8 @@ let
   #audiofireFfadoRule = builtins.readFile ./pipewire/audiofire-ffado.conf;
   # routeToArdourRule = builtins.readFile ./wireplumber/route-to-ardour.conf;
   # routeToArdourScript = builtins.readFile ./wireplumber/route-to-ardour.lua;
-  staticLinksRule = builtins.readFile ./wireplumber/static-links.conf;
-  staticLinksScript = builtins.readFile ./wireplumber/static-links.lua;
+  audioRoutesRule = builtins.readFile ./wireplumber/audio-routes.conf;
+  audioRoutesScript = builtins.readFile ./wireplumber/audio-routes.lua;
   #routeMidiToSpotifyRule = builtins.readFile ./wireplumber/route-midi-to-spotify.conf;
   #routeMidiToSpotifyScript = builtins.readFile ./wireplumber/route-midi-to-spotify.lua;
   #saffireClockRule = builtins.readFile ./wireplumber/saffire-clock.conf;
@@ -118,14 +118,14 @@ in
   #xdg.configFile."pipewire/pipewire.conf.d/51-audiofire-ffado.conf".text = audiofireFfadoRule;
 
   # xdg.dataFile."wireplumber/scripts/route-to-ardour.lua".text = routeToArdourScript;
-  xdg.dataFile."wireplumber/scripts/static-links.lua".text = staticLinksScript;
+  xdg.dataFile."wireplumber/scripts/audio-routes.lua".text = audioRoutesScript;
   # xdg.dataFile."wireplumber/scripts/route-midi-to-spotify.lua".text = routeMidiToSpotifyScript;
 
   # xdg.configFile."wireplumber/wireplumber.conf.d/50-route-to-ardour.conf".text = routeToArdourRule;
   #xdg.configFile."wireplumber/wireplumber.conf.d/50-route-midi-to-spotify.conf".text =
   #  routeMidiToSpotifyRule;
   #xdg.configFile."wireplumber/wireplumber.conf.d/51-saffire-clock.conf".text = saffireClockRule;
-  xdg.configFile."wireplumber/wireplumber.conf.d/50-static-links.conf".text = staticLinksRule;
+  xdg.configFile."wireplumber/wireplumber.conf.d/50-audio-routes.conf".text = audioRoutesRule;
 
   # I don't know why all three of these are required, but it doesn't work without them.
   xdg.configFile."pipewire/client.conf.d/52-battletech-games.conf".text = battletechGamesRule;
