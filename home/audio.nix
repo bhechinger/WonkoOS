@@ -85,7 +85,6 @@ in
       PartOf = [
         "hyprland-session.target"
         "pipewire.service"
-        "wireplumber.service"
       ];
     };
 
@@ -123,6 +122,8 @@ in
   xdg.configFile."pipewire/client.conf.d/52-battletech-games.conf".text = battletechGamesRule;
   xdg.configFile."pipewire/pipewire-pulse.conf.d/52-battletech-games.conf".text = battletechGamesRule;
   xdg.configFile."wireplumber/wireplumber.conf.d/52-battletech-games.conf".text = battletechGamesRule;
+
+  systemd.user.services.spotify-midi-control.Unit.PartOf = [ "pipewire.service" ];
 
   services = {
     spotifyd = {

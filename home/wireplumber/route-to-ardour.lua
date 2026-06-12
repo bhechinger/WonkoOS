@@ -161,13 +161,13 @@ local function link_is_expected_route(output_port, input_port)
   return input_port.properties["port.alias"] == "ardour:" .. bus .. "/audio_in " .. channel
 end
 
-local function remove_unwanted_firefox_links(port)
+local function remove_unwanted_routed_links(port)
   if port.properties["port.direction"] ~= "out" then
     return
   end
 
   local node = lookup_node(port.properties["node.id"])
-  if not node or not is_firefox_node(node) then
+  if not node or not route_for_node(node) then
     return
   end
 
@@ -190,7 +190,7 @@ local function ensure_to_ardour(port)
     end)
   end
 
-  remove_unwanted_firefox_links(port)
+  remove_unwanted_routed_links(port)
 end
 
 local function ensure_routes()
