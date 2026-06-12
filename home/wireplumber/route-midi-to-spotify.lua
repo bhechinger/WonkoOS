@@ -1,9 +1,3 @@
-local nodes = ObjectManager {
-  Interest {
-    type = "node",
-  }
-}
-
 local ports = ObjectManager {
   Interest {
     type = "port",
@@ -17,30 +11,12 @@ local links = ObjectManager {
   }
 }
 
-local current_link = nil
-
-local function lookup_node(node_id)
-  return nodes:lookup {
-    Constraint { "object.id", "equals", node_id },
-  }
-end
-
 local function is_source_port(port)
   if port.properties["port.direction"] ~= "out" then
     return false
   end
 
-  if port.properties["port.alias"] ~= "nanoKONTROL2:nanoKONTROL2 _ CTRL" then
-    return false
-  end
-
-  local node = lookup_node(port.properties["node.id"])
-  if not node then
-    return false
-  end
-
-  return node.properties["node.name"] == "Midi-Bridge"
-    and node.properties["media.class"] == "Midi/Bridge"
+  return port.properties["port.alias"] == "nanoKONTROL2:nanoKONTROL2 _ CTRL"
 end
 
 local function is_target_port(port)
@@ -48,17 +24,7 @@ local function is_target_port(port)
     return false
   end
 
-  if port.properties["port.name"] ~= "input_1" then
-    return false
-  end
-
-  local node = lookup_node(port.properties["node.id"])
-  if not node then
-    return false
-  end
-
-  return node.properties["node.name"] == "spotify-midi-control"
-    and node.properties["media.class"] == "Stream/Input/Midi"
+  return port.properties["port.alias"] == "spotify-midi-control:input_1"
 end
 
 local function find_port(predicate)
@@ -81,10 +47,6 @@ local function link_exists(output_port, input_port)
 end
 
 local function ensure_route()
-  if current_link then
-    return
-  end
-
   local output_port = find_port(is_source_port)
   local input_port = find_port(is_target_port)
   if not output_port or not input_port then
@@ -95,22 +57,22 @@ local function ensure_route()
     return
   end
 
-  current_link = Link("link-factory", {
+  local link = Link("link-factory", {
     ["link.output.node"] = output_port.properties["node.id"],
     ["link.output.port"] = output_port.properties["object.id"],
     ["link.input.node"] = input_port.properties["node.id"],
     ["link.input.port"] = input_port.properties["object.id"],
     ["object.id"] = nil,
-    ["node.description"] = "nanoKONTROL2 to spotify-midi-control",
+    ["object.linger"] = true,
+    ["link.async"] = true,
   })
 
-  current_link:activate(1)
+  link:activate(1)
 end
 
-nodes:connect("object-added", ensure_route)
 ports:connect("object-added", ensure_route)
+links:connect("object-added", ensure_route)
 
-nodes:activate()
 ports:activate()
 links:activate()
 
