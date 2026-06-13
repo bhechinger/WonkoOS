@@ -14,6 +14,8 @@ let
   #audiofireFfadoRule = builtins.readFile ./pipewire/audiofire-ffado.conf;
   audioRoutesRule = builtins.readFile ./wireplumber/audio-routes.conf;
   audioRoutesScript = builtins.readFile ./wireplumber/audio-routes.lua;
+  midiRoutesRule = builtins.readFile ./wireplumber/midi-routes.conf;
+  midiRoutesScript = builtins.readFile ./wireplumber/midi-routes.lua;
   #routeMidiToSpotifyRule = builtins.readFile ./wireplumber/route-midi-to-spotify.conf;
   #routeMidiToSpotifyScript = builtins.readFile ./wireplumber/route-midi-to-spotify.lua;
   #saffireClockRule = builtins.readFile ./wireplumber/saffire-clock.conf;
@@ -32,6 +34,7 @@ in
     audacious
     pavucontrol
     spotify
+    ffado-mixer
   ];
   xdg.configFile."autostart/org.rncbc.qpwgraph.desktop" = {
     force = true;
@@ -115,6 +118,8 @@ in
 
   xdg.dataFile."wireplumber/scripts/audio-routes.lua".text = audioRoutesScript;
   xdg.configFile."wireplumber/wireplumber.conf.d/50-audio-routes.conf".text = audioRoutesRule;
+  # xdg.dataFile."wireplumber/scripts/midi-routes.lua".text = midiRoutesScript;
+  # xdg.configFile."wireplumber/wireplumber.conf.d/50-midi-routes.conf".text = midiRoutesRule;
 
   xdg.configFile."pipewire/client.conf.d/52-battletech-games.conf".text = battletechGamesRule;
   xdg.configFile."pipewire/pipewire-pulse.conf.d/52-battletech-games.conf".text = battletechGamesRule;
