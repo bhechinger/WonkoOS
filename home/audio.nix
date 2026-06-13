@@ -18,7 +18,7 @@ let
   midiRoutesScript = builtins.readFile ./wireplumber/midi-routes.lua;
   #routeMidiToSpotifyRule = builtins.readFile ./wireplumber/route-midi-to-spotify.conf;
   #routeMidiToSpotifyScript = builtins.readFile ./wireplumber/route-midi-to-spotify.lua;
-  #saffireClockRule = builtins.readFile ./wireplumber/saffire-clock.conf;
+  saffireClockRule = builtins.readFile ./wireplumber/saffire-clock.conf;
 
 in
 {
@@ -34,7 +34,6 @@ in
     audacious
     pavucontrol
     spotify
-    ffado-mixer
   ];
   xdg.configFile."autostart/org.rncbc.qpwgraph.desktop" = {
     force = true;
@@ -130,7 +129,7 @@ in
 
   #xdg.configFile."wireplumber/wireplumber.conf.d/50-route-midi-to-spotify.conf".text =
   #  routeMidiToSpotifyRule;
-  #xdg.configFile."wireplumber/wireplumber.conf.d/51-saffire-clock.conf".text = saffireClockRule;
+  xdg.configFile."wireplumber/wireplumber.conf.d/51-saffire-clock.conf".text = saffireClockRule;
 
   # I don't know why all three of these are required, but it doesn't work without them.
 

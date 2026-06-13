@@ -4,6 +4,7 @@ local desired_links = {
   -- Hardware/controller MIDI into Ardour.
   { output = "Pro24-004de0:Pro24-004de0 MIDI 1", input = "ardour:physical_midi_input_monitor_enable" },
   { output = "nanoKONTROL2:nanoKONTROL2 _ CTRL", input = "ardour:physical_midi_input_monitor_enable" },
+  { output = "nanoKONTROL2:nanoKONTROL2 _ CTRL", input = "ardour:MIDI Control In" },
 
   -- nanoKONTROL2 control surface into spotify-midi-control.
   { output = "nanoKONTROL2:nanoKONTROL2 _ CTRL", input = "spotify-midi-control:input_1" },
