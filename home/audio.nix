@@ -20,6 +20,27 @@ let
   #routeMidiToSpotifyScript = builtins.readFile ./wireplumber/route-midi-to-spotify.lua;
   saffireClockRule = builtins.readFile ./wireplumber/saffire-clock.conf;
 
+  waitForPipeWireGraph = pkgs.writeShellScript "wait-for-pipewire-graph" ''
+    set -eu
+
+    saffire_node="alsa_output.firewire-0x00130e0401c04de0.multichannel-output"
+    deadline=$((SECONDS + 15))
+
+    while [ "$SECONDS" -lt "$deadline" ]; do
+      if ${pkgs.coreutils}/bin/timeout 2 ${pkgs.pipewire}/bin/pw-top -b | ${pkgs.gawk}/bin/awk -v node="$saffire_node" '
+        $0 ~ node && $1 == "R" && $3 > 0 && $4 > 0 { ready = 1 }
+        END { exit ready ? 0 : 1 }
+      '; then
+        exit 0
+      fi
+
+      ${pkgs.coreutils}/bin/sleep 0.5
+    done
+
+    echo "Timed out waiting for active PipeWire Saffire driver graph: $saffire_node" >&2
+    exit 1
+  '';
+
 in
 {
   home.packages = with pkgs; [
@@ -131,9 +152,26 @@ in
   #  routeMidiToSpotifyRule;
   xdg.configFile."wireplumber/wireplumber.conf.d/51-saffire-clock.conf".text = saffireClockRule;
 
-  # I don't know why all three of these are required, but it doesn't work without them.
+  # Keep spotify-midi-control from publishing its MIDI input before PipeWire has a real driver graph.
+  systemd.user.services.spotify-midi-control = {
+    Unit = {
+      Wants = [
+        "pipewire.service"
+        "wireplumber.service"
+      ];
+      After = [
+        "pipewire.service"
+        "wireplumber.service"
+      ];
+      PartOf = [ "pipewire.service" ];
+    };
 
-  systemd.user.services.spotify-midi-control.Unit.PartOf = [ "pipewire.service" ];
+    Service = {
+      ExecStartPre = "${waitForPipeWireGraph}";
+      Restart = "on-failure";
+      RestartSec = 5;
+    };
+  };
 
   services = {
     spotifyd = {
