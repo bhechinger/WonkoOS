@@ -423,11 +423,11 @@
         "nixpkgs": "nixpkgs_4"
       },
       "locked": {
-        "lastModified": 1781397386,
-        "narHash": "sha256-MD1MQ4AAf/y3Cyb6tOawUw/bgXAd5SbjogWgKWi7iyM=",
+        "lastModified": 1781429593,
+        "narHash": "sha256-BtrK436wv7/dI1V8nN42Tj+o3THSwUfeVLLxcz+81aY=",
         "owner": "bhechinger",
         "repo": "spotify-midi-control",
-        "rev": "b14f6f8eb7061491123ca9211349507d2b317da5",
+        "rev": "d835b255dfe78eff78ae9903ddf8e93bfce84264",
         "type": "github"
       },
       "original": {
