@@ -117,8 +117,8 @@ in
 
   xdg.dataFile."wireplumber/scripts/audio-routes.lua".text = audioRoutesScript;
   xdg.configFile."wireplumber/wireplumber.conf.d/50-audio-routes.conf".text = audioRoutesRule;
-  # xdg.dataFile."wireplumber/scripts/midi-routes.lua".text = midiRoutesScript;
-  # xdg.configFile."wireplumber/wireplumber.conf.d/50-midi-routes.conf".text = midiRoutesRule;
+  xdg.dataFile."wireplumber/scripts/midi-routes.lua".text = midiRoutesScript;
+  xdg.configFile."wireplumber/wireplumber.conf.d/50-midi-routes.conf".text = midiRoutesRule;
 
   xdg.configFile."pipewire/client.conf.d/52-battletech-games.conf".text = battletechGamesRule;
   xdg.configFile."pipewire/pipewire-pulse.conf.d/52-battletech-games.conf".text = battletechGamesRule;
