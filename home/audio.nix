@@ -16,8 +16,6 @@ let
   audioRoutesScript = builtins.readFile ./wireplumber/audio-routes.lua;
   midiRoutesRule = builtins.readFile ./wireplumber/midi-routes.conf;
   midiRoutesScript = builtins.readFile ./wireplumber/midi-routes.lua;
-  #routeMidiToSpotifyRule = builtins.readFile ./wireplumber/route-midi-to-spotify.conf;
-  #routeMidiToSpotifyScript = builtins.readFile ./wireplumber/route-midi-to-spotify.lua;
   saffireClockRule = builtins.readFile ./wireplumber/saffire-clock.conf;
 
 in
@@ -125,10 +123,6 @@ in
   xdg.configFile."wireplumber/wireplumber.conf.d/52-battletech-games.conf".text = battletechGamesRule;
 
   #xdg.configFile."pipewire/pipewire.conf.d/51-audiofire-ffado.conf".text = audiofireFfadoRule;
-  # xdg.dataFile."wireplumber/scripts/route-midi-to-spotify.lua".text = routeMidiToSpotifyScript;
-
-  #xdg.configFile."wireplumber/wireplumber.conf.d/50-route-midi-to-spotify.conf".text =
-  #  routeMidiToSpotifyRule;
   xdg.configFile."wireplumber/wireplumber.conf.d/51-saffire-clock.conf".text = saffireClockRule;
 
   services = {
