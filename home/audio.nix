@@ -137,7 +137,7 @@ let
   };
 
   battletechGamesRule = builtins.readFile ./wireplumber/battletech-games.conf;
-  #audiofireFfadoRule = builtins.readFile ./pipewire/audiofire-ffado.conf;
+  audiofireFfadoRule = builtins.readFile ./pipewire/audiofire-ffado.conf;
   audioRoutesRule = builtins.readFile ./wireplumber/audio-routes.conf;
   audioRoutesScript = builtins.readFile ./wireplumber/audio-routes.lua;
   midiRoutesRule = builtins.readFile ./wireplumber/midi-routes.conf;
@@ -268,25 +268,10 @@ in
   xdg.configFile."pipewire/pipewire-pulse.conf.d/52-battletech-games.conf".text = battletechGamesRule;
   xdg.configFile."wireplumber/wireplumber.conf.d/52-battletech-games.conf".text = battletechGamesRule;
 
-  #xdg.configFile."pipewire/pipewire.conf.d/51-audiofire-ffado.conf".text = audiofireFfadoRule;
+  xdg.configFile."pipewire/pipewire.conf.d/51-audiofire-ffado.conf".text = audiofireFfadoRule;
   xdg.configFile."wireplumber/wireplumber.conf.d/51-saffire-clock.conf".text = saffireClockRule;
 
   services = {
-    spotifyd = {
-      enable = true;
-      settings = {
-        global = {
-          bitrate = 320;
-          username = "";
-          password = "";
-          backend = "pulseaudio";
-          device = "pipewire";
-          control = "pipewire";
-          device_type = "computer";
-          device_name = "deepthought";
-        };
-      };
-    };
     spotify-midi-control = {
       enable = true;
       backend = "pipewire";
