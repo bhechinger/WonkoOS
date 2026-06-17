@@ -15,15 +15,17 @@ let
     runtimeInputs = with pkgs; [
       coreutils
       gnugrep
+      jq
       pipewire
     ];
     text = ''
       set -euo pipefail
 
+      saffire_sink="alsa_output.firewire-0x00130e0401c04de0.multichannel-output"
       saffire_source="alsa_input.firewire-0x00130e0401c04de0.multichannel-input"
-      min_boot_age_seconds=300
       max_wait_seconds=90
       poll_interval_seconds=2
+      required_consecutive_ready_checks=2
 
       log() {
         printf 'ardour-pipewire-ready: %s\n' "$*" >&2
@@ -37,20 +39,27 @@ let
         timeout 3 pw-link -io 2>/dev/null | grep -Fqx "$1"
       }
 
-      wait_for_saffire_boot_settle() {
-        local uptime_seconds
-        local remaining_seconds
+      node_ready() {
+        local node_name="$1"
+        local media_class="$2"
+        local pcm_stream="$3"
 
-        read -r uptime_seconds _ < /proc/uptime
-        uptime_seconds="''${uptime_seconds%.*}"
+        timeout 3 pw-dump |
+          jq -e \
+            --arg node_name "$node_name" \
+            --arg media_class "$media_class" \
+            --arg pcm_stream "$pcm_stream" '
+            any(.[]; .type == "PipeWire:Interface:Node" and
+              .info.props["node.name"] == $node_name and
+              .info.props["media.class"] == $media_class and
+              .info.props["device.bus"] == "firewire" and
+              .info.props["api.alsa.pcm.stream"] == $pcm_stream)
+          ' >/dev/null
+      }
 
-        if test "$uptime_seconds" -ge "$min_boot_age_seconds"; then
-          return 0
-        fi
-
-        remaining_seconds="$((min_boot_age_seconds - uptime_seconds))"
-        log "waiting $remaining_seconds seconds for FireWire Saffire to settle after boot"
-        sleep "$remaining_seconds"
+      saffire_nodes_ready() {
+        node_ready "$saffire_sink" "Audio/Sink" "playback" &&
+          node_ready "$saffire_source" "Audio/Source" "capture"
       }
 
       saffire_ports_exist() {
@@ -65,24 +74,61 @@ let
         has_port "Midi-Bridge:nanoKONTROL2: _ CTRL (capture)"
       }
 
+      readiness_failures() {
+        if ! pipewire_responds; then
+          printf '%s\n' "PipeWire is not responding to pw-link"
+        fi
+
+        if ! saffire_nodes_ready; then
+          printf '%s\n' "Saffire playback/capture nodes are not ready"
+        fi
+
+        if ! saffire_ports_exist; then
+          printf '%s\n' "required Saffire audio ports are missing"
+        fi
+
+        if ! midi_ports_exist; then
+          printf '%s\n' "nanoKONTROL PipeWire MIDI port is missing"
+        fi
+
+        return 0
+      }
+
       wait_until_ready() {
+        local consecutive_ready_checks=0
         local deadline
+        local failures
+        local last_failures=""
         deadline="$(($(date +%s) + max_wait_seconds))"
 
         while test "$(date +%s)" -lt "$deadline"; do
-          if pipewire_responds &&
-             saffire_ports_exist &&
-             midi_ports_exist; then
-            return 0
+          failures="$(readiness_failures)"
+
+          if test -z "$failures"; then
+            consecutive_ready_checks="$((consecutive_ready_checks + 1))"
+
+            if test "$consecutive_ready_checks" -ge "$required_consecutive_ready_checks"; then
+              return 0
+            fi
+          else
+            consecutive_ready_checks=0
+
+            if test "$failures" != "$last_failures"; then
+              log "waiting for readiness conditions: $(printf '%s' "$failures" | tr '\n' ';')"
+              last_failures="$failures"
+            fi
           fi
 
           sleep "$poll_interval_seconds"
         done
 
+        failures="$(readiness_failures)"
+        if test -n "$failures"; then
+          log "readiness still failing: $(printf '%s' "$failures" | tr '\n' ';')"
+        fi
+
         return 1
       }
-
-      wait_for_saffire_boot_settle
 
       if wait_until_ready; then
         log "PipeWire Saffire audio and MIDI ports are ready"
@@ -137,7 +183,7 @@ let
   };
 
   battletechGamesRule = builtins.readFile ./wireplumber/battletech-games.conf;
-  audiofireFfadoRule = builtins.readFile ./pipewire/audiofire-ffado.conf;
+  # audiofireFfadoRule = builtins.readFile ./pipewire/audiofire-ffado.conf;
   audioRoutesRule = builtins.readFile ./wireplumber/audio-routes.conf;
   audioRoutesScript = builtins.readFile ./wireplumber/audio-routes.lua;
   midiRoutesRule = builtins.readFile ./wireplumber/midi-routes.conf;
@@ -268,7 +314,7 @@ in
   xdg.configFile."pipewire/pipewire-pulse.conf.d/52-battletech-games.conf".text = battletechGamesRule;
   xdg.configFile."wireplumber/wireplumber.conf.d/52-battletech-games.conf".text = battletechGamesRule;
 
-  xdg.configFile."pipewire/pipewire.conf.d/51-audiofire-ffado.conf".text = audiofireFfadoRule;
+  # xdg.configFile."pipewire/pipewire.conf.d/51-audiofire-ffado.conf".text = audiofireFfadoRule;
   xdg.configFile."wireplumber/wireplumber.conf.d/51-saffire-clock.conf".text = saffireClockRule;
 
   services = {
