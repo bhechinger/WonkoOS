@@ -1,4 +1,5 @@
 local reconcile_delay_ms = 500
+local reconcile_interval_ms = 2000
 
 local desired_links = {
   -- Route selected app streams directly into Ardour and remove their default sink links.
@@ -20,17 +21,17 @@ local desired_links = {
   { output = "ardour:Mic/audio_out 2",        input = "Ardour:input_FR" },
 
   -- Feed Ardour's outputs into the Saffire
-  { output = "ardour:Master/audio_out 1",     input = "saffire_ffado_output:00130e0401c04de0_1394/In:01 (Mixer/In:17)_in" },
-  { output = "ardour:Master/audio_out 2",     input = "saffire_ffado_output:00130e0401c04de0_1394/In:02 (Mixer/In:18)_in" },
-  { output = "ardour:auditioner/audio_out 1", input = "saffire_ffado_output:00130e0401c04de0_1394/In:01 (Mixer/In:17)_in" },
-  { output = "ardour:auditioner/audio_out 2", input = "saffire_ffado_output:00130e0401c04de0_1394/In:02 (Mixer/In:18)_in" },
-  { output = "ardour:Click/audio_out 1",      input = "saffire_ffado_output:00130e0401c04de0_1394/In:01 (Mixer/In:17)_in" },
-  { output = "ardour:Click/audio_out 2",      input = "saffire_ffado_output:00130e0401c04de0_1394/In:02 (Mixer/In:18)_in" },
+  { output = "ardour:Master/audio_out 1",     input = "Saffire Pro 24 FFADO Output:00130e0401c04de0_1394/In:01 (Mixer/In:17)_in" },
+  { output = "ardour:Master/audio_out 2",     input = "Saffire Pro 24 FFADO Output:00130e0401c04de0_1394/In:02 (Mixer/In:18)_in" },
+  { output = "ardour:auditioner/audio_out 1", input = "Saffire Pro 24 FFADO Output:00130e0401c04de0_1394/In:01 (Mixer/In:17)_in" },
+  { output = "ardour:auditioner/audio_out 2", input = "Saffire Pro 24 FFADO Output:00130e0401c04de0_1394/In:02 (Mixer/In:18)_in" },
+  { output = "ardour:Click/audio_out 1",      input = "Saffire Pro 24 FFADO Output:00130e0401c04de0_1394/In:01 (Mixer/In:17)_in" },
+  { output = "ardour:Click/audio_out 2",      input = "Saffire Pro 24 FFADO Output:00130e0401c04de0_1394/In:02 (Mixer/In:18)_in" },
 
   -- Feed the Saffire inputs into Ardour
-  { output = "saffire_ffado_input:00130e0401c04de0_1394/Out:01 (Anlg/In:03)_out",  input = "ardour:Mic/audio_in 1" },
-  { output = "saffire_ffado_input:00130e0401c04de0_1394/Out:05 (SPDIF/In:01)_out", input = "ardour:Mac/audio_in 1" },
-  { output = "saffire_ffado_input:00130e0401c04de0_1394/Out:06 (SPDIF/In:02)_out", input = "ardour:Mac/audio_in 2" },
+  { output = "Saffire Pro 24 FFADO Input:00130e0401c04de0_1394/Out:01 (Anlg/In:03)_out",  input = "ardour:Mic/audio_in 1" },
+  { output = "Saffire Pro 24 FFADO Input:00130e0401c04de0_1394/Out:05 (SPDIF/In:01)_out", input = "ardour:Mac/audio_in 1" },
+  { output = "Saffire Pro 24 FFADO Input:00130e0401c04de0_1394/Out:06 (SPDIF/In:02)_out", input = "ardour:Mac/audio_in 2" },
 }
 
 local ports = ObjectManager {
@@ -46,6 +47,7 @@ local links = ObjectManager {
 }
 
 local reconcile_source = nil
+local reconcile_interval_source = nil
 
 local function find_port(alias, direction)
   return ports:lookup {
@@ -146,3 +148,10 @@ ports:activate()
 links:activate()
 
 schedule_reconcile()
+
+-- Ardour can rebuild JACK links after the initial ports appear. Keep this
+-- idempotent repair loop in sync with the MIDI route reconciler.
+reconcile_interval_source = Core.timeout_add(reconcile_interval_ms, function()
+  reconcile_links()
+  return true
+end)
