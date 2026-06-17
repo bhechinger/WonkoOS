@@ -6,6 +6,7 @@
 
 {
   home.packages = with pkgs; [
+    ncdu
     xlsclients
     fastfetch
     mtr-gui
