@@ -7,6 +7,7 @@
   services = {
     atuin = {
       enable = true;
+      openFirewall = true;
       openRegistration = true;
 
       # Keep the default PostgreSQL backend and make the implicit module behavior
