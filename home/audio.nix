@@ -21,8 +21,7 @@ let
       set -euo pipefail
 
       saffire_source="alsa_input.firewire-0x00130e0401c04de0.multichannel-input"
-      probe_file="''${TMPDIR:-/tmp}/ardour-saffire-readiness.wav"
-      min_probe_bytes=4096
+      min_boot_age_seconds=300
       max_wait_seconds=90
       poll_interval_seconds=2
 
@@ -30,24 +29,28 @@ let
         printf 'ardour-pipewire-ready: %s\n' "$*" >&2
       }
 
-      systemctl_user() {
-        local runtime_dir
-        local bus_address
-
-        runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
-        bus_address="''${DBUS_SESSION_BUS_ADDRESS:-unix:path=$runtime_dir/bus}"
-
-        XDG_RUNTIME_DIR="$runtime_dir" \
-          DBUS_SESSION_BUS_ADDRESS="$bus_address" \
-          env -u NOTIFY_SOCKET /run/current-system/sw/bin/systemctl --user "$@"
-      }
-
       pipewire_responds() {
-        pw-cli info 0 >/dev/null 2>&1
+        timeout 3 pw-link -io >/dev/null 2>&1
       }
 
       has_port() {
-        pw-link -io 2>/dev/null | grep -Fqx "$1"
+        timeout 3 pw-link -io 2>/dev/null | grep -Fqx "$1"
+      }
+
+      wait_for_saffire_boot_settle() {
+        local uptime_seconds
+        local remaining_seconds
+
+        read -r uptime_seconds _ < /proc/uptime
+        uptime_seconds="''${uptime_seconds%.*}"
+
+        if test "$uptime_seconds" -ge "$min_boot_age_seconds"; then
+          return 0
+        fi
+
+        remaining_seconds="$((min_boot_age_seconds - uptime_seconds))"
+        log "waiting $remaining_seconds seconds for FireWire Saffire to settle after boot"
+        sleep "$remaining_seconds"
       }
 
       saffire_ports_exist() {
@@ -59,48 +62,18 @@ let
       }
 
       midi_ports_exist() {
-        has_port "Midi-Bridge:Pro24-004de0: MIDI 1 (capture)" &&
-          has_port "Midi-Bridge:nanoKONTROL2: _ CTRL (capture)"
-      }
-
-      saffire_capture_delivers_buffers() {
-        rm -f "$probe_file"
-
-        timeout 5 pw-record \
-          --target "$saffire_source" \
-          --channels 16 \
-          --rate 48000 \
-          --format s32 \
-          "$probe_file" >/dev/null 2>&1 || true
-
-        test -f "$probe_file" || return 1
-
-        local probe_bytes
-        probe_bytes="$(wc -c < "$probe_file")"
-        rm -f "$probe_file"
-
-        test "$probe_bytes" -gt "$min_probe_bytes"
+        has_port "Midi-Bridge:nanoKONTROL2: _ CTRL (capture)"
       }
 
       wait_until_ready() {
         local deadline
-        local capture_failures=0
         deadline="$(($(date +%s) + max_wait_seconds))"
 
         while test "$(date +%s)" -lt "$deadline"; do
           if pipewire_responds &&
              saffire_ports_exist &&
              midi_ports_exist; then
-            if saffire_capture_delivers_buffers; then
-              return 0
-            fi
-
-            capture_failures="$((capture_failures + 1))"
-            if test "$capture_failures" -ge 3; then
-              return 1
-            fi
-          else
-            capture_failures=0
+            return 0
           fi
 
           sleep "$poll_interval_seconds"
@@ -109,36 +82,56 @@ let
         return 1
       }
 
-      restart_pipewire_stack() {
-        local attempt
+      wait_for_saffire_boot_settle
 
-        for attempt in 1 2 3 4 5; do
-          if systemctl_user restart pipewire.service pipewire-pulse.service wireplumber.service; then
-            return 0
-          fi
+      if wait_until_ready; then
+        log "PipeWire Saffire audio and MIDI ports are ready"
+        exit 0
+      fi
 
-          log "PipeWire restart attempt $attempt failed; retrying"
-          sleep 1
-        done
+      log "Saffire audio/MIDI port readiness failed"
+      exit 1
+    '';
+  };
 
-        return 1
+  spotifyMidiControlReady = pkgs.writeShellApplication {
+    name = "spotify-midi-control-ready";
+    runtimeInputs = with pkgs; [
+      coreutils
+      gnugrep
+      pipewire
+    ];
+    text = ''
+      set -euo pipefail
+
+      max_wait_seconds=90
+      poll_interval_seconds=2
+      nanokontrol_port="Midi-Bridge:nanoKONTROL2: _ CTRL (capture)"
+
+      log() {
+        printf 'spotify-midi-control-ready: %s\n' "$*" >&2
       }
 
-      if wait_until_ready; then
-        log "PipeWire Saffire audio and MIDI are ready"
-        exit 0
-      fi
+      pipewire_responds() {
+        timeout 3 pw-link -io >/dev/null 2>&1
+      }
 
-      log "PipeWire graph did not become usable; restarting user PipeWire stack once"
-      restart_pipewire_stack
-      sleep 3
+      has_port() {
+        timeout 3 pw-link -io 2>/dev/null | grep -Fqx "$1"
+      }
 
-      if wait_until_ready; then
-        log "PipeWire Saffire audio and MIDI recovered after restart"
-        exit 0
-      fi
+      deadline="$(($(date +%s) + max_wait_seconds))"
 
-      log "Saffire audio/MIDI readiness failed"
+      while test "$(date +%s)" -lt "$deadline"; do
+        if pipewire_responds && has_port "$nanokontrol_port"; then
+          log "nanoKONTROL PipeWire MIDI port is ready"
+          exit 0
+        fi
+
+        sleep "$poll_interval_seconds"
+      done
+
+      log "nanoKONTROL PipeWire MIDI port did not become ready"
       exit 1
     '';
   };
@@ -198,33 +191,59 @@ in
     };
   };
 
-  systemd.user.services.ardour-default = {
-    Unit = {
-      Description = "Ardour Default session";
-      Wants = [
-        "pipewire.service"
-        "wireplumber.service"
-      ];
-      After = [
-        "pipewire.service"
-        "wireplumber.service"
-      ];
-      PartOf = [
-        "hyprland-session.target"
-      ];
+  systemd.user.services = {
+    ardour-default = {
+      Unit = {
+        Description = "Ardour Default session";
+        Wants = [
+          "pipewire.service"
+          "wireplumber.service"
+        ];
+        After = [
+          "pipewire.service"
+          "wireplumber.service"
+        ];
+        PartOf = [
+          "hyprland-session.target"
+        ];
+      };
+
+      Service = {
+        ExecStartPre = "${ardourPipewireReady}/bin/ardour-pipewire-ready";
+        ExecStart = "${ardourPipewire}/bin/ardour9 /home/wonko/Default";
+        KillSignal = "SIGINT";
+        Restart = "on-failure";
+        RestartSec = 5;
+        SuccessExitStatus = "SIGINT";
+        TimeoutStartSec = 420;
+        TimeoutStopSec = 120;
+      };
+
+      Install.WantedBy = [ "hyprland-session.target" ];
     };
 
-    Service = {
-      ExecStartPre = "${ardourPipewireReady}/bin/ardour-pipewire-ready";
-      ExecStart = "${ardourPipewire}/bin/ardour9 /home/wonko/Default";
-      KillSignal = "SIGINT";
-      Restart = "on-failure";
-      RestartSec = 5;
-      SuccessExitStatus = "SIGINT";
-      TimeoutStopSec = 120;
-    };
+    spotify-midi-control = {
+      Unit = {
+        Wants = [
+          "pipewire.service"
+          "wireplumber.service"
+        ];
+        After = [
+          "pipewire.service"
+          "wireplumber.service"
+        ];
+        PartOf = [
+          "pipewire.service"
+          "wireplumber.service"
+        ];
+      };
 
-    Install.WantedBy = [ "hyprland-session.target" ];
+      Service = {
+        ExecStartPre = "${spotifyMidiControlReady}/bin/spotify-midi-control-ready";
+        Restart = "on-failure";
+        RestartSec = 5;
+      };
+    };
   };
 
   xdg.configFile."pipewire/pipewire.conf.d/10-null-sink.conf" = {

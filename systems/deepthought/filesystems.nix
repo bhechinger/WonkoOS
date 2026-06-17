@@ -1,4 +1,4 @@
-{ ... }:
+{ config, ... }:
 
 {
   fileSystems."/" = {
@@ -19,6 +19,12 @@
     options = [ "zfsutil" ];
   };
 
+  fileSystems."/var/lib/docker" = {
+    device = "zpool/docker";
+    fsType = "zfs";
+    options = [ "zfsutil" ];
+  };
+
   fileSystems."/home" = {
     device = "tank/home";
     fsType = "zfs";
@@ -33,12 +39,6 @@
       "dmask=0022"
     ];
   };
-
-  #fileSystems."/backups" = {
-  #  device = "backups";  # Replace with the correct device path after iSCSI login you cloud also do /dev/disk/by-uuid/<UUID-of-device>
-  #  fsType = "zfs";  # Or the correct filesystem type
-  #  options = [ "zfsutil" "_netdev" "nofail" ];  # Ensures network is up before mounting and wont fail to boot if it cant connect
-  #};
 
   swapDevices = [
     {
@@ -63,7 +63,7 @@
         commonMountOptions
         // {
           what = "basket.4amlunch.net:/Brian";
-          where = "/basket/Brian";
+          where = "/nfs/Brian";
         }
       )
 
@@ -71,7 +71,7 @@
         commonMountOptions
         // {
           what = "basket.4amlunch.net:/NetShare";
-          where = "/basket/NetShare";
+          where = "/nfs/NetShare";
         }
       )
 
@@ -79,18 +79,18 @@
         commonMountOptions
         // {
           what = "basket.4amlunch.net:/homes";
-          where = "/basket/homes";
+          where = "/nfs/homes";
         }
       )
 
       #(commonMountOptions // {
       #  what = "bob.4amlunch.net:/home/docker/paperless/consume";
-      #  where = "/basket/paperless/consume";
+      #  where = "/nfs/paperless/consume";
       #})
 
       #(commonMountOptions // {
       #  what = "bob.4amlunch.net:/home/docker/paperless/export";
-      #  where = "/basket/paperless/export";
+      #  where = "/nfs/paperless/export";
       #})
     ];
 
@@ -106,12 +106,44 @@
     in
 
     [
-      (commonAutoMountOptions // { where = "/basket/Brian"; })
-      (commonAutoMountOptions // { where = "/basket/NetShare"; })
-      (commonAutoMountOptions // { where = "/basket/homes"; })
-      #(commonAutoMountOptions // { where = "/basket/paperless/consume"; })
-      #(commonAutoMountOptions // { where = "/basket/paperless/export"; })
+      (commonAutoMountOptions // { where = "/nfs/Brian"; })
+      (commonAutoMountOptions // { where = "/nfs/NetShare"; })
+      (commonAutoMountOptions // { where = "/nfs/homes"; })
+      #(commonAutoMountOptions // { where = "/nfs/paperless/consume"; })
+      #(commonAutoMountOptions // { where = "/nfs/paperless/export"; })
     ];
+
+  systemd.services.zfs-import-basket = {
+    description = "Import ZFS pool \"basket\" after iSCSI login";
+    after = [
+      "iscsi.service"
+      "zfs-import.target"
+    ];
+    requires = [ "iscsi.service" ];
+    wantedBy = [ "multi-user.target" ];
+    path = [ config.boot.zfs.package ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+    };
+    script = ''
+      for attempt in $(seq 1 24); do
+        if zpool list -H -o name basket >/dev/null 2>&1; then
+          exit 0
+        fi
+
+        if zpool import -N basket; then
+          exit 0
+        fi
+
+        echo "basket pool is not importable yet; waiting for iSCSI devices ($attempt/24)"
+        udevadm settle --timeout=5 || true
+        sleep 5
+      done
+
+      zpool import -N basket
+    '';
+  };
 
   services = {
     zfs = {
@@ -121,6 +153,7 @@
 
     openiscsi = {
       enable = true;
+      enableAutoLoginOut = true;
       name = "iqn.2020-08.internal.4amlunch.deepthought:desktop";
       discoverPortal = "10.42.0.30";
     };

@@ -1,4 +1,5 @@
 local reconcile_delay_ms = 500
+local reconcile_interval_ms = 2000
 
 local desired_links = {
   -- nanoKONTROL2 control surface into Ardour.
@@ -16,6 +17,7 @@ local ports = ObjectManager {
 }
 
 local reconcile_source = nil
+local reconcile_interval_source = nil
 local created_links = {}
 local schedule_reconcile
 
@@ -87,3 +89,8 @@ ports:connect("object-removed", schedule_reconcile)
 ports:activate()
 
 schedule_reconcile()
+
+reconcile_interval_source = Core.timeout_add(reconcile_interval_ms, function()
+  reconcile_links()
+  return true
+end)

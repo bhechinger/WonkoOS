@@ -11,6 +11,7 @@
     unstable-pkgs.mame
     mindustry
     r2modman
+    heroic
     prismlauncher
     javaPackages.compiler.temurin-bin.jdk-25
     mcpelauncher-ui-qt
