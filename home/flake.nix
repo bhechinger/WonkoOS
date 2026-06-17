@@ -50,6 +50,10 @@
         };
         overlays = [
           (_final: prev: {
+            # Codex's upstream Linux sandbox currently conflicts with this NixOS
+            # setup, so the bwrap and landlock checks are patched out below. The
+            # wrapper still drops Linux capabilities with setpriv, but Codex
+            # subprocesses are intentionally not filesystem/network sandboxed here.
             codex = prev.codex.overrideAttrs (old: {
               env = (old.env or { }) // {
                 RUST_MIN_STACK = "16777216";
