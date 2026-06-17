@@ -20,7 +20,7 @@ grep -Fq 'saffire_ffado_output' "$audio_nix" ||
 grep -Fq 'saffire_ffado_input' "$audio_nix" ||
   fail 'ardour readiness helper must target the Saffire FFADO input node'
 
-grep -Fq 'api.ffado' "$audio_nix" ||
+grep -Fq 'ffado-group' "$audio_nix" ||
   fail 'ardour readiness helper must identify FFADO-backed nodes'
 
 grep -Fq 'readiness_failures()' "$audio_nix" ||

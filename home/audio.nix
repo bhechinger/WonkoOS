@@ -50,7 +50,7 @@ let
             any(.[]; .type == "PipeWire:Interface:Node" and
               .info.props["node.name"] == $node_name and
               .info.props["media.class"] == $media_class and
-              (.info.props["api.ffado.path"]? or .info.props["api.ffado.device"]? or .info.props["api.ffado.id"]?))
+              .info.props["node.group"] == "ffado-group")
           ' >/dev/null
       }
 
@@ -60,11 +60,11 @@ let
       }
 
       saffire_ports_exist() {
-        has_port "Pro24-004de0:capture_AUX0" &&
-          has_port "Pro24-004de0:capture_AUX4" &&
-          has_port "Pro24-004de0:capture_AUX5" &&
-          has_port "Pro24-004de0:playback_FL" &&
-          has_port "Pro24-004de0:playback_FR"
+        has_port "saffire_ffado_input:00130e0401c04de0_1394/Out:01 (Anlg/In:03)_out" &&
+          has_port "saffire_ffado_input:00130e0401c04de0_1394/Out:05 (SPDIF/In:01)_out" &&
+          has_port "saffire_ffado_input:00130e0401c04de0_1394/Out:06 (SPDIF/In:02)_out" &&
+          has_port "saffire_ffado_output:00130e0401c04de0_1394/In:01 (Mixer/In:17)_in" &&
+          has_port "saffire_ffado_output:00130e0401c04de0_1394/In:02 (Mixer/In:18)_in"
       }
 
       midi_ports_exist() {
