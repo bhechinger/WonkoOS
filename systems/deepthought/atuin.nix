@@ -8,6 +8,10 @@
     atuin = {
       enable = true;
       openRegistration = true;
+
+      # Keep the default PostgreSQL backend and make the implicit module behavior
+      # explicit: this creates the local atuin database and database owner.
+      database.createLocally = true;
     };
   };
 }
