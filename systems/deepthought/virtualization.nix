@@ -10,7 +10,6 @@
         enable = true;
         flags = [
           "--all"
-          "--volumes"
         ];
       };
       enable = true;
