@@ -16,9 +16,14 @@ local ports = ObjectManager {
   }
 }
 
+local links = ObjectManager {
+  Interest {
+    type = "link",
+  }
+}
+
 local reconcile_source = nil
 local reconcile_interval_source = nil
-local created_links = {}
 local schedule_reconcile
 
 local function find_port(alias, direction)
@@ -28,13 +33,17 @@ local function find_port(alias, direction)
   }
 end
 
-local function link_key(output_port, input_port)
-  return output_port.properties["object.id"] .. ":" .. input_port.properties["object.id"]
+local function link_exists(output_port, input_port)
+  return links:lookup {
+    Constraint { "link.output.node", "equals", output_port.properties["node.id"] },
+    Constraint { "link.output.port", "equals", output_port.properties["object.id"] },
+    Constraint { "link.input.node", "equals", input_port.properties["node.id"] },
+    Constraint { "link.input.port", "equals", input_port.properties["object.id"] },
+  } ~= nil
 end
 
 local function create_link(output_port, input_port)
-  local key = link_key(output_port, input_port)
-  if created_links[key] then
+  if link_exists(output_port, input_port) then
     return
   end
 
@@ -52,9 +61,7 @@ local function create_link(output_port, input_port)
     link:activate(1)
   end)
 
-  if activated then
-    created_links[key] = link
-  end
+  return activated
 end
 
 local function reconcile_links()
@@ -85,8 +92,11 @@ end
 
 ports:connect("object-added", schedule_reconcile)
 ports:connect("object-removed", schedule_reconcile)
+links:connect("object-added", schedule_reconcile)
+links:connect("object-removed", schedule_reconcile)
 
 ports:activate()
+links:activate()
 
 schedule_reconcile()
 
