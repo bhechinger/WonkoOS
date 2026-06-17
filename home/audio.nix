@@ -215,7 +215,7 @@ in
         Restart = "on-failure";
         RestartSec = 5;
         SuccessExitStatus = "SIGINT";
-        TimeoutStartSec = 420;
+        TimeoutStartSec = 600;
         TimeoutStopSec = 120;
       };
 
@@ -241,6 +241,8 @@ in
       Service = {
         ExecStartPre = "${spotifyMidiControlReady}/bin/spotify-midi-control-ready";
         # Recover after PipeWire/WirePlumber churn even when the helper exits cleanly.
+        # Restart=always is intentional: PartOf stops this unit on PipeWire/WirePlumber
+        # restart; Restart=always re-schedules it once those units are active again.
         Restart = "always";
         RestartSec = 5;
       };
