@@ -141,7 +141,7 @@ let
   };
 
   battletechGamesRule = builtins.readFile ./wireplumber/battletech-games.conf;
-  # audiofireFfadoRule = builtins.readFile ./pipewire/audiofire-ffado.conf;
+  saffireFfadoRule = builtins.readFile ./pipewire/saffire-ffado.conf;
   audioRoutesRule = builtins.readFile ./wireplumber/audio-routes.conf;
   audioRoutesScript = builtins.readFile ./wireplumber/audio-routes.lua;
   # midiRoutesRule = builtins.readFile ./wireplumber/midi-routes.conf;
@@ -246,7 +246,7 @@ in
   xdg.configFile."pipewire/pipewire-pulse.conf.d/52-battletech-games.conf".text = battletechGamesRule;
   xdg.configFile."wireplumber/wireplumber.conf.d/52-battletech-games.conf".text = battletechGamesRule;
 
-  # xdg.configFile."pipewire/pipewire.conf.d/51-audiofire-ffado.conf".text = audiofireFfadoRule;
+  xdg.configFile."pipewire/pipewire.conf.d/52-saffire-ffado.conf".text = saffireFfadoRule;
   xdg.configFile."wireplumber/wireplumber.conf.d/51-saffire-clock.conf".text = saffireClockRule;
 
   services = {
