@@ -21,8 +21,8 @@ let
     text = ''
       set -euo pipefail
 
-      saffire_sink="alsa_output.firewire-0x00130e0401c04de0.multichannel-output"
-      saffire_source="alsa_input.firewire-0x00130e0401c04de0.multichannel-input"
+      saffire_sink="saffire_ffado_output"
+      saffire_source="saffire_ffado_input"
       max_wait_seconds=90
       poll_interval_seconds=2
       required_consecutive_ready_checks=2
@@ -42,32 +42,29 @@ let
       node_ready() {
         local node_name="$1"
         local media_class="$2"
-        local pcm_stream="$3"
 
         timeout 3 pw-dump |
           jq -e \
             --arg node_name "$node_name" \
-            --arg media_class "$media_class" \
-            --arg pcm_stream "$pcm_stream" '
+            --arg media_class "$media_class" '
             any(.[]; .type == "PipeWire:Interface:Node" and
               .info.props["node.name"] == $node_name and
               .info.props["media.class"] == $media_class and
-              .info.props["device.bus"] == "firewire" and
-              .info.props["api.alsa.pcm.stream"] == $pcm_stream)
+              (.info.props["api.ffado.path"]? or .info.props["api.ffado.device"]? or .info.props["api.ffado.id"]?))
           ' >/dev/null
       }
 
       saffire_nodes_ready() {
-        node_ready "$saffire_sink" "Audio/Sink" "playback" &&
-          node_ready "$saffire_source" "Audio/Source" "capture"
+        node_ready "$saffire_sink" "Audio/Sink" &&
+          node_ready "$saffire_source" "Audio/Source"
       }
 
       saffire_ports_exist() {
-        has_port "$saffire_source:capture_AUX0" &&
-          has_port "$saffire_source:capture_AUX4" &&
-          has_port "$saffire_source:capture_AUX5" &&
-          has_port "alsa_output.firewire-0x00130e0401c04de0.multichannel-output:playback_FL" &&
-          has_port "alsa_output.firewire-0x00130e0401c04de0.multichannel-output:playback_FR"
+        has_port "Pro24-004de0:capture_AUX0" &&
+          has_port "Pro24-004de0:capture_AUX4" &&
+          has_port "Pro24-004de0:capture_AUX5" &&
+          has_port "Pro24-004de0:playback_FL" &&
+          has_port "Pro24-004de0:playback_FR"
       }
 
       midi_ports_exist() {
