@@ -240,7 +240,8 @@ in
 
       Service = {
         ExecStartPre = "${spotifyMidiControlReady}/bin/spotify-midi-control-ready";
-        Restart = "on-failure";
+        # Recover after PipeWire/WirePlumber churn even when the helper exits cleanly.
+        Restart = "always";
         RestartSec = 5;
       };
     };

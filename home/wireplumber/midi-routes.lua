@@ -100,6 +100,9 @@ links:activate()
 
 schedule_reconcile()
 
+-- Periodic reconciliation is intentionally redundant with the debounced object
+-- callbacks above. Links are idempotent because create_link checks ObjectManager
+-- state before creating anything.
 reconcile_interval_source = Core.timeout_add(reconcile_interval_ms, function()
   reconcile_links()
   return true
