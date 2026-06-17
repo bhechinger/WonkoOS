@@ -1,4 +1,4 @@
-{ config, ... }:
+{ config, pkgs, ... }:
 
 {
   fileSystems."/" = {
@@ -121,7 +121,10 @@
     ];
     requires = [ "iscsi.service" ];
     wantedBy = [ "multi-user.target" ];
-    path = [ config.boot.zfs.package ];
+    path = [
+      config.boot.zfs.package
+      pkgs.systemd
+    ];
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
