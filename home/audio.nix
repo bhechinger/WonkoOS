@@ -10,6 +10,139 @@ let
     '';
   };
 
+  ardourPipewireReady = pkgs.writeShellApplication {
+    name = "ardour-pipewire-ready";
+    runtimeInputs = with pkgs; [
+      coreutils
+      gnugrep
+      pipewire
+    ];
+    text = ''
+      set -euo pipefail
+
+      saffire_source="alsa_input.firewire-0x00130e0401c04de0.multichannel-input"
+      probe_file="''${TMPDIR:-/tmp}/ardour-saffire-readiness.wav"
+      min_probe_bytes=4096
+      max_wait_seconds=90
+      poll_interval_seconds=2
+
+      log() {
+        printf 'ardour-pipewire-ready: %s\n' "$*" >&2
+      }
+
+      systemctl_user() {
+        local runtime_dir
+        local bus_address
+
+        runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+        bus_address="''${DBUS_SESSION_BUS_ADDRESS:-unix:path=$runtime_dir/bus}"
+
+        XDG_RUNTIME_DIR="$runtime_dir" \
+          DBUS_SESSION_BUS_ADDRESS="$bus_address" \
+          env -u NOTIFY_SOCKET /run/current-system/sw/bin/systemctl --user "$@"
+      }
+
+      pipewire_responds() {
+        pw-cli info 0 >/dev/null 2>&1
+      }
+
+      has_port() {
+        pw-link -io 2>/dev/null | grep -Fqx "$1"
+      }
+
+      saffire_ports_exist() {
+        has_port "$saffire_source:capture_AUX0" &&
+          has_port "$saffire_source:capture_AUX4" &&
+          has_port "$saffire_source:capture_AUX5" &&
+          has_port "alsa_output.firewire-0x00130e0401c04de0.multichannel-output:playback_FL" &&
+          has_port "alsa_output.firewire-0x00130e0401c04de0.multichannel-output:playback_FR"
+      }
+
+      midi_ports_exist() {
+        has_port "Midi-Bridge:Pro24-004de0: MIDI 1 (capture)" &&
+          has_port "Midi-Bridge:nanoKONTROL2: _ CTRL (capture)"
+      }
+
+      saffire_capture_delivers_buffers() {
+        rm -f "$probe_file"
+
+        timeout 5 pw-record \
+          --target "$saffire_source" \
+          --channels 16 \
+          --rate 48000 \
+          --format s32 \
+          "$probe_file" >/dev/null 2>&1 || true
+
+        test -f "$probe_file" || return 1
+
+        local probe_bytes
+        probe_bytes="$(wc -c < "$probe_file")"
+        rm -f "$probe_file"
+
+        test "$probe_bytes" -gt "$min_probe_bytes"
+      }
+
+      wait_until_ready() {
+        local deadline
+        local capture_failures=0
+        deadline="$(($(date +%s) + max_wait_seconds))"
+
+        while test "$(date +%s)" -lt "$deadline"; do
+          if pipewire_responds &&
+             saffire_ports_exist &&
+             midi_ports_exist; then
+            if saffire_capture_delivers_buffers; then
+              return 0
+            fi
+
+            capture_failures="$((capture_failures + 1))"
+            if test "$capture_failures" -ge 3; then
+              return 1
+            fi
+          else
+            capture_failures=0
+          fi
+
+          sleep "$poll_interval_seconds"
+        done
+
+        return 1
+      }
+
+      restart_pipewire_stack() {
+        local attempt
+
+        for attempt in 1 2 3 4 5; do
+          if systemctl_user restart pipewire.service pipewire-pulse.service wireplumber.service; then
+            return 0
+          fi
+
+          log "PipeWire restart attempt $attempt failed; retrying"
+          sleep 1
+        done
+
+        return 1
+      }
+
+      if wait_until_ready; then
+        log "PipeWire Saffire audio and MIDI are ready"
+        exit 0
+      fi
+
+      log "PipeWire graph did not become usable; restarting user PipeWire stack once"
+      restart_pipewire_stack
+      sleep 3
+
+      if wait_until_ready; then
+        log "PipeWire Saffire audio and MIDI recovered after restart"
+        exit 0
+      fi
+
+      log "Saffire audio/MIDI readiness failed"
+      exit 1
+    '';
+  };
+
   battletechGamesRule = builtins.readFile ./wireplumber/battletech-games.conf;
   #audiofireFfadoRule = builtins.readFile ./pipewire/audiofire-ffado.conf;
   audioRoutesRule = builtins.readFile ./wireplumber/audio-routes.conf;
@@ -33,21 +166,13 @@ in
     pavucontrol
     spotify
   ];
-  xdg.configFile."autostart/org.rncbc.qpwgraph.desktop" = {
+  xdg.configFile."autostart/pulseaudio.desktop" = {
     force = true;
     text = ''
       [Desktop Entry]
-      Categories=AudioVideo;Audio;Video;Midi;X-Alsa;X-PipeWire;Qt;
-      Comment=qpwgraph is a PipeWire graph Qt GUI interface
-      Exec=qpwgraph -d -m
-      GenericName=PipeWire Graph Viewer
-      Icon=org.rncbc.qpwgraph
-      Keywords=PipeWire;MIDI;ALSA;JACK;Qt;
-      Name=qpwgraph
-      StartupNotify=true
-      Terminal=false
+      Hidden=true
+      Name=PulseAudio Sound System
       Type=Application
-      Version=1.0
     '';
   };
 
@@ -86,12 +211,11 @@ in
       ];
       PartOf = [
         "hyprland-session.target"
-        "pipewire.service"
       ];
     };
 
     Service = {
-      ExecStartPre = "${pkgs.coreutils}/bin/sleep 5";
+      ExecStartPre = "${ardourPipewireReady}/bin/ardour-pipewire-ready";
       ExecStart = "${ardourPipewire}/bin/ardour9 /home/wonko/Default";
       KillSignal = "SIGINT";
       Restart = "on-failure";
