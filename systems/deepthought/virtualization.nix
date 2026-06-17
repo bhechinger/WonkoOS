@@ -6,7 +6,13 @@
   virtualisation = {
     containers.enable = true;
     docker = {
-      autoPrune.enable = true;
+      autoPrune = {
+        enable = true;
+        flags = [
+          "--all"
+          "--volumes"
+        ];
+      };
       enable = true;
       #enableNvidia = true;
       storageDriver = "zfs";

@@ -1,4 +1,4 @@
-{ inputs, config, lib, pkgs, ... }:
+{ lib, ... }:
 
 {
   services = {
@@ -6,36 +6,28 @@
       enable = true;
       ensureUsers = [
         {
-	  name = "wonko";
-	  ensureDBOwnership = true;
-	  ensureClauses = {
-	    superuser = true;
-	    login = true;
-	  };
-	}
-        {
-	  name = "atuin";
-	  ensureDBOwnership = true;
-	  ensureClauses = {
-	    login = true;
-	  };
-	}
+          name = "wonko";
+          ensureDBOwnership = true;
+          ensureClauses = {
+            superuser = true;
+            login = true;
+          };
+        }
       ];
-      ensureDatabases = [ "wonko" "atuin" ];
-      authentication = pkgs.lib.mkOverride 10 ''
+      ensureDatabases = [ "wonko" ];
+      authentication = lib.mkForce ''
         #type database  DBuser  auth-method
         # "local" is for Unix domain socket connections only
-        local   all             all                                     trust
+        local   all             all                                     peer
         # IPv4 local connections:
-        host    all             all             127.0.0.1/32            trust
+        host    all             all             127.0.0.1/32            scram-sha-256
         # IPv6 local connections:
-        host    all             all             ::1/128                 trust
+        host    all             all             ::1/128                 scram-sha-256
         # Allow replication connections from localhost, by a user with the
         # replication privilege.
-        local   replication     all                                     trust
-        host    replication     all             127.0.0.1/32            trust
-        host    replication     all             ::1/128                 trust
-        local atuin       atuin     md5
+        local   replication     all                                     peer
+        host    replication     all             127.0.0.1/32            scram-sha-256
+        host    replication     all             ::1/128                 scram-sha-256
       '';
     };
   };

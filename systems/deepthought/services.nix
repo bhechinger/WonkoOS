@@ -1,4 +1,5 @@
 {
+  lib,
   pkgs,
   ...
 }:
@@ -51,8 +52,8 @@
       ];
     };
 
-    openssh.enable = true;
-    rpcbind.enable = true; # needed for NFS
+    # NixOS enables rpcbind for NFS mounts by default; these clients use NFSv4.
+    rpcbind.enable = lib.mkForce false;
 
     #hardware = {
     #  openrgb = {

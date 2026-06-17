@@ -50,7 +50,7 @@
   systemd.mounts =
     let
       commonMountOptions = {
-        type = "nfs";
+        type = "nfs4";
         mountConfig = {
           Options = "noatime";
         };

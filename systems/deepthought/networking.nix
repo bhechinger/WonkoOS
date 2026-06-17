@@ -47,11 +47,21 @@
     extraHosts = ''
       10.42.0.30 basket.4amlunch.net basket
     '';
-    firewall.enable = false;
+    firewall = {
+      enable = true;
+      allowedTCPPorts = [ 22 ];
+    };
   };
 
   services = {
-    openssh.enable = true;
+    openssh = {
+      enable = true;
+      settings = {
+        KbdInteractiveAuthentication = false;
+        PasswordAuthentication = false;
+        PermitRootLogin = "no";
+      };
+    };
     zerotierone = {
       enable = true;
       joinNetworks = [ "a84ac5c10a853bc1" ];

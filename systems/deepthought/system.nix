@@ -121,9 +121,6 @@ in
 
   nixpkgs.config = {
     allowUnfree = true;
-    permittedInsecurePackages = [
-      "electron-25.9.0"
-    ];
     packageOverrides = pkgs: {
       xsaneGimp = pkgs.xsane.override { gimpSupport = true; };
     };

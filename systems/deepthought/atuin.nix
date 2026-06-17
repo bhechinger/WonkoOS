@@ -8,10 +8,6 @@
     atuin = {
       enable = true;
       openRegistration = true;
-      database = {
-        uri = "postgresql://atuin:atuin@localhost:5432/atuin";
-        createLocally = true;
-      };
     };
   };
 }

@@ -6,6 +6,7 @@
       withUWSM = true;
       xwayland.enable = true;
     };
+    kdeconnect.enable = true;
     evince.enable = true;
   };
 

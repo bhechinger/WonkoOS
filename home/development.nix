@@ -22,7 +22,6 @@
     podman-compose
     graphviz
     grpcurl
-    act
     action-validator
     gcc
     k8sgpt
