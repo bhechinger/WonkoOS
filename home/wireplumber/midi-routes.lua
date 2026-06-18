@@ -4,9 +4,6 @@ local reconcile_interval_ms = 2000
 local desired_links = {
   -- nanoKONTROL2 control surface into Ardour.
   { output = "nanoKONTROL2:nanoKONTROL2 _ CTRL", input = "ardour:MIDI Control In" },
-
-  -- nanoKONTROL2 control surface into spotify-midi-control.
-  { output = "nanoKONTROL2:nanoKONTROL2 _ CTRL", input = "spotify-midi-control:input_1" },
 }
 
 local ports = ObjectManager {

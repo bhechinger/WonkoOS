@@ -140,54 +140,12 @@ let
     '';
   };
 
-  spotifyMidiControlReady = pkgs.writeShellApplication {
-    name = "spotify-midi-control-ready";
-    runtimeInputs = with pkgs; [
-      coreutils
-      gnugrep
-      pipewire
-    ];
-    text = ''
-      set -euo pipefail
-
-      max_wait_seconds=90
-      poll_interval_seconds=2
-      nanokontrol_port="Midi-Bridge:nanoKONTROL2: _ CTRL (capture)"
-
-      log() {
-        printf 'spotify-midi-control-ready: %s\n' "$*" >&2
-      }
-
-      pipewire_responds() {
-        timeout 3 pw-link -io >/dev/null 2>&1
-      }
-
-      has_port() {
-        timeout 3 pw-link -io 2>/dev/null | grep -Fqx "$1"
-      }
-
-      deadline="$(($(date +%s) + max_wait_seconds))"
-
-      while test "$(date +%s)" -lt "$deadline"; do
-        if pipewire_responds && has_port "$nanokontrol_port"; then
-          log "nanoKONTROL PipeWire MIDI port is ready"
-          exit 0
-        fi
-
-        sleep "$poll_interval_seconds"
-      done
-
-      log "nanoKONTROL PipeWire MIDI port did not become ready"
-      exit 1
-    '';
-  };
-
   battletechGamesRule = builtins.readFile ./wireplumber/battletech-games.conf;
   # audiofireFfadoRule = builtins.readFile ./pipewire/audiofire-ffado.conf;
   audioRoutesRule = builtins.readFile ./wireplumber/audio-routes.conf;
   audioRoutesScript = builtins.readFile ./wireplumber/audio-routes.lua;
-  midiRoutesRule = builtins.readFile ./wireplumber/midi-routes.conf;
-  midiRoutesScript = builtins.readFile ./wireplumber/midi-routes.lua;
+  # midiRoutesRule = builtins.readFile ./wireplumber/midi-routes.conf;
+  # midiRoutesScript = builtins.readFile ./wireplumber/midi-routes.lua;
   saffireClockRule = builtins.readFile ./wireplumber/saffire-clock.conf;
 
 in
@@ -267,32 +225,6 @@ in
 
       Install.WantedBy = [ "hyprland-session.target" ];
     };
-
-    spotify-midi-control = {
-      Unit = {
-        Wants = [
-          "pipewire.service"
-          "wireplumber.service"
-        ];
-        After = [
-          "pipewire.service"
-          "wireplumber.service"
-        ];
-        PartOf = [
-          "pipewire.service"
-          "wireplumber.service"
-        ];
-      };
-
-      Service = {
-        ExecStartPre = "${spotifyMidiControlReady}/bin/spotify-midi-control-ready";
-        # Recover after PipeWire/WirePlumber churn even when the helper exits cleanly.
-        # Restart=always is intentional: PartOf stops this unit on PipeWire/WirePlumber
-        # restart; Restart=always re-schedules it once those units are active again.
-        Restart = "always";
-        RestartSec = 5;
-      };
-    };
   };
 
   xdg.configFile."pipewire/pipewire.conf.d/10-null-sink.conf" = {
@@ -307,8 +239,8 @@ in
 
   xdg.dataFile."wireplumber/scripts/audio-routes.lua".text = audioRoutesScript;
   xdg.configFile."wireplumber/wireplumber.conf.d/50-audio-routes.conf".text = audioRoutesRule;
-  xdg.dataFile."wireplumber/scripts/midi-routes.lua".text = midiRoutesScript;
-  xdg.configFile."wireplumber/wireplumber.conf.d/50-midi-routes.conf".text = midiRoutesRule;
+  # xdg.dataFile."wireplumber/scripts/midi-routes.lua".text = midiRoutesScript;
+  # xdg.configFile."wireplumber/wireplumber.conf.d/50-midi-routes.conf".text = midiRoutesRule;
 
   xdg.configFile."pipewire/client.conf.d/52-battletech-games.conf".text = battletechGamesRule;
   xdg.configFile."pipewire/pipewire-pulse.conf.d/52-battletech-games.conf".text = battletechGamesRule;
