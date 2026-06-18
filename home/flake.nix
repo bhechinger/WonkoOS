@@ -2,6 +2,7 @@
   inputs = {
     nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0"; # Stable Nixpkgs
     unstable-nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1"; # Unstable Nixpkgs
+    zed-nixpkgs.url = "github:NixOS/nixpkgs/7e1d71cbba1625e0003e8015be354dfaf7b8fee5"; # zed-editor 1.7.2
 
     determinate = {
       url = "https://flakehub.com/f/DeterminateSystems/determinate/3"; # Determinate 3.*
@@ -27,6 +28,7 @@
     {
       nixpkgs,
       unstable-nixpkgs,
+      zed-nixpkgs,
       determinate,
       home-manager,
       auto-splice,
@@ -77,6 +79,12 @@
           })
         ];
       };
+      zed-pkgs = import zed-nixpkgs {
+        inherit system;
+        config = {
+          allowUnfree = true;
+        };
+      };
     in
     {
       homeConfigurations = {
@@ -84,6 +92,7 @@
           inherit pkgs;
           extraSpecialArgs = {
             inherit unstable-pkgs;
+            inherit zed-pkgs;
             inherit auto-splice;
             inherit sops-nix;
             inherit spotify-midi-control;
@@ -100,6 +109,7 @@
             ./kubernetes.nix
             ./software.nix
             ./desktop.nix
+            ./zed-unstable-watch.nix
             ./nix_tools.nix
             ./zenith.nix
             ./games.nix
