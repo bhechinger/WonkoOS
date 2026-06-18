@@ -410,7 +410,8 @@
         "nixpkgs": "nixpkgs_3",
         "sops-nix": "sops-nix",
         "spotify-midi-control": "spotify-midi-control",
-        "unstable-nixpkgs": "unstable-nixpkgs"
+        "unstable-nixpkgs": "unstable-nixpkgs",
+        "zed-nixpkgs": "zed-nixpkgs"
       }
     },
     "rust-overlay": {
@@ -502,6 +503,22 @@
       "original": {
         "type": "tarball",
         "url": "https://flakehub.com/f/NixOS/nixpkgs/0.1"
+      }
+    },
+    "zed-nixpkgs": {
+      "locked": {
+        "lastModified": 1781776918,
+        "narHash": "sha256-bpcAy3qVwOzMZ9beRVkBF2MT1QwV/aek30BIUlhnnXw=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "7e1d71cbba1625e0003e8015be354dfaf7b8fee5",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "7e1d71cbba1625e0003e8015be354dfaf7b8fee5",
+        "type": "github"
       }
     }
   },
