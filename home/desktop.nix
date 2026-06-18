@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ lib, pkgs, ... }:
 {
   imports = [
     ./hyprland.nix
@@ -44,14 +44,23 @@
     };
   };
 
-  services.kdeconnect = {
-    enable = true;
-    indicator = true;
+  services = {
+    kdeconnect = {
+      enable = true;
+      indicator = true;
+    };
+    pass-secret-service.enable = true;
   };
+
+  programs.password-store.enable = true;
 
   fonts.fontconfig.enable = true;
 
   systemd.user.targets.hyprland-session.Unit.Wants = [
     "xdg-desktop-autostart.target"
+  ];
+
+  systemd.user.services.pass-secret-service.Install.Alias = [
+    "dbus-org.freedesktop.secrets.service"
   ];
 }
