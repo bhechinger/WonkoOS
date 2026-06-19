@@ -55,7 +55,7 @@ in
         "[workspace special:chat2 silent] signal-desktop"
         "[workspace special:chat2 silent] telegram"
 
-        "[workspace special:audio silent] qpwgraph -d"
+        "[workspace special:audio silent] qjackctl"
 
         #"[workspace special:games silent] steam"
         #"[workspace special:games silent] r2modman"
@@ -383,7 +383,7 @@ in
         "workspace special:chat2, match:class Signal"
         "workspace special:chat2, match:class org.telegram.desktop"
         "workspace special:audio, match:class Ardour"
-        "workspace special:audio, match:class org.rncbc.qpwgraph"
+        "workspace special:audio, match:class org.rncbc.qjackctl"
         "workspace special:games, match:class steam"
         "suppress_event activate, match:class steam"
         "workspace special:games, match:class r2modman"

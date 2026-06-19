@@ -22,6 +22,7 @@
       extraGroups = [
         "wheel"
         "audio"
+        "jackaudio"
         "libvirtd"
         "users"
         "docker"

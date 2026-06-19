@@ -7,6 +7,7 @@ let
   hugepages = import ../../common/hugepages.nix (import ./hugepages-inputs.nix);
 in
 {
+  system.nixos.tags = [ "jack-ffado" ];
   boot = {
     loader = {
       grub.memtest86.enable = true;
@@ -51,6 +52,7 @@ in
       "firewire-ohci"
     ];
     blacklistedKernelModules = [
+      "snd_dice"
       "snd_fireworks"
     ];
     extraModprobeConfig = ''

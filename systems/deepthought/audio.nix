@@ -1,11 +1,16 @@
 {
   pkgs,
+  lib,
   ...
 }:
 
+let
+  jackSampleRate = 48000;
+  jackPeriodSize = 2048;
+  jackPeriods = 3;
+  jackRealtimePriority = 88;
+in
 {
-  security.rtkit.enable = true;
-
   musnix = {
     enable = true;
     ffado.enable = true;
@@ -15,59 +20,50 @@
       resetAll = 1;
       prioLow = 0;
       enable = true;
-      nameList = "rtc0 firewire_ohci";
+      highList = "firewire_ohci";
+      nameList = "rtc0";
     };
   };
 
   services = {
     pipewire = {
-      enable = true;
-      audio.enable = true;
-      wireplumber.enable = true;
-      alsa = {
+      enable = false;
+      audio.enable = false;
+      wireplumber.enable = false;
+      alsa.enable = false;
+      pulse.enable = false;
+      jack.enable = false;
+    };
+
+    jack = {
+      jackd = {
         enable = true;
-        support32Bit = true;
-      };
-      pulse.enable = true;
-      jack.enable = true;
-      socketActivation = true;
-      wireplumber.extraConfig."51-saffire-headroom" = {
-        "monitor.alsa.rules" = [
-          {
-            matches = [
-              {
-                "node.name" = "~alsa_(input|output).firewire-0x00130e0401c04de0.*";
-              }
-            ];
-            actions.update-props = {
-              "api.alsa.headroom" = 1024;
-            };
-          }
+        extraOptions = [
+          "-R"
+          "-P"
+          (toString jackRealtimePriority)
+          "-dfirewire"
+          "-r"
+          (toString jackSampleRate)
+          "-p"
+          (toString jackPeriodSize)
+          "-n"
+          (toString jackPeriods)
         ];
+        session = lib.mkForce "";
       };
+      alsa.enable = false;
+      loopback.enable = false;
     };
   };
 
-  systemd.user.services = {
-    pipewire.serviceConfig = {
-      LimitMEMLOCK = "infinity";
-      LimitRTPRIO = 95;
-      LimitNICE = "-11";
-      RestrictRealtime = false;
-    };
-    pipewire-pulse.serviceConfig = {
-      LimitMEMLOCK = "infinity";
-      LimitRTPRIO = 95;
-      LimitNICE = "-11";
-      RestrictRealtime = false;
-    };
-    wireplumber.serviceConfig = {
-      LimitMEMLOCK = "infinity";
-      LimitRTPRIO = 95;
-      LimitNICE = "-11";
-      RestrictRealtime = false;
-    };
+  systemd.services.jack = {
+    after = [ "rtirq.service" ];
+    wants = [ "rtirq.service" ];
+    wantedBy = [ "multi-user.target" ];
   };
+
+  systemd.services.rtirq.after = lib.mkForce [ "sysinit.target" ];
 
   systemd.services."user@".serviceConfig = {
     LimitMEMLOCK = "infinity";
@@ -78,7 +74,10 @@
 
   environment.systemPackages = with pkgs; [
     alsa-utils
-    alsa-lib
-    pulseaudioFull
+    ffado
+    ffado-mixer
+    jack2
+    jack-example-tools
+    qjackctl
   ];
 }
