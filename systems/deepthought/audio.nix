@@ -15,7 +15,8 @@
       resetAll = 1;
       prioLow = 0;
       enable = true;
-      nameList = "rtc0 firewire_ohci";
+      highList = "firewire_ohci";
+      nameList = "rtc0";
     };
   };
 
