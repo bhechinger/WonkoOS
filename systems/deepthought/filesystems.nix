@@ -135,7 +135,7 @@
           exit 0
         fi
 
-        if zpool import -N basket; then
+        if zpool import basket; then
           exit 0
         fi
 
@@ -144,7 +144,7 @@
         sleep 5
       done
 
-      zpool import -N basket
+      zpool import basket
     '';
   };
 
