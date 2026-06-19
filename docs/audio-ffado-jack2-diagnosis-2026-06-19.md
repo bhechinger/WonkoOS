@@ -61,13 +61,14 @@ Live checks run in this session:
 7. Confirm FFADO/JACK realtime thread priority.
 8. Confirm JACK client failure after the FFADO backend stops.
 
-Follow-up checks not run in this session:
+Follow-up checks remaining after the first live diagnostic pass:
 
-1. Reboot into a controlled JACK run with FFADO verbose level 6.
-2. Reboot or restart cleanly with period size 512 and the same verbose logging.
-3. Move the Saffire between the two FW643 controllers and compare stability.
-4. Physically remove or disable one FW643 controller, then test each remaining topology.
-5. Only after those data points, consider testing FFADO 2.5.0 or adding a watchdog restart.
+1. Reboot or restart cleanly with period size 512 and the same verbose logging.
+2. Move the Saffire between the two FW643 controllers and compare stability.
+3. Physically remove or disable one FW643 controller, then test each remaining topology.
+4. Only after those data points, consider testing FFADO 2.5.0 or adding a watchdog restart.
+
+The verbose JACK/FFADO run was completed after the initial report; results are in the "Experiment 1" section below.
 
 ## System Details
 
@@ -440,29 +441,120 @@ Interpretation: the `jackd` process remains alive, but the JACK driver is stoppe
 
    JACK's firewire backend supports `-v`. The current service uses the default libffado verbose level 3. The next useful log should be captured at level 6.
 
+## Experiment 1: FFADO Verbose Level 6
+
+Date: 2026-06-19, Europe/Lisbon  
+Booted generation: `/nix/store/z18dbsx73lbnmbcajzsm0f1k5kn64b3q-nixos-system-deepthought-jack-ffado-26.05.20260611.a037402`  
+JACK command: `jackd -R -P 88 -dfirewire -v 6 -r 48000 -p 2048 -n 3`
+
+This experiment changed only the FFADO verbosity. Period size, sample rate, realtime priority, controller, and kernel config were left unchanged.
+
+Initial checks:
+
+```text
+$ readlink -f /run/current-system
+/nix/store/z18dbsx73lbnmbcajzsm0f1k5kn64b3q-nixos-system-deepthought-jack-ffado-26.05.20260611.a037402
+
+$ systemctl show jack.service --property=ExecStart,LimitRTPRIO,LimitMEMLOCK,User
+ExecStart=... jackd -R -P 88 -dfirewire -v 6 -r 48000 -p 2048 -n 3
+LimitMEMLOCK=infinity
+LimitRTPRIO=99
+User=jackaudio
+```
+
+The verbose option took effect:
+
+```text
+Jun 19 18:24:10 jackd[2481]: ffado_streaming_init: libffado 2.4.9 built Jun 26 2024 09:44:00
+Jun 19 18:24:10 jackd[2481]: setVerboseLevel: Setting verbose level to 6...
+Jun 19 18:24:10 jackd[2481]: ffado_streaming_init: Starting with realtime scheduling, base priority 93
+```
+
+Realtime thread creation was explicit in the verbose log:
+
+```text
+Jun 19 18:24:10 jackd[2481]: Start: (ISOXMT) Create RT thread ... with priority 94
+Jun 19 18:24:10 jackd[2481]: Start: (ISORCV) Create RT thread ... with priority 92
+Jun 19 18:24:10 jackd[2481]: AcquireRealTime: (ISOXMT, ...) Acquire realtime, prio 94
+Jun 19 18:24:10 jackd[2481]: AcquireRealTime: (ISORCV, ...) Acquire realtime, prio 92
+Jun 19 18:24:10 jackd[2481]: AcquireRealTime: (ARMRT, ...) Acquire realtime, prio 93
+```
+
+Startup warnings:
+
+```text
+Jun 19 18:24:10 jackd[2481]: read of CSR_SPLIT_TIMEOUT_HI failed
+Jun 19 18:24:10 jackd[2481]: write of CSR_SPLIT_TIMEOUT_HI failed
+Jun 19 18:24:10 jackd[2481]: Could not set SPLIT_TIMEOUT to min requested (1000000)
+Jun 19 18:24:11 jackd[2481]: Warning (dice_eap.cpp)[1811] read: No routes found. Base 0x7, offset 0x4000
+Jun 19 18:24:11 jackd[2481]: Warning (dice_avdevice.cpp)[1382] startstopStreamByIndex: ISO_CHANNEL register != 0xFFFFFFFF (=0x00000001) for ARX 0
+```
+
+Runtime before failure:
+
+- `jack_lsp` succeeded shortly after boot and again around 18:28.
+- `ffado-test ListDevices` still enumerated the Saffire.
+- Verbose logs repeatedly emitted `waitForPeriod: wait extended since period not ready`.
+- The xrun counter remained `Xruns: 0` until the failure sequence.
+
+Failure timing:
+
+- JACK started at 18:24:10.
+- First clear handler failure appeared at 18:33:10.
+- Client connection failed immediately after the backend stopped:
+
+```text
+$ systemd-run --user --wait --collect --pipe env JACK_PROMISCUOUS_SERVER=jackaudio jack_lsp
+Error: cannot connect to JACK, jack_client_open() failed, status = 0x21
+```
+
+Important verbose failure sequence:
+
+```text
+Jun 19 18:33:10 jackd[2481]: Warning (IsoHandlerManager.cpp)[ 352] Execute: (..., Receive) Handler died: now: 551488D7, last: 5113F3EF, diff: 49180904 (max: 49152000)
+Jun 19 18:33:10 jackd[2481]: Warning (StreamProcessor.cpp)[ 173] handlerDied: Handler died for 0x56a3c168cce0
+Jun 19 18:33:10 jackd[2481]: waitForPeriod: XRUN detected
+Jun 19 18:33:10 jackd[2481]: handleXrun: Handling Xrun ...
+Jun 19 18:33:10 jackd[2481]: handleXrun: Restarting StreamProcessors...
+Jun 19 18:33:10 jackd[2481]: Warning (IsoHandlerManager.cpp)[ 352] Execute: (..., Transmit) Handler died: now: 5523B629, last: 511FF32B, diff: 49337086 (max: 49152000)
+Jun 19 18:33:11 jackd[2481]: Warning (IsoHandlerManager.cpp)[ 292] Execute: Timeout while waiting for activity
+Jun 19 18:33:15 jackd[2481]: startDryRunning: Timeout waiting for the SP's to start dry-running
+Jun 19 18:33:15 jackd[2481]: Error (IsoHandlerManager.cpp)[1947] requestEnable: Enable requested on enabled stream 'Receive'
+Jun 19 18:33:15 jackd[2481]: Error (StreamProcessor.cpp)[1249] scheduleStartDryRunning: Could not start handler for SP 0x56a3c168cce0
+Jun 19 18:33:15 jackd[2481]: Error (StreamProcessorManager.cpp)[ 518] startDryRunning: Could not put 'Receive' SP 0x56a3c168cce0 into the dry-running state
+Jun 19 18:33:15 jackd[2481]: handleXrun: Could not put SP's in dry-running state (try 9)
+Jun 19 18:33:15 jackd[2481]: Fatal (StreamProcessorManager.cpp)[1198] handleXrun: Could not syncStartAll...
+Jun 19 18:33:15 jackd[2481]: Error (devicemanager.cpp)[ 999] waitForPeriod: Could not handle XRUN
+Jun 19 18:33:15 jackd[2481]: Error (ffado.cpp)[ 273] ffado_streaming_wait: Error condition while waiting (Unhandled XRUN)
+Jun 19 18:33:15 jackd[2481]: JackFFADODriver::ffado_driver_wait - unhandled xrun
+Jun 19 18:33:15 jackd[2481]: firewire ERR: wait status < 0! (= -1)
+Jun 19 18:33:15 jackd[2481]: JackAudioDriver::ProcessAsync: read error, stopping...
+```
+
+Kernel log around the failure:
+
+```text
+$ journalctl -k -b --since '2026-06-19 18:32:30' --until '2026-06-19 18:33:30' --no-pager
+-- No entries --
+```
+
+Experiment 1 conclusion:
+
+The verbose run confirms that FFADO is not simply reporting a generic xrun. The receive ISO handler misses its activity deadline first, by a small margin over the configured maximum, then the transmit handler also dies during recovery. FFADO attempts to restart stream processors, but recovery loops fail because the receive stream is still considered enabled. This ends with `Could not syncStartAll`, `Unhandled XRUN`, and the JACK driver stopping while `jackd` remains alive.
+
+This points the next experiment at changing the period size to 512, per Jonathan's suggestion, while keeping `-v 6` enabled. If the same receive-handler death occurs at 512, the controller A/B test becomes the next highest-value data point.
+
 ## Recommended Next Experiments
 
 Run these in order, one variable at a time.
 
-1. Controlled verbose JACK/FFADO boot
-
-   Temporarily add `"-v" "6"` to the JACK firewire backend options, reboot into a clean state, wait for the failure, then collect:
-
-   ```text
-   journalctl -u rtirq.service -u jack.service -u jack-session.service -b --no-pager
-   journalctl -k -b --no-pager | rg -i 'firewire|1394|isochron|cycle|xrun|irq'
-   ps -Leo pid,tid,cls,rtprio,pri,psr,comm,args | rg 'jackd|FW_|irq/.*firewire'
-   ```
-
-   Goal: capture libffado debug around the first xrun rather than only JACK's final `wait status < 0`.
-
-2. Period-size experiment at 512/3
+1. Period-size experiment at 512/3
 
    Change only the period size from 2048 to 512, keep sample rate 48000, periods 3, priority 88, and FFADO verbose level 6. Reboot and repeat the same capture.
 
    Goal: test Jonathan's buffer-size suggestion without mixing in other changes.
 
-3. Controller A/B test
+2. Controller A/B test
 
    Test the Saffire attached through each FW643 controller. For each controller, capture:
 
@@ -474,17 +566,17 @@ Run these in order, one variable at a time.
 
    Goal: determine whether the xrun follows the Saffire regardless of controller or is specific to one FW643 path.
 
-4. Single-controller test
+3. Single-controller test
 
    If physically practical, remove or disable one FW643 controller and test again. Then swap and test the other controller alone.
 
    Goal: rule out odd interactions from two identical FW643 controllers on the same PCIe switch path.
 
-5. FFADO 2.5.0 test
+4. FFADO 2.5.0 test
 
    Only after the above, test FFADO 2.5.0 if packaging effort is acceptable. Jonathan noted its release but did not expect it to be decisive for this case.
 
-6. Recovery watchdog
+5. Recovery watchdog
 
    A watchdog that restarts JACK when `jack_lsp` fails may improve usability, but it should not be treated as the primary fix until the FFADO/controller data above is collected.
 

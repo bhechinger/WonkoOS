@@ -43,6 +43,8 @@ in
           "-P"
           (toString jackRealtimePriority)
           "-dfirewire"
+          "-v"
+          "6"
           "-r"
           (toString jackSampleRate)
           "-p"
