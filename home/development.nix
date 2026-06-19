@@ -9,6 +9,7 @@
   home.packages = with pkgs; [
     act
     unstable-pkgs.codex
+    unstable-pkgs.opencode
     zed-pkgs.zed-editor
     cloc
     nil
