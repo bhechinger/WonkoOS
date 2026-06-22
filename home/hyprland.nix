@@ -1,4 +1,4 @@
-{ ... }:
+{ pkgs, ... }:
 let
   browser = "firefox";
   terminal = "kitty";
@@ -33,7 +33,6 @@ in
         "systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP"
 
         "poweralertd &"
-        "hyprpolkitagent &"
         "wl-clip-persist --clipboard both &"
         #"wl-paste --watch cliphist store &"
         "waybar &"
@@ -493,5 +492,11 @@ in
         force_zero_scaling = true;
       };
     };
+  };
+
+  systemd.user.packages = [ pkgs.hyprpolkitagent ];
+
+  xdg.configFile."systemd/user/graphical-session.target.wants/hyprpolkitagent.service" = {
+    source = "${pkgs.hyprpolkitagent}/share/systemd/user/hyprpolkitagent.service";
   };
 }
