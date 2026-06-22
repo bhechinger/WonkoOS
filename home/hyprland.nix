@@ -1,4 +1,4 @@
-{ ... }:
+{ pkgs, ... }:
 let
   browser = "firefox";
   terminal = "kitty";
@@ -492,5 +492,11 @@ in
         force_zero_scaling = true;
       };
     };
+  };
+
+  systemd.user.packages = [ pkgs.hyprpolkitagent ];
+
+  xdg.configFile."systemd/user/graphical-session.target.wants/hyprpolkitagent.service" = {
+    source = "${pkgs.hyprpolkitagent}/share/systemd/user/hyprpolkitagent.service";
   };
 }
