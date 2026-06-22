@@ -12,7 +12,15 @@
       [
         awww
         grimblast
+        hyprcursor
         hyprpicker
+        hyprsysteminfo
+        hyprsunset
+        hyprpolkitagent
+        hyprland-qt-support
+        hyprpwcenter
+        hyprshutdown
+        hyprutils
         grim
         slurp
         wl-clip-persist
