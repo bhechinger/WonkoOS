@@ -34,6 +34,7 @@
         noto-fonts-cjk-sans
         noto-fonts-color-emoji
         proggyfonts
+        libnotify
       ]
       ++ builtins.filter lib.attrsets.isDerivation (builtins.attrValues pkgs.nerd-fonts);
 
@@ -50,6 +51,7 @@
       indicator = true;
     };
     pass-secret-service.enable = true;
+    mako.enable = true;
   };
 
   programs.password-store.enable = true;
