@@ -54,6 +54,7 @@
     gimp
     inxi
     mesa-demos
+    whatsie
   ];
 
   programs = {

@@ -47,7 +47,7 @@ in
 
         "[workspace special:chat silent] slack"
         "[workspace special:chat silent] discord"
-        "[workspace special:chat silent] chromium"
+        "[workspace special:chat silent] whatsie"
         "[workspace special:chat silent] irccloud"
         #"[workspace special:chat silent] kitty --class irssi -T irssi irssi"
 
@@ -377,7 +377,7 @@ in
       windowrule = [
         "workspace special:chat, match:class Slack"
         "workspace special:chat, match:class discord"
-        "workspace special:chat, match:class Chromium"
+        "workspace special:chat, match:class com.ktechpit.whatsie"
         "workspace special:chat, match:class IRCCloud"
         "workspace special:chat2, match:class thunderbird"
         "workspace special:chat2, match:class Signal"
