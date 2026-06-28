@@ -38,10 +38,16 @@ let
     cookie_dir="''${XDG_RUNTIME_DIR:-/tmp}"
     [ -w "$cookie_dir" ] || cookie_dir="/tmp"
     cookie_jar="$cookie_dir/waybar-coolercontrol-cookie"
+    password_path="/run/secrets/coolercontrol-admin-password"
     coolercontrol_status="$(${pkgs.curl}/bin/curl -fsk -b "$cookie_jar" -X POST https://127.0.0.1:11987/status -H 'content-type: application/json' --data '{}' 2>/dev/null)"
 
-    if ! printf '%s' "$coolercontrol_status" | ${pkgs.jq}/bin/jq -e '.devices' >/dev/null 2>&1; then
-      ${pkgs.curl}/bin/curl -fsk -c "$cookie_jar" -u CCAdmin:coolAdmin -X POST https://127.0.0.1:11987/login -H 'content-type: application/json' --data '{}' >/dev/null 2>&1
+    if ! printf '%s' "$coolercontrol_status" | ${pkgs.jq}/bin/jq -e '.devices' >/dev/null 2>&1 && [ -r "$password_path" ]; then
+      coolercontrol_password="$(cat "$password_path")"
+      auth_file="$(${pkgs.coreutils}/bin/mktemp "$cookie_dir/waybar-coolercontrol-auth.XXXXXX")"
+      trap 'rm -f "$auth_file"' EXIT
+      printf 'machine 127.0.0.1 login CCAdmin password %s\n' "$coolercontrol_password" > "$auth_file"
+      chmod 600 "$auth_file"
+      ${pkgs.curl}/bin/curl -fsk -c "$cookie_jar" --netrc-file "$auth_file" -X POST https://127.0.0.1:11987/login -H 'content-type: application/json' --data '{}' >/dev/null 2>&1
       coolercontrol_status="$(${pkgs.curl}/bin/curl -fsk -b "$cookie_jar" -X POST https://127.0.0.1:11987/status -H 'content-type: application/json' --data '{}' 2>/dev/null)"
     fi
 

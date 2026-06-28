@@ -14,13 +14,28 @@
     lm_sensors
   ];
 
+  sops = {
+    useSystemdActivation = true;
+    secrets.coolercontrol-admin-password = {
+      sopsFile = ./secrets/coolercontrol.sops;
+      format = "yaml";
+      key = "admin-password";
+      owner = "wonko";
+      group = "users";
+      mode = "0400";
+    };
+  };
+
   programs.coolercontrol.enable = true;
 
-  systemd.services.coolercontrold.preStart = ''
-    mkdir -p /etc/coolercontrol
+  systemd.services.coolercontrold = {
+    requires = [ "sops-install-secrets.service" ];
+    after = [ "sops-install-secrets.service" ];
+    preStart = ''
+      mkdir -p /etc/coolercontrol
 
-    if [ ! -e /etc/coolercontrol/config.toml ]; then
-      cat > /etc/coolercontrol/config.toml <<'EOF'
+      if [ ! -e /etc/coolercontrol/config.toml ]; then
+        cat > /etc/coolercontrol/config.toml <<'EOF'
     [devices]
     [legacy690]
     [device-settings]
@@ -39,9 +54,9 @@
     [settings]
     apply_on_boot = true
     EOF
-    fi
+      fi
 
-    ${pkgs.python3}/bin/python3 <<'PY'
+      ${pkgs.python3}/bin/python3 <<'PY'
     from pathlib import Path
 
     config_path = Path("/etc/coolercontrol/config.toml")
@@ -101,7 +116,37 @@
 
     config_path.write_text(text)
     PY
-  '';
+    '';
+    postStart = ''
+      set -eu
+
+      password_file=${config.sops.secrets.coolercontrol-admin-password.path}
+      password="$(cat "$password_file")"
+      url="https://127.0.0.1:11987"
+      auth_file="$(mktemp)"
+      trap 'rm -f "$auth_file" /tmp/coolercontrol-password-cookie' EXIT
+      printf 'machine 127.0.0.1 login CCAdmin password %s\n' "$password" > "$auth_file"
+      chmod 600 "$auth_file"
+
+      for _ in $(seq 1 60); do
+        if ${pkgs.curl}/bin/curl -fsk -X GET "$url/handshake" >/dev/null 2>&1; then
+          break
+        fi
+        sleep 1
+      done
+
+      if ${pkgs.curl}/bin/curl -fsk --netrc-file "$auth_file" -X POST "$url/login" -H 'content-type: application/json' --data '{}' >/dev/null; then
+        exit 0
+      fi
+
+      if ! ${pkgs.curl}/bin/curl -fsk -u CCAdmin:coolAdmin -c /tmp/coolercontrol-password-cookie -X POST "$url/login" -H 'content-type: application/json' --data '{}' >/dev/null; then
+        echo "coolercontrold password is neither the SOPS secret nor the default password" >&2
+        exit 1
+      fi
+
+      ${pkgs.curl}/bin/curl -fsk -b /tmp/coolercontrol-password-cookie --netrc-file "$auth_file" -X POST "$url/set-passwd" -H 'content-type: application/json' --data "{\"current_password\":\"coolAdmin\"}" >/dev/null
+    '';
+  };
 
   hardware = {
     # Enable only after pwmconfig finds stable fan*_input/pwm* paths for this board.

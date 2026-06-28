@@ -5,6 +5,7 @@
     inputs.determinate.nixosModules.default
     inputs.musnix.nixosModules.musnix
     inputs.disko.nixosModules.disko
+    inputs.sops-nix.nixosModules.sops
 
     ../hardware/deepthought.nix
     #./zfs.nix

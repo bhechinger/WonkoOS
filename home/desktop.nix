@@ -4,6 +4,7 @@
     ./hyprland.nix
     ./waybar.nix
     ./hyprlock.nix
+    ./coolercontrol.nix
   ];
 
   home = {

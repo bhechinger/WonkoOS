@@ -1,5 +1,8 @@
 keys:
   - &yubikey 1095C1E7CE8B8EBCCA52E07F8167F649B348E6CE
+  - &deepthought age1vl4w7htylu57jmsekelgq4xmgpjq8lp2cngn9wjuyrna7dfc9v2spevjpy
 creation_rules:
   - path_regex: home/secrets/.*\.sops$
     pgp: *yubikey
+  - path_regex: systems/deepthought/secrets/.*\.sops$
+    age: *deepthought
