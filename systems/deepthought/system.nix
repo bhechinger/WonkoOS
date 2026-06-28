@@ -59,7 +59,8 @@ in
     extraModulePackages = [ ];
     # kernelPackages = pkgs.linuxPackages_xanmod_latest;
     # kernelPackages = pkgs.linuxPackages_6_18;
-    kernelPackages = pkgs.linuxPackages_latest;
+    # Keep ZFS on the latest 7.0.x kernel instead of following linuxPackages_latest.
+    kernelPackages = pkgs.linuxPackagesFor pkgs.linux_7_0;
     zfs = {
       forceImportRoot = false;
       extraPools = [
