@@ -1,16 +1,11 @@
-{
-  pkgs,
-  unstable-pkgs,
-  zed-pkgs,
-  ...
-}:
+{ pkgs, unstable-pkgs, ... }:
 
 {
   home.packages = with pkgs; [
     act
     unstable-pkgs.codex
     unstable-pkgs.opencode
-    zed-pkgs.zed-editor
+    unstable-pkgs.zed-editor
     cloc
     nil
     nixd
