@@ -1,6 +1,19 @@
-{ pkgs, ... }:
+{
+  config,
+  pkgs,
+  sops-nix,
+  ...
+}:
 
 {
+  imports = [ sops-nix.homeManagerModules.sops ];
+
+  sops.gnupg.home = "/home/wonko/.gnupg";
+  sops.secrets."github-pat-token" = {
+    sopsFile = ./secrets/github-pat-token.sops;
+    format = "binary";
+  };
+
   home = {
     shell = {
       enableZshIntegration = true;
@@ -11,6 +24,7 @@
   };
 
   programs = {
+    bat.enable = true;
     zsh = {
       enable = true;
       autocd = true;
@@ -47,6 +61,10 @@
       };
 
       initContent = ''
+        if [[ -r ${config.sops.secrets."github-pat-token".path} ]]; then
+          export GITHUB_PAT_TOKEN="$(<${config.sops.secrets."github-pat-token".path})"
+        fi
+
         bindkey -v
       '';
     };

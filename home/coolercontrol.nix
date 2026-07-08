@@ -6,6 +6,7 @@ let
     password_path="/run/secrets/coolercontrol-admin-password"
     config_dir="$HOME/.config/org.coolercontrol.CoolerControl"
     config_file="$config_dir/CoolerControl.conf"
+    webengine_cookie_db="$HOME/.local/share/org.coolercontrol.CoolerControl/CoolerControl/QtWebEngine/coolercontrol/Cookies"
     cookie_jar="''${XDG_RUNTIME_DIR:-/tmp}/coolercontrol-gui-cookie"
     url="https://127.0.0.1:11987"
 
@@ -26,16 +27,19 @@ let
     ${pkgs.curl}/bin/curl -fsk -c "$cookie_jar" --netrc-file "$auth_file" -X POST "$url/login" -H 'content-type: application/json' --data '{}' >/dev/null
 
     cookie="$(${pkgs.gawk}/bin/awk '$6 == "cc" { value = $7 } END { if (value != "") print value; else exit 1 }' "$cookie_jar")"
-    expires="$(${pkgs.coreutils}/bin/date -u -d '+1 year' '+%a, %d-%b-%Y %H:%M:%S GMT')"
+    expires="$(LC_ALL=C ${pkgs.coreutils}/bin/date -u -d '+1 year' '+%a, %d-%b-%Y %H:%M:%S GMT')"
 
     mkdir -p "$config_dir"
-    ${pkgs.python3}/bin/python3 - "$config_file" "$cookie" "$expires" <<'PY'
+    ${pkgs.python3}/bin/python3 - "$config_file" "$webengine_cookie_db" "$cookie" "$expires" <<'PY'
+    import sqlite3
     import sys
+    import time
     from pathlib import Path
 
     config_file = Path(sys.argv[1])
-    cookie = sys.argv[2]
-    expires = sys.argv[3]
+    webengine_cookie_db = Path(sys.argv[2])
+    cookie = sys.argv[3]
+    expires = sys.argv[4]
     line = f'networkCookies="@ByteArray(cc={cookie}; HttpOnly; expires={expires}; domain=localhost; path=/\\n)"'
 
     if config_file.exists():
@@ -54,7 +58,28 @@ let
         lines.append(line)
 
     config_file.write_text("\n".join(lines) + "\n")
+
+    if webengine_cookie_db.exists():
+        now = int((time.time() + 11644473600) * 1_000_000)
+        expires_utc = now + 365 * 24 * 60 * 60 * 1_000_000
+        with sqlite3.connect(webengine_cookie_db, timeout=1) as con:
+            con.execute("DELETE FROM cookies WHERE host_key = 'localhost' AND name = 'cc'")
+            con.execute(
+                """
+                INSERT INTO cookies (
+                    creation_utc, host_key, top_frame_site_key, name, value, encrypted_value, path,
+                    expires_utc, is_secure, is_httponly, last_access_utc, has_expires,
+                    is_persistent, priority, samesite, source_scheme, source_port,
+                    last_update_utc, source_type, has_cross_site_ancestor
+                ) VALUES (?, 'localhost', ?, 'cc', ?, ?, '/', ?, 1, 1, ?, 1, 1, 1, 2, 2, 11987, ?, 0, 0)
+                """,
+                (now, "", cookie, b"", expires_utc, now, now),
+            )
     PY
+  '';
+  launchCoolercontrol = pkgs.writeShellScript "coolercontrol-gui" ''
+    ${refreshCookie} || true
+    exec ${pkgs.coolercontrol.coolercontrol-gui}/bin/coolercontrol "$@"
   '';
 in
 {
@@ -66,6 +91,20 @@ in
       Name=CoolerControl
       Hidden=true
     '';
+  };
+
+  xdg.desktopEntries."org.coolercontrol.CoolerControl" = {
+    name = "CoolerControl";
+    exec = "${launchCoolercontrol}";
+    icon = "org.coolercontrol.CoolerControl";
+    terminal = false;
+    type = "Application";
+    startupNotify = true;
+    categories = [ "Utility" ];
+    settings = {
+      Keywords = "cooling;fan control;pump control;";
+      StartupWMClass = "org.coolercontrol.CoolerControl";
+    };
   };
 
   systemd.user.services.coolercontrol-refresh-cookie = {
@@ -91,9 +130,7 @@ in
     };
 
     Service = {
-      ExecStart = "${pkgs.coolercontrol.coolercontrol-gui}/bin/coolercontrol";
-      Restart = "on-failure";
-      RestartSec = 5;
+      ExecStart = launchCoolercontrol;
     };
 
     Install.WantedBy = [ "xdg-desktop-autostart.target" ];
