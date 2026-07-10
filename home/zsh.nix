@@ -1,5 +1,6 @@
 {
   config,
+  lib,
   pkgs,
   sops-nix,
   ...
@@ -12,6 +13,28 @@
   sops.secrets."github-pat-token" = {
     sopsFile = ./secrets/github-pat-token.sops;
     format = "binary";
+  };
+
+  systemd.user.services.sops-unlock = {
+    Unit = {
+      Description = "Unlock the YubiKey for sops-nix";
+      Before = [ "sops-nix.service" ];
+    };
+    Service = {
+      Type = "oneshot";
+      ExecStart = pkgs.writeShellScript "sops-unlock" ''
+        ${pkgs.sops}/bin/sops --decrypt ${./secrets/github-pat-token.sops} >/dev/null
+      '';
+    };
+    Install.WantedBy = [ "hyprland-session.target" ];
+  };
+
+  systemd.user.services.sops-nix = {
+    Unit = {
+      Requires = [ "sops-unlock.service" ];
+      After = [ "sops-unlock.service" ];
+    };
+    Install.WantedBy = lib.mkForce [ "hyprland-session.target" ];
   };
 
   home = {
@@ -61,10 +84,6 @@
       };
 
       initContent = ''
-        if [[ -r ${config.sops.secrets."github-pat-token".path} ]]; then
-          export GITHUB_PAT_TOKEN="$(<${config.sops.secrets."github-pat-token".path})"
-        fi
-
         bindkey -v
       '';
     };

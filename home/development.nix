@@ -1,9 +1,19 @@
-{ pkgs, unstable-pkgs, ... }:
+{ config, pkgs, unstable-pkgs, ... }:
 
+let
+  codex = pkgs.writeShellScriptBin "codex" ''
+    if [[ ! -r ${config.sops.secrets."github-pat-token".path} ]]; then
+      echo "codex: GitHub PAT secret is unavailable" >&2
+      exit 1
+    fi
+    export GITHUB_PAT_TOKEN="$(<${config.sops.secrets."github-pat-token".path})"
+    exec ${unstable-pkgs.codex}/bin/codex "$@"
+  '';
+in
 {
   home.packages = with pkgs; [
     act
-    unstable-pkgs.codex
+    codex
     unstable-pkgs.opencode
     unstable-pkgs.zed-editor
     cloc
