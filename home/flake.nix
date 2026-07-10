@@ -54,7 +54,20 @@
             # setup, so the bwrap and landlock checks are patched out below. The
             # wrapper still drops Linux capabilities with setpriv, but Codex
             # subprocesses are intentionally not filesystem/network sandboxed here.
-            codex = prev.codex.overrideAttrs (old: {
+            codex = prev.codex.overrideAttrs (old: rec {
+              version = "0.144.1";
+              src = prev.fetchFromGitHub {
+                owner = "openai";
+                repo = "codex";
+                tag = "rust-v0.144.1";
+                hash = "sha256-KHgrqIZyAmLhTZSRYbb7huBO8neOib/B1Vx/oPW2nEU=";
+              };
+              cargoHash = "sha256-S4dsZXfmKvJItL2XYKyxfhqdCMATEG6oPjrtVRwkuYc=";
+              cargoDeps = prev.rustPlatform.fetchCargoVendor {
+                inherit src version;
+                pname = "codex";
+                hash = cargoHash;
+              };
               env = (old.env or { }) // {
                 RUST_MIN_STACK = "16777216";
               };
