@@ -49,7 +49,10 @@
     '';
     firewall = {
       enable = true;
-      allowedTCPPorts = [ 22 1234 ];
+      allowedTCPPorts = [
+        22
+        1234
+      ];
     };
   };
 

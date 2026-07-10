@@ -1,50 +1,11 @@
 { config, pkgs, ... }:
 
 {
-  fileSystems."/" = {
-    device = "zpool/root";
-    fsType = "zfs";
-    options = [ "zfsutil" ];
-  };
-
-  fileSystems."/nix" = {
-    device = "zpool/nix";
-    fsType = "zfs";
-    options = [ "zfsutil" ];
-  };
-
-  fileSystems."/var" = {
-    device = "zpool/var";
-    fsType = "zfs";
-    options = [ "zfsutil" ];
-  };
-
-  fileSystems."/var/lib/docker" = {
-    device = "zpool/docker";
-    fsType = "zfs";
-    options = [ "zfsutil" ];
-  };
-
-  fileSystems."/home" = {
-    device = "tank/home";
-    fsType = "zfs";
-    options = [ "zfsutil" ];
-  };
-
-  fileSystems."/boot" = {
-    device = "/dev/disk/by-id/nvme-WDC_WDS100T2B0C-00PXH0_21281Y459408-part1";
-    fsType = "vfat";
-    options = [
-      "fmask=0022"
-      "dmask=0022"
-    ];
-  };
-
-  swapDevices = [
-    {
-      device = "/dev/disk/by-id/nvme-WDC_WDS100T2B0C-00PXH0_21281Y459408-part2";
-    }
-  ];
+  # OpenZFS owns these native mountpoints; disko still provisions and mounts
+  # them during installation.
+  fileSystems."/var".enable = false;
+  fileSystems."/var/lib/docker".enable = false;
+  fileSystems."/home".enable = false;
 
   # NFS mounts
   systemd.mounts =
@@ -118,8 +79,12 @@
     after = [
       "iscsi.service"
       "zfs-import.target"
+      "zfs-mount.service"
     ];
-    requires = [ "iscsi.service" ];
+    requires = [
+      "iscsi.service"
+      "zfs-mount.service"
+    ];
     wantedBy = [ "multi-user.target" ];
     path = [
       config.boot.zfs.package
@@ -132,11 +97,11 @@
     script = ''
       for attempt in $(seq 1 24); do
         if zpool list -H -o name basket >/dev/null 2>&1; then
-          exit 0
+          break
         fi
 
         if zpool import basket; then
-          exit 0
+          break
         fi
 
         echo "basket pool is not importable yet; waiting for iSCSI devices ($attempt/24)"
@@ -144,7 +109,15 @@
         sleep 5
       done
 
-      zpool import basket
+      if ! zpool list -H -o name basket >/dev/null 2>&1; then
+        zpool import basket
+      fi
+
+      while IFS=$'\t' read -r dataset mounted canmount; do
+        if [ "$mounted" = "no" ] && [ "$canmount" = "on" ]; then
+          zfs mount "$dataset"
+        fi
+      done < <(zfs list -H -o name,mounted,canmount -t filesystem -r basket)
     '';
   };
 

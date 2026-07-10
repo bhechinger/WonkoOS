@@ -25,6 +25,7 @@
 
   outputs =
     {
+      self,
       nixpkgs,
       unstable-nixpkgs,
       determinate,
@@ -121,5 +122,8 @@
           ];
         };
       };
+
+      formatter.${system} = pkgs.nixfmt-tree;
+      checks.${system}.home = self.homeConfigurations.wonko.activationPackage;
     };
 }

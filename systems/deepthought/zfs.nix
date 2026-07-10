@@ -1,12 +1,8 @@
 {
-  device ? throw "Set this to your disk device, e.g. /dev/sda",
-  ...
-}:
-{
   disko.devices = {
     disk = {
       os = {
-        inherit device;
+        device = "/dev/disk/by-id/nvme-WDC_WDS100T2B0C-00PXH0_21281Y459408";
         type = "disk";
         content = {
           type = "gpt";
@@ -18,49 +14,79 @@
                 type = "filesystem";
                 format = "vfat";
                 mountpoint = "/boot";
-                mountOptions = [ "umask=0077" ];
+                mountOptions = [
+                  "fmask=0022"
+                  "dmask=0022"
+                ];
               };
+            };
+            swap = {
+              size = "8G";
+              content.type = "swap";
             };
             zfs = {
               size = "100%";
               content = {
                 type = "zfs";
-                pool = "zroot";
+                pool = "zpool";
               };
             };
           };
         };
       };
+      tank = {
+        device = "/dev/disk/by-id/nvme-WDS200T1XHE-00AFY0_21143L800578";
+        type = "disk";
+        content = {
+          type = "zfs";
+          pool = "tank";
+        };
+      };
     };
     zpool = {
-      zroot = {
+      zpool = {
         type = "zpool";
-        # Workaround: cannot import 'zroot': I/O error in disko tests
-        options.cachefile = "none";
+        options.ashift = "12";
         rootFsOptions = {
           compression = "zstd";
-          "com.sun:auto-snapshot" = "false";
+          mountpoint = "none";
+          xattr = "sa";
+          acltype = "posixacl";
         };
-        # mountpoint = "/";
-        postCreateHook = "zfs list -t snapshot -H -o name | grep -E '^zroot@blank$' || zfs snapshot zroot@blank";
 
         datasets = {
           root = {
             type = "zfs_fs";
             mountpoint = "/";
+            options.mountpoint = "legacy";
+          };
+          nix = {
+            type = "zfs_fs";
+            mountpoint = "/nix";
+            options.mountpoint = "legacy";
           };
           var = {
             type = "zfs_fs";
             mountpoint = "/var";
           };
-          nix = {
+          docker = {
             type = "zfs_fs";
-            mountpoint = "/nix";
+            mountpoint = "/var/lib/docker";
           };
-          home = {
-            type = "zfs_fs";
-            mountpoint = "/home";
-          };
+        };
+      };
+      tank = {
+        type = "zpool";
+        options.ashift = "12";
+        rootFsOptions = {
+          compression = "on";
+          mountpoint = "none";
+          xattr = "sa";
+          acltype = "posixacl";
+        };
+        datasets.home = {
+          type = "zfs_fs";
+          mountpoint = "/home";
         };
       };
     };

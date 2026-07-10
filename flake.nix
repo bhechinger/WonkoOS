@@ -3,8 +3,6 @@
 
   inputs = {
     nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0"; # Stable Nixpkgs
-    nixpkgs-unstable.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1"; # Unstable Nixpkgs
-
     determinate = {
       url = "https://flakehub.com/f/DeterminateSystems/determinate/3"; # Determinate 3.*
       inputs.nixpkgs.follows = "nixpkgs";
@@ -12,11 +10,6 @@
 
     disko = {
       url = "github:nix-community/disko/latest";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    hyprland = {
-      url = "github:hyprwm/Hyprland";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -35,12 +28,7 @@
     { self, nixpkgs, ... }@inputs:
     let
       system = "x86_64-linux";
-
-      # pkgs = import nixpkgs {
-      #  inherit system;
-      #  config = { allowUnfree = true; };
-      # };
-
+      pkgs = nixpkgs.legacyPackages.${system};
       inherit (nixpkgs) lib;
     in
     {
@@ -50,13 +38,71 @@
 
           specialArgs = {
             inherit inputs;
-            device = "/dev/vda";
           };
 
           modules = [
             ./systems/deepthought/default.nix
           ];
         };
+      };
+
+      packages.${system} = {
+        inherit (inputs.disko.packages.${system}) disko disko-install;
+      };
+
+      formatter.${system} = pkgs.nixfmt-tree;
+
+      checks.${system} = {
+        nixos = self.nixosConfigurations.deepthought.config.system.build.toplevel;
+
+        hugepages =
+          assert import ./common/hugepages-test.nix;
+          pkgs.runCommand "hugepages-test" { } ''
+            touch "$out"
+          '';
+
+        storage-layout =
+          let
+            config = self.nixosConfigurations.deepthought.config;
+            activeMounts = map (filesystem: filesystem.mountPoint) config.system.build.fileSystems;
+          in
+          assert
+            builtins.attrNames config.disko.devices.disk == [
+              "os"
+              "tank"
+            ];
+          assert
+            builtins.attrNames config.disko.devices.zpool == [
+              "tank"
+              "zpool"
+            ];
+          assert config.disko.devices.zpool.zpool.datasets.root.options.mountpoint == "legacy";
+          assert config.disko.devices.zpool.zpool.datasets.nix.options.mountpoint == "legacy";
+          assert config.disko.devices.zpool.zpool.datasets.var.mountpoint == "/var";
+          assert config.disko.devices.zpool.zpool.datasets.docker.mountpoint == "/var/lib/docker";
+          assert config.disko.devices.zpool.tank.datasets.home.mountpoint == "/home";
+          assert lib.all (mountpoint: lib.elem mountpoint activeMounts) [
+            "/"
+            "/boot"
+            "/nix"
+          ];
+          assert lib.all (mountpoint: !lib.elem mountpoint activeMounts) [
+            "/var"
+            "/var/lib/docker"
+            "/home"
+          ];
+          assert !lib.elem "basket" config.boot.zfs.extraPools;
+          pkgs.runCommand "storage-layout-test" { } ''
+            touch "$out"
+          '';
+
+        formatting = pkgs.runCommand "formatting-check" { nativeBuildInputs = [ pkgs.nixfmt-tree ]; } ''
+          cp -r ${self} source
+          chmod -R u+w source
+          cd source
+          treefmt --ci --tree-root "$PWD" --walk filesystem .
+          touch "$out"
+        '';
       };
     };
 }

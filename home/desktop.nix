@@ -11,7 +11,6 @@
     packages =
       with pkgs;
       [
-        awww
         grimblast
         hyprcursor
         hyprpicker
@@ -24,7 +23,6 @@
         hyprutils
         grim
         slurp
-        wl-clip-persist
         cliphist
         wf-recorder
         glib
@@ -61,15 +59,18 @@
     };
     pass-secret-service.enable = true;
     mako.enable = true;
+    awww.enable = true;
+    poweralertd.enable = true;
+    wl-clip-persist = {
+      enable = true;
+      clipboardType = "both";
+      systemdTargets = [ "hyprland-session.target" ];
+    };
   };
 
   programs.password-store.enable = true;
 
   fonts.fontconfig.enable = true;
-
-  systemd.user.targets.hyprland-session.Unit.Wants = [
-    "xdg-desktop-autostart.target"
-  ];
 
   systemd.user.services.pass-secret-service.Install.Alias = [
     "dbus-org.freedesktop.secrets.service"

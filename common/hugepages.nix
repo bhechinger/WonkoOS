@@ -16,11 +16,7 @@ let
   hugePageSizeBytes = hugePageSizeKiB * 1024;
 
   pagesForSegment =
-    segmentBytes:
-    let
-      minPages = builtins.div segmentBytes hugePageSizeBytes;
-    in
-    if minPages > 0 then minPages + 1 else 0;
+    segmentBytes: builtins.div (segmentBytes + hugePageSizeBytes - 1) hugePageSizeBytes;
 
   nrHugepages =
     1

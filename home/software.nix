@@ -42,8 +42,6 @@
     #usbmuxd2-unstable
     #ventoy
     vlc
-    poweralertd
-    wl-clip-persist
     telegram-desktop
     signal-desktop
     discord

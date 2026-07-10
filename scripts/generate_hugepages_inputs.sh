@@ -11,13 +11,11 @@ huge_page_size_bytes=$((huge_page_size_kib * 1024))
 
 hugepage_count() {
   local total=1
-  local segment_bytes min_pages
+  local segment_bytes pages
 
   for segment_bytes in "$@"; do
-    min_pages=$((segment_bytes / huge_page_size_bytes))
-    if [ "$min_pages" -gt 0 ]; then
-      total=$((total + min_pages + 1))
-    fi
+    pages=$(((segment_bytes + huge_page_size_bytes - 1) / huge_page_size_bytes))
+    total=$((total + pages))
   done
 
   printf '%s\n' "$total"

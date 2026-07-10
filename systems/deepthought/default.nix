@@ -8,7 +8,7 @@
     inputs.sops-nix.nixosModules.sops
 
     ../hardware/deepthought.nix
-    #./zfs.nix
+    ./zfs.nix
     ./networking.nix
     ./users.nix
     ./filesystems.nix

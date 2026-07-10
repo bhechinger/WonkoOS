@@ -26,12 +26,12 @@
     nginx = {
       enable = true;
       virtualHosts."deepthought.4amlunch.net" = {
-#        addSSL = true;
-#        enableACME = true;
+        #        addSSL = true;
+        #        enableACME = true;
         locations."/grafana/" = {
-            proxyPass = "http://${toString config.services.grafana.settings.server.http_addr}:${toString config.services.grafana.settings.server.http_port}";
-            proxyWebsockets = true;
-            recommendedProxySettings = true;
+          proxyPass = "http://${toString config.services.grafana.settings.server.http_addr}:${toString config.services.grafana.settings.server.http_port}";
+          proxyWebsockets = true;
+          recommendedProxySettings = true;
         };
       };
     };
@@ -82,20 +82,24 @@
       scrapeConfigs = [
         {
           job_name = "deepthought";
-          static_configs = [{
-            targets = [
-              "127.0.0.1:${toString config.services.prometheus.exporters.node.port}"
-              "127.0.0.1:9835"
-            ];
-          }];
+          static_configs = [
+            {
+              targets = [
+                "127.0.0.1:${toString config.services.prometheus.exporters.node.port}"
+                "127.0.0.1:9835"
+              ];
+            }
+          ];
         }
         {
           job_name = "sierra";
-          static_configs = [{
-            targets = [
-              "10.42.0.251:9100"
-            ];
-          }];
+          static_configs = [
+            {
+              targets = [
+                "10.42.0.251:9100"
+              ];
+            }
+          ];
         }
       ];
     };
@@ -109,11 +113,11 @@
   #systemd.services.promtail = {
   #  description = "Promtail service for Loki";
   #  wantedBy = [ "multi-user.target" ];
-#
-#    serviceConfig = {
-#      ExecStart = ''
-#        ${pkgs.grafana-loki}/bin/promtail --config.file ${./promtail.yaml}
-#      '';
-#    };
-#  };
+  #
+  #    serviceConfig = {
+  #      ExecStart = ''
+  #        ${pkgs.grafana-loki}/bin/promtail --config.file ${./promtail.yaml}
+  #      '';
+  #    };
+  #  };
 }

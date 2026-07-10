@@ -1,7 +1,8 @@
-{ pkgs, ... }:
+{ lib, pkgs, ... }:
 let
   browser = "firefox";
   terminal = "kitty";
+  telegram = lib.getExe pkgs.telegram-desktop;
 in
 {
   systemd.user.targets.hyprland-session.Unit.Wants = [
@@ -28,18 +29,10 @@ in
 
       # autostart
       exec-once = [
-        # "hash dbus-update-activation-environment 2>/dev/null"
-        "dbus-update-activation-environment --all --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP"
-        "systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP"
-
-        "poweralertd &"
-        "wl-clip-persist --clipboard both &"
         #"wl-paste --watch cliphist store &"
-        "waybar &"
         #"swaync &"
         #"vicinae server &"
         "hyprctl setcursor Bibata-Modern-Ice 24 &"
-        "swww-daemon &"
 
         # "${terminal} --gtk-single-instance=true --quit-after-last-window-closed=false --initial-window=false"
         "[workspace 1 silent] ${browser}"
@@ -53,7 +46,7 @@ in
 
         #"[workspace special:chat2 silent] thunderbird"
         "[workspace special:chat2 silent] signal-desktop"
-        "[workspace special:chat2 silent] telegram"
+        "[workspace special:chat2 silent] ${telegram}"
 
         "[workspace special:audio silent] qpwgraph -d"
 
@@ -173,9 +166,6 @@ in
       };
 
       bind = [
-        # show keybinds list
-        "$mainMod, F1, exec, show-keybinds"
-
         # keybindings
         "SUPER, Tab, workspace, previous"
         "$mainMod, Return, exec, ${terminal}"
