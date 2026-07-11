@@ -1,0 +1,118 @@
+{
+  config,
+  inputs,
+  lib,
+  modulesPath,
+  pkgs,
+  ...
+}:
+
+let
+  wonkoKeys =
+    (import ../deepthought/users.nix { inherit pkgs; }).users.users.wonko.openssh.authorizedKeys.keys;
+in
+{
+  imports = [
+    inputs.determinate.nixosModules.default
+    inputs.disko.nixosModules.disko
+    (modulesPath + "/installer/scan/not-detected.nix")
+    ./disko.nix
+    ./networking.nix
+    ./services.nix
+  ];
+
+  boot = {
+    initrd.availableKernelModules = [
+      "ahci"
+      "nvme"
+      "sd_mod"
+      "usb_storage"
+      "xhci_pci"
+    ];
+    kernelModules = [ "kvm-intel" ];
+    loader = {
+      systemd-boot.enable = true;
+      efi.canTouchEfiVariables = true;
+    };
+    supportedFilesystems = [ "nfs" ];
+    zfs = {
+      devNodes = lib.mkDefault "/dev/disk/by-partuuid";
+      extraPools = [ "zpool" ];
+      forceImportRoot = false;
+    };
+  };
+
+  hardware = {
+    cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
+    enableRedistributableFirmware = true;
+    graphics.enable = true;
+  };
+
+  nix = {
+    settings = {
+      experimental-features = [
+        "flakes"
+        "nix-command"
+      ];
+      trusted-users = [
+        "root"
+        "wonko"
+        "@wheel"
+      ];
+    };
+  };
+
+  nixpkgs = {
+    config.allowUnfree = true;
+    hostPlatform = lib.mkDefault "x86_64-linux";
+  };
+
+  security.sudo.wheelNeedsPassword = false;
+
+  programs.zsh.enable = true;
+
+  services = {
+    openssh = {
+      enable = true;
+      settings = {
+        KbdInteractiveAuthentication = false;
+        PasswordAuthentication = false;
+        PermitRootLogin = "no";
+      };
+    };
+    zfs = {
+      autoScrub.enable = true;
+      trim.enable = true;
+    };
+  };
+
+  users = {
+    mutableUsers = false;
+    users.wonko = {
+      description = "Brian Hechinger";
+      extraGroups = [
+        "docker"
+        "libvirtd"
+        "wheel"
+      ];
+      isNormalUser = true;
+      linger = true;
+      openssh.authorizedKeys.keys = wonkoKeys;
+      shell = pkgs.zsh;
+      uid = 1000;
+    };
+  };
+
+  environment.systemPackages = with pkgs; [
+    git
+    rsync
+    tmux
+    vim
+  ];
+
+  i18n.defaultLocale = "en_US.UTF-8";
+  time.timeZone = "Europe/Lisbon";
+  zramSwap.enable = true;
+
+  system.stateVersion = "26.05";
+}

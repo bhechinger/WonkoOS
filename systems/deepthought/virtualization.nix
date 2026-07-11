@@ -1,6 +1,4 @@
-{
-  ...
-}:
+_:
 
 {
   virtualisation = {
@@ -13,7 +11,6 @@
         ];
       };
       enable = true;
-      #enableNvidia = true;
       storageDriver = "zfs";
     };
     podman = {
@@ -26,6 +23,5 @@
       };
     };
     spiceUSBRedirection.enable = true;
-    #waydroid.enable = true;
   };
 }

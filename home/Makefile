@@ -1,10 +1,10 @@
-.PHONY: update
+.PHONY: build switch update
 switch:
-	nh home switch .
+	nh home switch ..
 	hyprctl reload
 
 build:
-	nh home build .
+	nh home build ..
 
 update:
-	nix flake lock --update-input auto-splice
+	nix flake update auto-splice --flake ..

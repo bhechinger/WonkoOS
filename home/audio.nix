@@ -141,11 +141,8 @@ let
   };
 
   battletechGamesRule = builtins.readFile ./wireplumber/battletech-games.conf;
-  # audiofireFfadoRule = builtins.readFile ./pipewire/audiofire-ffado.conf;
   audioRoutesRule = builtins.readFile ./wireplumber/audio-routes.conf;
   audioRoutesScript = builtins.readFile ./wireplumber/audio-routes.lua;
-  # midiRoutesRule = builtins.readFile ./wireplumber/midi-routes.conf;
-  # midiRoutesScript = builtins.readFile ./wireplumber/midi-routes.lua;
   saffireClockRule = builtins.readFile ./wireplumber/saffire-clock.conf;
 
 in
@@ -163,35 +160,52 @@ in
     pavucontrol
     spotify
   ];
-  xdg.configFile."autostart/pulseaudio.desktop" = {
-    force = true;
-    text = ''
-      [Desktop Entry]
-      Hidden=true
-      Name=PulseAudio Sound System
-      Type=Application
-    '';
-  };
+  xdg = {
+    configFile = {
+      "autostart/pulseaudio.desktop" = {
+        force = true;
+        text = ''
+          [Desktop Entry]
+          Hidden=true
+          Name=PulseAudio Sound System
+          Type=Application
+        '';
+      };
+      "pipewire/pipewire.conf.d/10-null-sink.conf" = {
+        force = true;
+        text = builtins.readFile ./pipewire/10-null-sink.conf;
+      };
+      "pipewire/pipewire.conf.d/11-null-source.conf" = {
+        force = true;
+        text = builtins.readFile ./pipewire/11-null-source.conf;
+      };
+      "wireplumber/wireplumber.conf.d/50-audio-routes.conf".text = audioRoutesRule;
+      "pipewire/client.conf.d/52-battletech-games.conf".text = battletechGamesRule;
+      "pipewire/pipewire-pulse.conf.d/52-battletech-games.conf".text = battletechGamesRule;
+      "wireplumber/wireplumber.conf.d/52-battletech-games.conf".text = battletechGamesRule;
+      "wireplumber/wireplumber.conf.d/51-saffire-clock.conf".text = saffireClockRule;
+    };
 
-  xdg.desktopEntries."org.rncbc.qpwgraph" = {
-    name = "qpwgraph";
-    genericName = "PipeWire Graph Viewer";
-    comment = "qpwgraph is a PipeWire graph Qt GUI interface";
-    exec = "qpwgraph -d";
-    icon = "org.rncbc.qpwgraph";
-    terminal = false;
-    startupNotify = true;
-    categories = [
-      "AudioVideo"
-      "Audio"
-      "Video"
-      "Midi"
-      "X-Alsa"
-      "X-PipeWire"
-      "Qt"
-    ];
-    settings = {
-      Keywords = "PipeWire;MIDI;ALSA;JACK;Qt;";
+    dataFile."wireplumber/scripts/audio-routes.lua".text = audioRoutesScript;
+
+    desktopEntries."org.rncbc.qpwgraph" = {
+      name = "qpwgraph";
+      genericName = "PipeWire Graph Viewer";
+      comment = "qpwgraph is a PipeWire graph Qt GUI interface";
+      exec = "qpwgraph -d";
+      icon = "org.rncbc.qpwgraph";
+      terminal = false;
+      startupNotify = true;
+      categories = [
+        "AudioVideo"
+        "Audio"
+        "Video"
+        "Midi"
+        "X-Alsa"
+        "X-PipeWire"
+        "Qt"
+      ];
+      settings.Keywords = "PipeWire;MIDI;ALSA;JACK;Qt;";
     };
   };
 
@@ -226,28 +240,6 @@ in
       Install.WantedBy = [ "hyprland-session.target" ];
     };
   };
-
-  xdg.configFile."pipewire/pipewire.conf.d/10-null-sink.conf" = {
-    force = true;
-    text = builtins.readFile ./pipewire/10-null-sink.conf;
-  };
-
-  xdg.configFile."pipewire/pipewire.conf.d/11-null-source.conf" = {
-    force = true;
-    text = builtins.readFile ./pipewire/11-null-source.conf;
-  };
-
-  xdg.dataFile."wireplumber/scripts/audio-routes.lua".text = audioRoutesScript;
-  xdg.configFile."wireplumber/wireplumber.conf.d/50-audio-routes.conf".text = audioRoutesRule;
-  # xdg.dataFile."wireplumber/scripts/midi-routes.lua".text = midiRoutesScript;
-  # xdg.configFile."wireplumber/wireplumber.conf.d/50-midi-routes.conf".text = midiRoutesRule;
-
-  xdg.configFile."pipewire/client.conf.d/52-battletech-games.conf".text = battletechGamesRule;
-  xdg.configFile."pipewire/pipewire-pulse.conf.d/52-battletech-games.conf".text = battletechGamesRule;
-  xdg.configFile."wireplumber/wireplumber.conf.d/52-battletech-games.conf".text = battletechGamesRule;
-
-  # xdg.configFile."pipewire/pipewire.conf.d/51-audiofire-ffado.conf".text = audiofireFfadoRule;
-  xdg.configFile."wireplumber/wireplumber.conf.d/51-saffire-clock.conf".text = saffireClockRule;
 
   services = {
     spotify-midi-control = {

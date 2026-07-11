@@ -110,29 +110,16 @@ in
             "DP-2"
           ];
           modules-left = [
-            #"sway/workspaces"
-            #"sway/mode"
-            #"sway/scratchpad"
             "custom/media"
           ];
-          #modules-center = [
-          #  "sway/window"
-          #];
           modules-right = [
-            #"mpd"
             "idle_inhibitor"
             "pulseaudio"
-            #"power-profiles-daemon"
             "cpu"
             "memory"
             "custom/cooling"
-            # "temperature"
-            #"keyboard-state"
-            #"sway/language"
-            #"battery"
             "clock"
             "tray"
-            #"custom/power"
           ];
 
           keyboard-state = {
@@ -144,16 +131,6 @@ in
               unlocked = "";
             };
           };
-          #"sway/mode" = {
-          #  format = "<span style=\"italic\">{}</span>";
-          #};
-          #"sway/scratchpad" = {
-          #  format = "{icon} {count}";
-          #  show-empty = false;
-          #  format-icons = ["" ""];
-          #  tooltip = true;
-          #  tooltip-format = "{app}: {title}";
-          #};
           mpd = {
             format = "{stateIcon} {consumeIcon}{randomIcon}{repeatIcon}{singleIcon}{artist} - {album} - {title} ({elapsedTime:%M:%S}/{totalTime:%M:%S}) ⸨{songPosition}|{queueLength}⸩ {volume}% ";
             format-disconnected = "Disconnected ";
@@ -188,12 +165,7 @@ in
             };
           };
           tray = {
-            # "icon-size" = 21;
             spacing = 10;
-            # "icons" = {
-            #   "blueman" = "bluetooth";
-            #   "TelegramDesktop" = "$HOME/.local/share/icons/hicolor/16x16/apps/telegram.png"
-            # };
           };
 
           clock = {
@@ -220,10 +192,7 @@ in
           };
 
           temperature = {
-            # "thermal-zone" = 2;
-            # "hwmon-path" = "/sys/class/hwmon/hwmon2/temp1_input";
             critical-threshold = 80;
-            # "format-critical" = "{temperatureC}°C {icon}";
             format = "{temperatureC}°C {icon}";
             format-icons = [
               ""
@@ -233,7 +202,6 @@ in
           };
 
           backlight = {
-            # "device" = "acpi_video1";
             format = "{percent}% {icon}";
             format-icons = [
               ""
@@ -250,7 +218,6 @@ in
 
           battery = {
             states = {
-              # "good" = 95;
               warning = 30;
               critical = 15;
             };
@@ -259,8 +226,6 @@ in
             format-charging = "{capacity}% ";
             format-plugged = "{capacity}% ";
             format-alt = "{time} {icon}";
-            # "format-good" = ""; // An empty format will hide the module
-            # "format-full" = "";
             format-icons = [
               ""
               ""
@@ -270,30 +235,7 @@ in
             ];
           };
 
-          #power-profiles-daemon = {
-          #    format = "{icon}";
-          #    tooltip-format = "Power profile: {profile}\nDriver: {driver}";
-          #    tooltip = true;
-          #    format-icons = {
-          #      default = "";
-          #      performance = "";
-          #      balanced = "";
-          #      power-saver = "";
-          #    };
-          #};
-
-          #network = {
-          #  # "interface" = "wlp2*"; // (Optional) To force the use of this interface
-          #  format-wifi = "{essid} ({signalStrength}%) ";
-          #  format-ethernet = "{ipaddr}/{cidr} ";
-          #  tooltip-format = "{ifname} via {gwaddr} ";
-          #  format-linked = "{ifname} (No IP) ";
-          #  format-disconnected = "Disconnected ⚠";
-          #  format-alt = "{ifname}: {ipaddr}/{cidr}";
-          #};
-
           pulseaudio = {
-            # "scroll-step" = 1; // %, can be a float
             format = "{volume}% {icon} {format_source}";
             format-bluetooth = "{volume}% {icon} {format_source}";
             format-bluetooth-muted = " {icon} {format_source}";
@@ -327,32 +269,6 @@ in
             on-click-right = "${pkgs.playerctl}/bin/playerctl --player=spotify next";
           };
 
-          #"custom/power" = {
-          #  format = "⏻ ";
-          #  tooltip = false;
-          #  menu = "on-click";
-          #  menu-file = "$HOME/.config/waybar/power_menu.xml"; # Menu file in resources folder
-          #  menu-actions = {
-          #    shutdown = "shutdown";
-          #    reboot = "reboot";
-          #    suspend = "systemctl suspend";
-          #    hibernate = "systemctl hibernate";
-          #  };
-          #};
-
-          #"sway/workspaces" = {
-          #  disable-scroll = true;
-          #  all-outputs = true;
-          #};
-
-          "custom/hello-from-waybar" = {
-            format = "hello {}";
-            max-length = 40;
-            interval = "once";
-            exec = pkgs.writeShellScript "hello-from-waybar" ''
-              echo "from within waybar"
-            '';
-          };
         };
       };
     };

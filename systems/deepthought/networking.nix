@@ -1,4 +1,4 @@
-{ ... }:
+_:
 
 {
   systemd.network.links."10-primary-trunk" = {
@@ -15,9 +15,6 @@
       "trunk" = {
         interfaces = [ "primary-trunk" ];
       };
-      #"storage" = {
-      #  interfaces = [ "enp5s0" ];
-      #};
     };
     vlans = {
       internal = {
@@ -33,10 +30,6 @@
           prefixLength = 24;
         }
       ];
-      #storage.ipv4.addresses = [{
-      #  address = "192.168.99.229";
-      #  prefixLength = 24;
-      #}];
     };
     defaultGateway = "10.42.0.1";
     dhcpcd.extraConfig = ''
@@ -69,6 +62,5 @@
       enable = true;
       joinNetworks = [ "a84ac5c10a853bc1" ];
     };
-    #cloudflare-warp.enable = true;
   };
 }

@@ -21,8 +21,6 @@
     irssi
     wine64
     kdePackages.bluedevil
-    #coolercontrol.coolercontrol-liqctld
-    coolercontrol.coolercontrold
     droidcam
     fluxcd
     fractal
@@ -38,16 +36,12 @@
     orca
     pinentry-all
     sslscan
-    #usbip-linux
-    #usbmuxd2-unstable
-    #ventoy
     vlc
     telegram-desktop
     signal-desktop
     discord
     slack
     age
-    #bubblewrap
     sops
     gimp
     inxi
@@ -61,7 +55,6 @@
       configPath = "${config.xdg.configHome}/mozilla/firefox";
       policies.SearchEngines.Default = "DuckDuckGo";
     };
-    # thunderbird.enable = true; # This is weird here, need to try again
     chromium.enable = true;
     obs-studio.enable = true;
     hyprshot = {

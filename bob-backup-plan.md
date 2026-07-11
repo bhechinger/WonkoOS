@@ -9,7 +9,7 @@ Backup layout:
 ```text
 /nfs/Brian/bob-backups/<UTC_TIMESTAMP>/
   rootfs/      # rsync-preserved absolute paths
-  metadata/    # service state, mount info, backup logs
+  metadata/    # service state, mount info, backup logs, required custom image
 ```
 
 ## Runbook
@@ -35,6 +35,14 @@ Backup layout:
    - Keep SSH, networking, and NFS-client plumbing running until the backup is verified.
 
 3. Back up active service data with `rsync --relative` into `rootfs/`:
+
+   - Save the active, locally named Samba AD image; it cannot be assumed to be
+     reproducible from a public registry:
+
+     ```sh
+     mkdir -p "$BACKUP/metadata/images"
+     docker image save -o "$BACKUP/metadata/images/wonko-samba-dc-test3.tar" wonko/samba-dc:test3
+     ```
 
    - Docker/Compose active data:
      - `/home/docker/reverse`
@@ -104,6 +112,9 @@ Backup layout:
   - `var/lib/docker/volumes/protonmail/_data`
   - `home/unifi/config`
   - `home/samba/lib`
+- Verify `metadata/images/wonko-samba-dc-test3.tar` is non-empty and validate
+  it with `docker image load --quiet --input` on a disposable Docker host if
+  one is available.
 - Confirm Docker containers and targeted systemd services remain stopped at the end.
 
 ## Assumptions

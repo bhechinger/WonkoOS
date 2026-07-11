@@ -1,12 +1,16 @@
-{ config, pkgs, unstable-pkgs, ... }:
+{
+  pkgs,
+  unstable-pkgs,
+  ...
+}:
 
 let
   codex = pkgs.writeShellScriptBin "codex" ''
-    if [[ ! -r ${config.sops.secrets."github-pat-token".path} ]]; then
-      echo "codex: GitHub PAT secret is unavailable" >&2
+    if ! GITHUB_PAT_TOKEN="$(${pkgs.gh}/bin/gh auth token)"; then
+      echo "codex: GitHub authentication is unavailable; run 'gh auth login'" >&2
       exit 1
     fi
-    export GITHUB_PAT_TOKEN="$(<${config.sops.secrets."github-pat-token".path})"
+    export GITHUB_PAT_TOKEN
     exec ${unstable-pkgs.codex}/bin/codex "$@"
   '';
 in
@@ -46,7 +50,6 @@ in
     go.enable = true;
     zellij = {
       enable = true;
-      #enableZshIntegration = true;
     };
     git = {
       enable = true;

@@ -107,26 +107,10 @@ in
     };
   };
 
-  systemd.user.services.coolercontrol-refresh-cookie = {
-    Unit = {
-      Description = "Refresh CoolerControl GUI session cookie";
-      After = [ "graphical-session.target" ];
-    };
-
-    Service = {
-      Type = "oneshot";
-      ExecStart = refreshCookie;
-    };
-  };
-
   systemd.user.services.coolercontrol = {
     Unit = {
       Description = "CoolerControl GUI";
-      After = [
-        "coolercontrol-refresh-cookie.service"
-        "graphical-session.target"
-      ];
-      Requires = [ "coolercontrol-refresh-cookie.service" ];
+      After = [ "graphical-session.target" ];
     };
 
     Service = {

@@ -14,11 +14,10 @@ in
 {
   boot = {
     loader = {
-      grub.memtest86.enable = true;
-      grub.extraConfig = ''
-        GRUB_CMDLINE_LINUX_DEFAULT=""
-      '';
-      systemd-boot.enable = true;
+      systemd-boot = {
+        enable = true;
+        memtest86.enable = true;
+      };
       efi.canTouchEfiVariables = true;
     };
     initrd = {
@@ -44,7 +43,7 @@ in
     };
     supportedFilesystems = [ "nfs" ];
     kernel = {
-      sysctl = hugepages.sysctl;
+      inherit (hugepages) sysctl;
     };
     kernelParams = [
       "mitigations=off"
@@ -97,10 +96,6 @@ in
   zramSwap.enable = true;
 
   nix = {
-    #gc = {
-    #  automatic = true;
-    #  options = "--delete-older-than 7d";
-    #};
     settings = {
       experimental-features = [
         "nix-command"
@@ -123,12 +118,7 @@ in
     };
   };
 
-  nixpkgs.config = {
-    allowUnfree = true;
-    packageOverrides = pkgs: {
-      xsaneGimp = pkgs.xsane.override { gimpSupport = true; };
-    };
-  };
+  nixpkgs.config.allowUnfree = true;
 
   environment = {
     variables.EDITOR = "nvim";

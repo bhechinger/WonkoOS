@@ -16,7 +16,6 @@
         hyprpicker
         hyprsysteminfo
         hyprsunset
-        hyprpolkitagent
         hyprland-qt-support
         hyprpwcenter
         hyprshutdown
@@ -53,6 +52,7 @@
   };
 
   services = {
+    hyprpolkitagent.enable = true;
     kdeconnect = {
       enable = true;
       indicator = true;

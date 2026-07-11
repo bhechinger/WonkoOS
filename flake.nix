@@ -3,6 +3,7 @@
 
   inputs = {
     nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0"; # Stable Nixpkgs
+    unstable-nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1"; # Unstable Nixpkgs
     linux_7_0.url = "github:NixOS/nixpkgs/709592197675b569aeaf6a68eb66365226a7c718";
     determinate = {
       url = "https://flakehub.com/f/DeterminateSystems/determinate/3"; # Determinate 3.*
@@ -23,17 +24,83 @@
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    home-manager = {
+      url = "github:nix-community/home-manager/release-26.05";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    auto-splice = {
+      url = "github:zenith-network/auto-splice";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    spotify-midi-control = {
+      url = "github:bhechinger/spotify-midi-control";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.home-manager.follows = "home-manager";
+    };
   };
 
   outputs =
     { self, nixpkgs, ... }@inputs:
     let
       system = "x86_64-linux";
-      pkgs = nixpkgs.legacyPackages.${system};
+      pkgs = import nixpkgs {
+        inherit system;
+        config.allowUnfree = true;
+      };
+      unstable-pkgs = import inputs.unstable-nixpkgs {
+        inherit system;
+        config.allowUnfree = true;
+        overlays = [
+          (_final: prev: {
+            codex = prev.codex.overrideAttrs (old: rec {
+              version = "0.144.1";
+              src = prev.fetchFromGitHub {
+                owner = "openai";
+                repo = "codex";
+                tag = "rust-v0.144.1";
+                hash = "sha256-KHgrqIZyAmLhTZSRYbb7huBO8neOib/B1Vx/oPW2nEU=";
+              };
+              cargoHash = "sha256-S4dsZXfmKvJItL2XYKyxfhqdCMATEG6oPjrtVRwkuYc=";
+              cargoDeps = prev.rustPlatform.fetchCargoVendor {
+                inherit src version;
+                pname = "codex";
+                hash = cargoHash;
+              };
+              env = (old.env or { }) // {
+                RUST_MIN_STACK = "16777216";
+              };
+              postFixup = (old.postFixup or "") + ''
+                mv $out/bin/codex $out/bin/.codex-setpriv-target
+                makeWrapper ${prev.util-linux}/bin/setpriv $out/bin/codex \
+                  --set SSL_CERT_FILE "${prev.cacert}/etc/ssl/certs/ca-bundle.crt" \
+                  --set NIX_SSL_CERT_FILE "${prev.cacert}/etc/ssl/certs/ca-bundle.crt" \
+                  --add-flags "--inh-caps=-all" \
+                  --add-flags "--ambient-caps=-all" \
+                  --add-flags "$out/bin/.codex-setpriv-target"
+              '';
+            });
+          })
+        ];
+      };
       inherit (nixpkgs) lib;
     in
     {
       nixosConfigurations = {
+        bob = lib.nixosSystem {
+          inherit system;
+
+          specialArgs = {
+            inherit inputs;
+          };
+
+          modules = [
+            ./systems/bob/default.nix
+          ];
+        };
+
         deepthought = lib.nixosSystem {
           inherit system;
 
@@ -47,6 +114,31 @@
         };
       };
 
+      homeConfigurations.wonko = inputs.home-manager.lib.homeManagerConfiguration {
+        inherit pkgs;
+        extraSpecialArgs = {
+          inherit unstable-pkgs;
+          inherit (inputs) auto-splice spotify-midi-control;
+        };
+        modules = [
+          inputs.determinate.homeManagerModules.default
+          inputs.spotify-midi-control.homeManagerModules.default
+          ./home/home.nix
+          ./home/zsh.nix
+          ./home/atuin.nix
+          ./home/audio.nix
+          ./home/development.nix
+          ./home/greptile.nix
+          ./home/kubernetes.nix
+          ./home/software.nix
+          ./home/desktop.nix
+          ./home/nix_tools.nix
+          ./home/zenith.nix
+          ./home/games.nix
+          ./home/gamedev.nix
+        ];
+      };
+
       packages.${system} = {
         inherit (inputs.disko.packages.${system}) disko disko-install;
       };
@@ -54,7 +146,9 @@
       formatter.${system} = pkgs.nixfmt-tree;
 
       checks.${system} = {
+        bob = self.nixosConfigurations.bob.config.system.build.toplevel;
         nixos = self.nixosConfigurations.deepthought.config.system.build.toplevel;
+        home = self.homeConfigurations.wonko.activationPackage;
 
         hugepages =
           assert import ./common/hugepages-test.nix;

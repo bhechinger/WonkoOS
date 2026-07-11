@@ -17,8 +17,6 @@
     mcpelauncher-ui-qt
     unigine-superposition
     python314
-    #python314Packages.pynvml
-    #python314Packages.nvidia-ml-py
   ];
 
   programs = {

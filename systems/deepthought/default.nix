@@ -21,6 +21,5 @@
     ./postgresql.nix
     ./atuin.nix
     ./audio.nix
-    ./vpns.nix
   ];
 }

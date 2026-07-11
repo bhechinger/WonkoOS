@@ -4,9 +4,6 @@
 }:
 
 {
-  #nixpkgs.config.permittedInsecurePackages = [
-  #  "qtwebengine-5.15.19"
-  #];
 
   environment = {
     systemPackages = with pkgs; [
@@ -63,7 +60,6 @@
     htop.enable = true;
     iotop.enable = true;
     less.enable = true;
-    openvpn3.enable = true;
     starship.enable = true;
     traceroute.enable = true;
     usbtop.enable = true;
@@ -92,12 +88,6 @@
       defaultEditor = true;
       vimAlias = true;
       viAlias = true;
-      #configure = {
-      #  customRC = ''
-      #    set clipboard+=unnamed
-      #    set clipboard+=unnamedplus
-      #  '';
-      #};
     };
 
     gnupg.agent = {
@@ -108,20 +98,13 @@
 
     zsh = {
       enable = true;
-      #  syntaxHighlighting.enable = true;
-      #  autosuggestions.enable = true;
-      #  ohMyZsh = {
-      #    enable = true;
-      #    plugins = [ "git" ];
-      #  };
-      #  #enableCompletetion = false; # so we can use zsh-autocomplete
     };
 
     nh = {
       enable = true;
       clean.enable = true;
       clean.extraArgs = "--keep-since 4d --keep 3";
-      flake = "/home/wonko/projects/nix/WonkoOS";
+      flake = "/home/wonko/nix/WonkoOS";
     };
   };
 }
