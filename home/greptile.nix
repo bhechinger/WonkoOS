@@ -11,7 +11,7 @@ let
 
   greptile = pkgs.writeShellApplication {
     name = "greptile";
-    runtimeInputs = [ pkgs.nodejs_22 ];
+    runtimeInputs = [ pkgs.nodejs ];
     text = ''
       exec node ${greptileJs} "$@"
     '';

@@ -82,9 +82,11 @@
   };
 
   # OpenZFS owns the native mountpoints; disko still creates them.
-  fileSystems."/var".enable = false;
-  fileSystems."/var/lib/docker".enable = false;
-  fileSystems."/var/lib/plexmediaserver".enable = false;
-  fileSystems."/home".enable = false;
-  fileSystems."/home/docker/pgsql".enable = false;
+  fileSystems = {
+    "/var".enable = false;
+    "/var/lib/docker".enable = false;
+    "/var/lib/plexmediaserver".enable = false;
+    "/home".enable = false;
+    "/home/docker/pgsql".enable = false;
+  };
 }

@@ -6,18 +6,33 @@
 
 let
   codex = pkgs.writeShellScriptBin "codex" ''
-    if ! GITHUB_PAT_TOKEN="$(${pkgs.gh}/bin/gh auth token)"; then
-      echo "codex: GitHub authentication is unavailable; run 'gh auth login'" >&2
-      exit 1
-    fi
-    export GITHUB_PAT_TOKEN
-    exec ${unstable-pkgs.codex}/bin/codex "$@"
+    exec ${unstable-pkgs.codex}/bin/codex \
+      -c 'shell_environment_policy.exclude=["GITHUB_PAT_TOKEN","GITHUB_TOKEN","GH_TOKEN","GITHUB_PERSONAL_ACCESS_TOKEN"]' \
+      -c 'shell_environment_policy.allow_login_shell=false' \
+      "$@"
   '';
+  codexGithubMcp = pkgs.writeShellApplication {
+    name = "codex-github-mcp";
+    runtimeInputs = with pkgs; [
+      gh
+      github-mcp-server
+    ];
+    text = ''
+      if ! GITHUB_PERSONAL_ACCESS_TOKEN="$(gh auth token)"; then
+        echo "codex-github-mcp: GitHub authentication is unavailable; run 'gh auth login'" >&2
+        exit 1
+      fi
+      export GITHUB_PERSONAL_ACCESS_TOKEN
+      exec github-mcp-server stdio
+    '';
+  };
 in
 {
   home.packages = with pkgs; [
     act
     codex
+    codexGithubMcp
+    nodejs
     unstable-pkgs.opencode
     unstable-pkgs.zed-editor
     cloc

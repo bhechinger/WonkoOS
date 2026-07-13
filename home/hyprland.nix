@@ -233,7 +233,7 @@ in
         "workspace special:chat, match:class discord"
         "workspace special:chat, match:class com.ktechpit.whatsie"
         "workspace special:chat, match:class IRCCloud"
-        "workspace special:chat2, match:class thunderbird"
+        "workspace special:chat2 silent, match:class thunderbird"
         "workspace special:chat2, match:class Signal"
         "workspace special:chat2, match:class org.telegram.desktop"
         "workspace special:audio, match:class Ardour"

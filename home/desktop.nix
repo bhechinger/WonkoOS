@@ -60,7 +60,6 @@
     pass-secret-service.enable = true;
     mako.enable = true;
     awww.enable = true;
-    poweralertd.enable = true;
     wl-clip-persist = {
       enable = true;
       clipboardType = "both";

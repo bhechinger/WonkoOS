@@ -66,3 +66,20 @@ sudo zfs set -u mountpoint=none zpool/docker
 `tank/home` already has the native `/home` mountpoint and needs no migration.
 After local ZFS mounts are ready, `zfs-import-basket.service` imports the remote
 pool normally and ZFS mounts its datasets under `/basket` and `/home/wonko`.
+
+## Codex GitHub authentication
+
+Home Manager installs a local `codex-github-mcp` server that obtains the
+current GitHub CLI token only inside the MCP child process. After switching the
+Home Manager generation, replace the existing `[mcp_servers.github]` URL and
+`bearer_token_env_var` entries in `~/.codex/config.toml` with:
+
+```toml
+[mcp_servers.github]
+command = "codex-github-mcp"
+```
+
+Keep the existing per-tool approval table below it. Revoke credentials exposed
+by the old wrapper, run `gh auth login`, and verify that `codex` starts without
+GitHub authentication while GitHub MCP calls work after login. The Codex
+launcher excludes GitHub token variables from tool subprocesses.

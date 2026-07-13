@@ -7,6 +7,27 @@
 let
   restoreMarker = "/var/lib/bob-restored";
   compose = lib.getExe pkgs.docker-compose;
+  dockerFirewall = pkgs.writeShellApplication {
+    name = "bob-docker-firewall";
+    runtimeInputs = [ pkgs.iptables ];
+    text = ''
+      chain=BOB-DOCKER
+
+      iptables -w -N "$chain" 2>/dev/null || true
+      iptables -w -F "$chain"
+      if ! iptables -w -C DOCKER-USER -j "$chain" 2>/dev/null; then
+        iptables -w -I DOCKER-USER 1 -j "$chain"
+      fi
+
+      iptables -w -A "$chain" -i management -p tcp \
+        -m conntrack --ctorigdstport 8080 -j ACCEPT
+      for port in 3478 10001 1900 5514; do
+        iptables -w -A "$chain" -i management -p udp \
+          -m conntrack --ctorigdstport "$port" -j ACCEPT
+      done
+      iptables -w -A "$chain" -i management -j DROP
+    '';
+  };
   bobRestore = pkgs.writeShellApplication {
     name = "bob-restore";
     runtimeInputs = with pkgs; [
@@ -36,7 +57,7 @@ let
       Type = "oneshot";
       RemainAfterExit = true;
       WorkingDirectory = directory;
-      ExecStart = "${compose} -f ${directory}/docker-compose.yaml up -d --remove-orphans ${lib.escapeShellArgs services}";
+      ExecStart = "${compose} -f ${directory}/docker-compose.yaml up -d --pull never --remove-orphans ${lib.escapeShellArgs services}";
       ExecStop = "-${compose} -f ${directory}/docker-compose.yaml stop ${lib.escapeShellArgs services}";
       TimeoutStartSec = "infinity";
       TimeoutStopSec = "5min";
@@ -55,7 +76,7 @@ in
     murmur = {
       enable = true;
       environmentFile = "/var/lib/mumble-server/murmurd.env";
-      openFirewall = true;
+      openFirewall = false;
       password = "$MURMURD_PASSWORD";
       stateDir = "/var/lib/mumble-server";
     };
@@ -71,7 +92,7 @@ in
     plex = {
       enable = true;
       dataDir = "/var/lib/plexmediaserver";
-      openFirewall = true;
+      openFirewall = false;
     };
 
     postfix = {
@@ -108,7 +129,7 @@ in
 
     tailscale = {
       enable = true;
-      openFirewall = true;
+      openFirewall = false;
     };
 
     timesyncd.enable = true;
@@ -124,15 +145,9 @@ in
     "video"
   ];
 
-  virtualisation = {
-    docker = {
-      enable = true;
-      storageDriver = "zfs";
-    };
-    libvirtd = {
-      enable = true;
-      qemu.swtpm.enable = true;
-    };
+  virtualisation.docker = {
+    enable = true;
+    storageDriver = "zfs";
   };
 
   systemd = {
@@ -177,7 +192,7 @@ in
       ];
       compose-unifi = mkComposeService "/home/wonko/unifi" [ "unifi-controller" ];
 
-      libvirtd.unitConfig.ConditionPathExists = restoreMarker;
+      docker.postStart = lib.getExe dockerFirewall;
       murmur.unitConfig.ConditionPathExists = restoreMarker;
       "nfs-server".unitConfig.ConditionPathExists = restoreMarker;
       plex.unitConfig.ConditionPathExists = restoreMarker;

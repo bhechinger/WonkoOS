@@ -1,4 +1,4 @@
-.PHONY: update hugepages-inputs
+.PHONY: hugepages-inputs boot switch build
 
 hugepages-inputs:
 	./scripts/generate_hugepages_inputs.sh

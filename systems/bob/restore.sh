@@ -8,11 +8,16 @@ fi
 backup=${1%/}
 source_root=$backup/rootfs
 marker=/var/lib/bob-restored
-ad_image=$backup/metadata/images/wonko-samba-dc-test3.tar
+image_archive=$backup/metadata/images/active-images.tar
 
 [[ -d $source_root ]] || { echo "missing backup root: $source_root" >&2; exit 1; }
-[[ -s $ad_image ]] || { echo "missing custom Samba image: $ad_image" >&2; exit 1; }
+[[ -e $backup/metadata/COMPLETE ]] || { echo "backup is incomplete: missing metadata/COMPLETE" >&2; exit 1; }
+[[ -s $image_archive ]] || { echo "missing container image archive: $image_archive" >&2; exit 1; }
 [[ ! -e $marker ]] || { echo "restore already completed: $marker exists" >&2; exit 1; }
+(
+  cd "$backup/metadata/images"
+  sha256sum --check active-images.tar.sha256
+)
 
 for path in \
   home/docker/paperless \
@@ -24,11 +29,14 @@ for path in \
   [[ -e $source_root/$path ]] || { echo "required backup path is missing: $path" >&2; exit 1; }
 done
 
+password=$(sed -n 's/^[[:space:]]*serverpassword[[:space:]]*=[[:space:]]*//p' "$source_root/etc/mumble-server.ini" | tail -n 1)
+[[ -n $password ]] || { echo "Mumble server password is missing or empty" >&2; exit 1; }
+
 systemctl stop compose-main.service compose-unifi.service compose-ad.service \
   plex.service murmur.service postfix.service nfs-server.service \
-  tailscaled.service zerotierone.service libvirtd.service 2>/dev/null || true
+  tailscaled.service zerotierone.service
 
-docker image load --input "$ad_image" >/dev/null
+docker image load --input "$image_archive" >/dev/null
 
 rsync -aHAX --numeric-ids --relative \
   "$source_root"/./home/docker/reverse \
@@ -62,7 +70,6 @@ install -d -m 0750 -o murmur -g murmur /var/lib/mumble-server
 if [[ -e /var/lib/mumble-server/mumble-server.sqlite && ! -e /var/lib/mumble-server/murmur.sqlite ]]; then
   cp -a /var/lib/mumble-server/mumble-server.sqlite /var/lib/mumble-server/murmur.sqlite
 fi
-password=$(sed -n 's/^[[:space:]]*serverpassword[[:space:]]*=[[:space:]]*//p' "$source_root/etc/mumble-server.ini" | tail -n 1)
 password=${password//\\/\\\\}
 password=${password//\"/\\\"}
 printf 'MURMURD_PASSWORD="%s"\n' "$password" > /var/lib/mumble-server/murmurd.env
@@ -72,15 +79,16 @@ chown -R plex:plex /var/lib/plexmediaserver
 
 install -d -m 0700 /var/lib/bob-legacy/etc /var/lib/bob-legacy/var/spool
 rsync -aHAX --numeric-ids "$source_root/etc/postfix/" /var/lib/bob-legacy/etc/postfix/
-rsync -aHAX --numeric-ids "$source_root/etc/libvirt/" /var/lib/bob-legacy/etc/libvirt/
 rsync -aHAX --numeric-ids "$source_root/var/spool/postfix/" /var/lib/bob-legacy/var/spool/postfix/
 
 touch "$marker"
-start_failed=0
-systemctl start tailscaled.service zerotierone.service nfs-server.service postfix.service murmur.service plex.service || start_failed=1
-systemctl start compose-ad.service compose-main.service compose-unifi.service || start_failed=1
+if ! systemctl start tailscaled.service zerotierone.service nfs-server.service postfix.service murmur.service plex.service \
+  || ! systemctl start compose-ad.service compose-main.service compose-unifi.service; then
+  rm -f "$marker"
+  echo "service startup failed; restore marker removed so the restore can be retried" >&2
+  exit 1
+fi
 
-echo "restore complete; legacy Postfix/libvirt files are retained under /var/lib/bob-legacy"
+echo "restore complete; legacy Postfix files are retained under /var/lib/bob-legacy"
 systemctl --no-pager --failed || true
 docker ps --format 'table {{.Names}}\t{{.Status}}'
-exit "$start_failed"

@@ -8,8 +8,7 @@
 }:
 
 let
-  wonkoKeys =
-    (import ../deepthought/users.nix { inherit pkgs; }).users.users.wonko.openssh.authorizedKeys.keys;
+  wonkoKeys = import ../../common/wonko-keys.nix;
 in
 {
   imports = [
@@ -92,7 +91,6 @@ in
       description = "Brian Hechinger";
       extraGroups = [
         "docker"
-        "libvirtd"
         "wheel"
       ];
       isNormalUser = true;

@@ -9,7 +9,7 @@ dry-run verification.
 
 | Workload | Choice | Reason |
 |---|---|---|
-| Plex, Murmur, Postfix, NFS, Tailscale, ZeroTier, libvirt | NixOS modules | Stable native modules, direct systemd supervision, no container layer needed. |
+| Plex, Murmur, Postfix, NFS, Tailscale, ZeroTier | NixOS modules | Stable native modules, direct systemd supervision, no container layer needed. |
 | Paperless/PostgreSQL/Redis, nginx, ProtonMail Bridge, Jackett, GeoIP updater, Cloudflare Tunnel | Existing Docker Compose | Lowest-risk restoration of current images, environment files, bind mounts, and PostgreSQL major version. |
 | UniFi and Samba AD | Existing Docker Compose | Preserves application databases and Samba's host-network identity at `10.42.0.2`. |
 | Kubernetes | Not used | One host has no failover benefit; Kubernetes complicates multicast, host networking, AD ports, and local persistent data. |
@@ -17,6 +17,15 @@ dry-run verification.
 This is deliberately a lift-and-shift first. Convert individual Compose
 services to NixOS modules only after the restored system is stable and each
 application has a tested export/import path.
+
+## Network policy
+
+Bob has an internal network at `10.42.0.2`, a management network at
+`10.42.11.2`, and an unnumbered guest bridge. The old external and storage
+bridges are not recreated. Internal, Tailscale, and ZeroTier clients retain
+the existing service access. Management is restricted to the UniFi device
+plane: TCP `8080` and UDP `3478`, `10001`, `1900`, and `5514`. Docker enforces
+the same restriction in its forwarding path.
 
 ## Storage
 
@@ -34,12 +43,12 @@ restored without rewriting Compose bind mounts.
 
 ## Before deployment
 
-1. Finish the backup and leave Ubuntu's application services down.
+1. Review and run `systems/bob/backup.sh` as described in the backup plan; it
+   leaves Ubuntu's application services down.
 2. Record the chosen timestamp directory under
    `/nfs/Brian/bob-backups/<UTC_TIMESTAMP>`.
-3. Confirm the backup contains the six required paths checked by `bob-restore`
-   and the active custom Samba image at
-   `metadata/images/wonko-samba-dc-test3.tar`.
+3. Confirm the backup contains `metadata/COMPLETE`, the required restore paths,
+   and `metadata/images/active-images.tar`.
 4. Confirm the target disk identity again:
 
    ```sh
@@ -94,19 +103,21 @@ sudo bob-restore /nfs/Brian/bob-backups/<UTC_TIMESTAMP>
 The restore command:
 
 - copies only the active paths listed in the backup plan;
-- loads the backed-up `wonko/samba-dc:test3` image required by Samba AD;
+- loads every image used by the backed-up running containers and forbids
+  implicit pulls during Compose startup;
 - recreates the `protonmail` Docker volume before restoring its data;
 - maps the Ubuntu Mumble database and password into the NixOS Murmur service;
 - fixes native Plex and Murmur ownership after preserving numeric IDs for
   container data;
-- retains old Postfix and libvirt configuration under `/var/lib/bob-legacy`
-  for inspection, while the active Postfix configuration is declarative;
-- writes `/var/lib/bob-restored` and starts native and Compose services.
+- retains old Postfix configuration under `/var/lib/bob-legacy` for inspection,
+  while the active Postfix configuration is declarative;
+- writes `/var/lib/bob-restored`, starts native and Compose services, and
+  removes the marker again if startup fails so the restore can be retried.
 
 Sonarr, ruTorrent, Minecraft, Rancher, Authentik, anonymous Docker volumes,
-Canonical Livepatch, and the old Nix store are not restored. The stopped
-`sierra` libvirt definition is retained only in the NFS backup/legacy copy; no
-VM disk was found and it is not activated.
+Canonical Livepatch, libvirt, and the old Nix store are not restored. The
+stopped `sierra` definition remains only in the NFS backup; no VM disk was
+found and libvirt is not enabled on NixOS.
 
 ## Validation
 
@@ -116,10 +127,13 @@ zfs list
 systemctl --failed
 systemctl status compose-ad compose-main compose-unifi
 docker ps
+iptables -S BOB-DOCKER
 findmnt /nfs/Brian
 findmnt /nfs/Plex
 ```
 
 Check Paperless, Plex, Mumble, UniFi, AD DNS/LDAP/SMB, Postfix port 25, and both
-Paperless NFS exports from their clients before considering the migration
-complete.
+Paperless NFS exports from their clients. From the management network, verify
+that only the UniFi device-plane ports are reachable. Confirm the same services
+remain available from internal, Tailscale, and ZeroTier before considering the
+migration complete.

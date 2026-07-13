@@ -191,6 +191,68 @@
             touch "$out"
           '';
 
+        bob-policy =
+          let
+            config = self.nixosConfigurations.bob.config;
+            firewall = config.networking.firewall;
+            management = firewall.interfaces.management;
+            composeServices = [
+              config.systemd.services.compose-ad
+              config.systemd.services.compose-main
+              config.systemd.services.compose-unifi
+            ];
+          in
+          assert config.services.tailscale.enable;
+          assert config.services.zerotierone.enable;
+          assert config.services.zerotierone.joinNetworks == [ "a84ac5c10a853bc1" ];
+          assert config.services.openvpn.servers == { };
+          assert self.nixosConfigurations.deepthought.config.services.openvpn.servers == { };
+          assert !config.virtualisation.libvirtd.enable;
+          assert !(config.systemd.network.links ? "10-storage");
+          assert
+            builtins.attrNames config.networking.bridges == [
+              "guest"
+              "internal"
+              "management"
+            ];
+          assert
+            builtins.attrNames config.networking.vlans == [
+              "vlan.410"
+              "vlan.420"
+            ];
+          assert !(config.networking.interfaces ? storage);
+          assert !config.systemd.network.wait-online.anyInterface;
+          assert lib.elem "--interface=internal:routable" config.systemd.network.wait-online.extraArgs;
+          assert firewall.allowedTCPPorts == [ ];
+          assert firewall.allowedUDPPorts == [ ];
+          assert
+            builtins.attrNames firewall.interfaces == [
+              "internal"
+              "management"
+              "tailscale0"
+              "ztnfaeb6wl"
+            ];
+          assert management.allowedTCPPorts == [ 8080 ];
+          assert
+            management.allowedUDPPorts == [
+              1900
+              3478
+              5514
+              10001
+            ];
+          assert lib.all (
+            service: lib.hasInfix "--pull never" service.serviceConfig.ExecStart
+          ) composeServices;
+          pkgs.runCommand "bob-policy-test" { } ''
+            touch "$out"
+          '';
+
+        bob-shell = pkgs.runCommand "bob-shell-check" { nativeBuildInputs = [ pkgs.shellcheck ]; } ''
+          bash -n ${./systems/bob/backup.sh} ${./systems/bob/restore.sh} ${./repl.sh}
+          shellcheck -s bash ${./systems/bob/backup.sh} ${./systems/bob/restore.sh} ${./repl.sh}
+          touch "$out"
+        '';
+
         formatting = pkgs.runCommand "formatting-check" { nativeBuildInputs = [ pkgs.nixfmt-tree ]; } ''
           cp -r ${self} source
           chmod -R u+w source
