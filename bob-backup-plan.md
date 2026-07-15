@@ -41,8 +41,9 @@ verifies the copy with a dry-run rsync, and leaves application services down.
 Libvirt data is archived for historical recovery only; the NixOS target does
 not enable libvirt.
 
-Sonarr, ruTorrent, Minecraft, Rancher, Authentik, unused Docker volumes, the
-old Nix store, and unrelated user data remain excluded.
+The retired Samba AD service, Sonarr, ruTorrent, Minecraft, Rancher, Authentik,
+unused Docker volumes, the old Nix store, and unrelated user data remain
+excluded.
 
 ## Validation
 

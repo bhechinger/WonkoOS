@@ -194,10 +194,12 @@
         bob-policy =
           let
             config = self.nixosConfigurations.bob.config;
+            deepthought = self.nixosConfigurations.deepthought.config;
             firewall = config.networking.firewall;
             management = firewall.interfaces.management;
+            vyprvpn = deepthought.services.openvpn.servers.vyprvpn-miami;
+            vyprvpnProfile = builtins.readFile ./systems/deepthought/openvpn/vyprvpn-miami.ovpn;
             composeServices = [
-              config.systemd.services.compose-ad
               config.systemd.services.compose-main
               config.systemd.services.compose-unifi
             ];
@@ -206,7 +208,16 @@
           assert config.services.zerotierone.enable;
           assert config.services.zerotierone.joinNetworks == [ "a84ac5c10a853bc1" ];
           assert config.services.openvpn.servers == { };
-          assert self.nixosConfigurations.deepthought.config.services.openvpn.servers == { };
+          assert builtins.attrNames deepthought.services.openvpn.servers == [ "vyprvpn-miami" ];
+          assert !vyprvpn.autoStart;
+          assert vyprvpn.updateResolvConf;
+          assert vyprvpn.authUserPass == deepthought.sops.secrets.vyprvpn-auth.path;
+          assert lib.hasInfix "verify-x509-name us4.vyprvpn.com name" vyprvpnProfile;
+          assert lib.hasInfix "block-ipv6" vyprvpnProfile;
+          assert lib.hasInfix "redirect-gateway ipv6" vyprvpnProfile;
+          assert deepthought.systemd.services.openvpn-vyprvpn-miami.wantedBy == [ ];
+          assert lib.elem "sops-install-secrets.service"
+            deepthought.systemd.services.openvpn-vyprvpn-miami.requires;
           assert !config.virtualisation.libvirtd.enable;
           assert !(config.systemd.network.links ? "10-storage");
           assert
@@ -223,6 +234,7 @@
           assert !(config.networking.interfaces ? storage);
           assert !config.systemd.network.wait-online.anyInterface;
           assert lib.elem "--interface=internal:routable" config.systemd.network.wait-online.extraArgs;
+          assert !(config.systemd.services ? compose-ad);
           assert firewall.allowedTCPPorts == [ ];
           assert firewall.allowedUDPPorts == [ ];
           assert

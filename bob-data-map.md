@@ -21,7 +21,6 @@ Collected from `bob` over SSH. Paths are on `bob`.
 | `jackett` | `/home/docker/jackett/config`, `/home/docker/jackett/downloads` | `/home/docker/jackett`: `23M` | Jackett config/download handoff |
 | `geoip-updater` | `/home/wonko/docker/data/geoip` | `72M` | GeoIP database output |
 | `unifi-controller` | `/home/unifi/config` | `836M` | UniFi controller config/database |
-| `ad-app-1` | `/home/samba/etc`, `/home/samba/lib`, `/home/wonko/AD/samba-admin-password` | `/home/samba`: `43M`; `/home/wonko/AD`: `16K` | Samba AD config/state plus secret file; container uses host network |
 | `sonarr` | `/home/docker/sonarr/config`, `/var/lib/docker/volumes/docker_torrent-data/_data`, `/var/lib/docker/volumes/docker_plex-shows/_data` | config `156M`; volumes `4K` each | Container is exited but data remains |
 | `rutorrent` | `/home/docker/rutorrent/data`, `/home/docker/rutorrent/passwd`, `/var/lib/docker/volumes/docker_torrent-data/_data` | `/home/docker/rutorrent`: `95M`; torrent volume `4K` | Container is exited but data remains |
 | `cloudflared-tunnel` | no Docker mount found | n/a | Persistent config, if any, is likely in compose/env or Cloudflare-side, not a container mount |
@@ -30,7 +29,6 @@ Compose files that define the active containers:
 
 - `/home/wonko/docker/docker-compose.yaml`
 - `/home/wonko/unifi/docker-compose.yaml`
-- `/home/wonko/AD/docker-compose.yaml`
 
 ## Systemd service data
 
@@ -69,7 +67,6 @@ These named volumes exist and may be stale service data:
 | `docker_authentik-redis` | `/var/lib/docker/volumes/docker_authentik-redis/_data` | `300K` |
 | `docker_paperless-*` | `/var/lib/docker/volumes/docker_paperless-{consume,data,export,media,pgsql-data}/_data` | `4K` each |
 | `docker_plex-data`, `docker_plex-movies` | `/var/lib/docker/volumes/docker_plex-{data,movies}/_data` | `4K` each |
-| `ad_etc`, `ad_lib` | `/var/lib/docker/volumes/ad_{etc,lib}/_data` | `4K` each |
 
 There are also many anonymous Docker volumes under `/var/lib/docker/volumes/<hash>/_data`; I did not map them to old containers because they are not mounted by the current service set.
 

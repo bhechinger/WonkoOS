@@ -22,7 +22,6 @@ image_archive=$backup/metadata/images/active-images.tar
 for path in \
   home/docker/paperless \
   home/docker/pgsql/paperless \
-  home/samba/lib \
   home/unifi/config \
   var/lib/docker/volumes/protonmail/_data \
   var/lib/plexmediaserver; do
@@ -32,7 +31,7 @@ done
 password=$(sed -n 's/^[[:space:]]*serverpassword[[:space:]]*=[[:space:]]*//p' "$source_root/etc/mumble-server.ini" | tail -n 1)
 [[ -n $password ]] || { echo "Mumble server password is missing or empty" >&2; exit 1; }
 
-systemctl stop compose-main.service compose-unifi.service compose-ad.service \
+systemctl stop compose-main.service compose-unifi.service \
   plex.service murmur.service postfix.service nfs-server.service \
   tailscaled.service zerotierone.service
 
@@ -45,16 +44,11 @@ rsync -aHAX --numeric-ids --relative \
   "$source_root"/./home/docker/redis \
   "$source_root"/./home/docker/jackett \
   "$source_root"/./home/unifi/config \
-  "$source_root"/./home/samba/etc \
-  "$source_root"/./home/samba/lib \
   "$source_root"/./home/wonko/docker/docker-compose.yaml \
   "$source_root"/./home/wonko/docker/.env \
   "$source_root"/./home/wonko/docker/paperless.env \
   "$source_root"/./home/wonko/docker/data/geoip \
   "$source_root"/./home/wonko/unifi/docker-compose.yaml \
-  "$source_root"/./home/wonko/AD/docker-compose.yaml \
-  "$source_root"/./home/wonko/AD/samba-admin-password \
-  "$source_root"/./home/wonko/AD/ad_console \
   "$source_root"/./var/lib/plexmediaserver \
   "$source_root"/./var/lib/mumble-server \
   "$source_root"/./var/lib/nfs \
@@ -83,7 +77,7 @@ rsync -aHAX --numeric-ids "$source_root/var/spool/postfix/" /var/lib/bob-legacy/
 
 touch "$marker"
 if ! systemctl start tailscaled.service zerotierone.service nfs-server.service postfix.service murmur.service plex.service \
-  || ! systemctl start compose-ad.service compose-main.service compose-unifi.service; then
+  || ! systemctl start compose-main.service compose-unifi.service; then
   rm -f "$marker"
   echo "service startup failed; restore marker removed so the restore can be retried" >&2
   exit 1

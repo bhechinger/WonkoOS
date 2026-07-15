@@ -25,7 +25,6 @@ Docker was queried as `wonko`. All containers below are compose-managed except w
 | `geoip-updater` | running | `crazymax/geoip-updater:latest` | none published | compose project `docker`; mount `/home/wonko/docker/data/geoip:/data` |
 | `cloudflared-tunnel` | running | `cloudflare/cloudflared` | outbound tunnel, no published ports | compose project `docker`, service `tunnel`; runs in container as `65532:65532` |
 | `unifi-controller` | running | `lscr.io/linuxserver/unifi-controller:latest` | `1900/udp`, `3478/udp`, `5514/udp`, `10001/udp`, `6789/tcp`, `8080/tcp`, `8443/tcp`, `8843/tcp`, `8880/tcp` | compose project `unifi`, `/home/wonko/unifi/docker-compose.yaml`; mount `/home/unifi/config:/config` |
-| `ad-app-1` | running | `wonko/samba-dc:test3` | host network; AD/Samba listeners on `10.42.0.2` including DNS `53`, Kerberos `88/464`, RPC `135/49152-49154`, NetBIOS `137-139`, LDAP `389/636/3268/3269`, SMB `445` | compose project `ad`, `/home/wonko/AD/docker-compose.yaml`; mounts `/home/samba/{etc,lib}` and `/home/wonko/AD/samba-admin-password` |
 | `sonarr` | exited | `lscr.io/linuxserver/sonarr:latest` | configured `8989/tcp`, not currently listening | compose project `docker`; mounts `/home/docker/sonarr/config`, torrent/show volumes |
 | `rutorrent` | exited | `crazymax/rtorrent-rutorrent:latest` | configured `8000/tcp`, `9000/tcp`, `6881/udp`, `50000/tcp`, `8081 -> 8080/tcp`, not currently listening | compose project `docker`; mounts `/home/docker/rutorrent/{data,passwd}`, torrent volume |
 
@@ -80,7 +79,6 @@ Baseline/inactive user units seen for `wonko`: `dbus.service`, `dirmngr.service`
 - `systemd-resolved`: `127.0.0.53:53`.
 - `rpcbind` / NFS stack: `111`, `2049`, and dynamic RPC ports.
 - Docker proxies expose the published container ports listed in the Docker table.
-- Samba AD listeners come from `ad-app-1` on host networking at `10.42.0.2`.
 
 ## Skipped baseline services
 

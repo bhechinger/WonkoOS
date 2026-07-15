@@ -28,7 +28,6 @@ metadata=$backup/metadata
 compose_files=(
   /home/wonko/docker/docker-compose.yaml
   /home/wonko/unifi/docker-compose.yaml
-  /home/wonko/AD/docker-compose.yaml
 )
 for file in "${compose_files[@]}"; do
   [[ -f $file ]] || { echo "missing Compose file: $file" >&2; exit 1; }
@@ -41,16 +40,11 @@ paths=(
   /home/docker/redis
   /home/docker/jackett
   /home/unifi/config
-  /home/samba/etc
-  /home/samba/lib
   /home/wonko/docker/docker-compose.yaml
   /home/wonko/docker/.env
   /home/wonko/docker/paperless.env
   /home/wonko/docker/data/geoip
   /home/wonko/unifi/docker-compose.yaml
-  /home/wonko/AD/docker-compose.yaml
-  /home/wonko/AD/samba-admin-password
-  /home/wonko/AD/ad_console
   /var/lib/docker/volumes/protonmail/_data
   /var/lib/plexmediaserver
   /etc/mumble-server.ini

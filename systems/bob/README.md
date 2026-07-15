@@ -11,8 +11,8 @@ dry-run verification.
 |---|---|---|
 | Plex, Murmur, Postfix, NFS, Tailscale, ZeroTier | NixOS modules | Stable native modules, direct systemd supervision, no container layer needed. |
 | Paperless/PostgreSQL/Redis, nginx, ProtonMail Bridge, Jackett, GeoIP updater, Cloudflare Tunnel | Existing Docker Compose | Lowest-risk restoration of current images, environment files, bind mounts, and PostgreSQL major version. |
-| UniFi and Samba AD | Existing Docker Compose | Preserves application databases and Samba's host-network identity at `10.42.0.2`. |
-| Kubernetes | Not used | One host has no failover benefit; Kubernetes complicates multicast, host networking, AD ports, and local persistent data. |
+| UniFi | Existing Docker Compose | Preserves the application database and existing device adoption. |
+| Kubernetes | Not used | One host has no failover benefit; Kubernetes complicates multicast and local persistent data. |
 
 This is deliberately a lift-and-shift first. Convert individual Compose
 services to NixOS modules only after the restored system is stable and each
@@ -114,9 +114,9 @@ The restore command:
 - writes `/var/lib/bob-restored`, starts native and Compose services, and
   removes the marker again if startup fails so the restore can be retried.
 
-Sonarr, ruTorrent, Minecraft, Rancher, Authentik, anonymous Docker volumes,
-Canonical Livepatch, libvirt, and the old Nix store are not restored. The
-stopped `sierra` definition remains only in the NFS backup; no VM disk was
+Samba AD, Sonarr, ruTorrent, Minecraft, Rancher, Authentik, anonymous Docker
+volumes, Canonical Livepatch, libvirt, and the old Nix store are not restored.
+The stopped `sierra` definition remains only in the NFS backup; no VM disk was
 found and libvirt is not enabled on NixOS.
 
 ## Validation
@@ -125,15 +125,15 @@ found and libvirt is not enabled on NixOS.
 zpool status
 zfs list
 systemctl --failed
-systemctl status compose-ad compose-main compose-unifi
+systemctl status compose-main compose-unifi
 docker ps
 iptables -S BOB-DOCKER
 findmnt /nfs/Brian
 findmnt /nfs/Plex
 ```
 
-Check Paperless, Plex, Mumble, UniFi, AD DNS/LDAP/SMB, Postfix port 25, and both
-Paperless NFS exports from their clients. From the management network, verify
-that only the UniFi device-plane ports are reachable. Confirm the same services
-remain available from internal, Tailscale, and ZeroTier before considering the
+Check Paperless, Plex, Mumble, UniFi, Postfix port 25, and both Paperless NFS
+exports from their clients. From the management network, verify that only the
+UniFi device-plane ports are reachable. Confirm the same services remain
+available from internal, Tailscale, and ZeroTier before considering the
 migration complete.

@@ -179,7 +179,6 @@ in
     ];
 
     services = {
-      compose-ad = mkComposeService "/home/wonko/AD" [ "app" ];
       compose-main = mkComposeService "/home/wonko/docker" [
         "reverse"
         "paperless"

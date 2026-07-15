@@ -1,6 +1,13 @@
-_:
+{ config, ... }:
 
 {
+  sops.secrets.vyprvpn-auth = {
+    sopsFile = ./secrets/vyprvpn.sops;
+    format = "yaml";
+    key = "auth";
+    mode = "0400";
+  };
+
   systemd.network.links."10-primary-trunk" = {
     matchConfig.MACAddress = "9c:6b:00:c0:c8:58";
     linkConfig.Name = "primary-trunk";
@@ -50,6 +57,18 @@ _:
   };
 
   services = {
+    openvpn.servers.vyprvpn-miami = {
+      config = "config ${./openvpn/vyprvpn-miami.ovpn}";
+      authUserPass = config.sops.secrets.vyprvpn-auth.path;
+      autoStart = false;
+      updateResolvConf = true;
+      up = ''
+        if [ -z "''${nameserver:-}" ]; then
+          echo "VyprVPN did not push a DNS server" >&2
+          exit 1
+        fi
+      '';
+    };
     openssh = {
       enable = true;
       settings = {
@@ -62,5 +81,10 @@ _:
       enable = true;
       joinNetworks = [ "a84ac5c10a853bc1" ];
     };
+  };
+
+  systemd.services.openvpn-vyprvpn-miami = {
+    requires = [ "sops-install-secrets.service" ];
+    after = [ "sops-install-secrets.service" ];
   };
 }
