@@ -8,8 +8,9 @@ let
       jq
     ];
     text = ''
-      export OPNSENSE_URL=https://sierra.4amlunch.internal
+      export OPNSENSE_URL=https://sierra.4amlunch.net
       export OPNSENSE_NETRC=/run/secrets/opnsense-api-netrc
+      export OPNSENSE_PINNED_PUBLIC_KEY="sha256//F4l/+Ixg/E7gUdrN/knO5vkZV7J6gzRhSm27bTS+vWE="
       export DNS_DOMAIN=4amlunch.net
       export DNS_TYPE=A
       export DNS_DESCRIPTION="Managed by WonkoOS"

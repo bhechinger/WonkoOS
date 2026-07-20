@@ -4,8 +4,9 @@ script=$1
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
-export OPNSENSE_URL=https://sierra.4amlunch.internal
+export OPNSENSE_URL=https://sierra.4amlunch.net
 export OPNSENSE_NETRC="$tmp/netrc"
+export OPNSENSE_PINNED_PUBLIC_KEY=sha256//test
 export DNS_DOMAIN=4amlunch.net
 export DNS_TYPE=A
 export DNS_DESCRIPTION="Managed by WonkoOS"
@@ -13,7 +14,7 @@ export CURL="$tmp/curl"
 export CALLS="$tmp/calls"
 
 printf '%s\n' \
-  "machine sierra.4amlunch.internal" \
+  "machine sierra.4amlunch.net" \
   "login test" \
   "password test" >"$OPNSENSE_NETRC"
 

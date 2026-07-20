@@ -118,11 +118,7 @@ in
       address = "10.42.0.1";
       interface = "internal";
     };
-    nameservers = [
-      "10.42.0.10"
-      "10.42.0.12"
-      "10.42.0.2"
-    ];
+    nameservers = [ "10.42.0.1" ];
     search = [
       "4amlunch.internal"
       "4amlunch.net"

@@ -270,6 +270,7 @@
               "vlan.420"
             ];
           assert !(config.networking.interfaces ? storage);
+          assert config.networking.nameservers == [ "10.42.0.1" ];
           assert !config.systemd.network.wait-online.anyInterface;
           assert lib.elem "--interface=internal:routable" config.systemd.network.wait-online.extraArgs;
           assert !(config.systemd.services ? compose-ad);
