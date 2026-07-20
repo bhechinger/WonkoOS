@@ -50,6 +50,8 @@ in
       domain = "4amlunch.net";
       extraDomainNames = [ "*.4amlunch.net" ];
       dnsProvider = "cloudflare";
+      dnsResolver = "1.1.1.1:53";
+      extraLegoFlags = [ "--dns.propagation-rns" ];
       credentialFiles."CF_DNS_API_TOKEN_FILE" = config.sops.secrets.cloudflare-acme-token.path;
       group = config.services.nginx.group;
     };
