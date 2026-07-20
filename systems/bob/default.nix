@@ -72,6 +72,10 @@ in
   security.sudo.wheelNeedsPassword = false;
 
   programs.nh.enable = true;
+  programs.vim = {
+    enable = true;
+    defaultEditor = true;
+  };
   programs.zsh.enable = true;
 
   services = {
@@ -107,11 +111,11 @@ in
 
   environment.systemPackages = with pkgs; [
     git
+    gh
     gnumake
     kitty.terminfo
     rsync
     tmux
-    vim
   ];
 
   i18n.defaultLocale = "en_US.UTF-8";
