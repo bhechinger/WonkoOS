@@ -7,7 +7,6 @@
 }:
 
 let
-  certificateDirectory = "/home/docker/reverse/certs/4amlunch.net";
   paperlessLocations = {
     "/" = {
       proxyPass = "http://paperless";
@@ -33,11 +32,29 @@ let
   };
   tls = {
     onlySSL = true;
-    sslCertificate = "${certificateDirectory}/fullchain.pem";
-    sslCertificateKey = "${certificateDirectory}/privkey.pem";
+    useACMEHost = "4amlunch.net";
   };
 in
 {
+  sops.secrets.cloudflare-acme-token = {
+    sopsFile = ../secrets/acme.sops;
+    format = "yaml";
+    key = "cloudflare-api-token";
+    mode = "0400";
+  };
+
+  security.acme = {
+    acceptTerms = true;
+    defaults.email = "wonko@4amlunch.net";
+    certs."4amlunch.net" = {
+      domain = "4amlunch.net";
+      extraDomainNames = [ "*.4amlunch.net" ];
+      dnsProvider = "cloudflare";
+      credentialFiles."CF_DNS_API_TOKEN_FILE" = config.sops.secrets.cloudflare-acme-token.path;
+      group = config.services.nginx.group;
+    };
+  };
+
   services.nginx = {
     enable = true;
     recommendedProxySettings = true;
@@ -45,32 +62,16 @@ in
     upstreams.paperless.servers."127.0.0.1:8000" = { };
     virtualHosts = {
       "basket.4amlunch.net" = tls // {
-        serverAliases = [
-          "basket"
-          "basket.4amlunch.internal"
-        ];
         locations."/".proxyPass = "https://10.42.0.30:8443";
       };
       "bob.4amlunch.net" = tls // {
-        serverAliases = [
-          "bob"
-          "bob.4amlunch.internal"
-        ];
         root = "/home/docker/reverse/html";
       };
       "hamburgerking.pt".root = "/home/docker/reverse/html/hbk";
       "jackett.4amlunch.net" = tls // {
-        serverAliases = [
-          "jackett"
-          "jackett.4amlunch.internal"
-        ];
         locations."/".proxyPass = "http://127.0.0.1:9117";
       };
       "paperless.4amlunch.net" = tls // {
-        serverAliases = [
-          "paperless"
-          "paperless.4amlunch.internal"
-        ];
         locations = paperlessLocations;
       };
       paperless-direct = {
@@ -101,16 +102,8 @@ in
       };
       "rutorrent.4amlunch.net" = tls // {
         basicAuthFile = "/var/lib/rutorrent/htpasswd";
-        serverAliases = [
-          "rutorrent"
-          "rutorrent.4amlunch.internal"
-        ];
       };
       "sonarr.4amlunch.net" = tls // {
-        serverAliases = [
-          "sonarr"
-          "sonarr.4amlunch.internal"
-        ];
         locations."/".proxyPass = "http://127.0.0.1:8989";
       };
     };
@@ -119,10 +112,13 @@ in
   systemd.services.nginx = {
     unitConfig.ConditionPathExists = [
       bobRestoreMarker
-      "${certificateDirectory}/fullchain.pem"
-      "${certificateDirectory}/privkey.pem"
       "/var/lib/rutorrent/htpasswd"
     ];
     serviceConfig.ProtectHome = lib.mkForce "read-only";
+  };
+
+  systemd.services."acme-4amlunch.net" = {
+    after = [ "sops-install-secrets.service" ];
+    requires = [ "sops-install-secrets.service" ];
   };
 }
