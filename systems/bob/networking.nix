@@ -119,10 +119,7 @@ in
       interface = "internal";
     };
     nameservers = [ "10.42.0.1" ];
-    search = [
-      "4amlunch.internal"
-      "4amlunch.net"
-    ];
+    search = [ "4amlunch.net" ];
     extraHosts = ''
       10.42.0.30 basket.4amlunch.net basket
     '';

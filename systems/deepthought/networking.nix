@@ -16,7 +16,7 @@
   networking = {
     hostName = "deepthought";
     hostId = "8425e349";
-    domain = "4amlunch.internal";
+    domain = "4amlunch.net";
     useDHCP = false;
     bridges = {
       "trunk" = {
