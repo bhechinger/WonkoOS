@@ -12,6 +12,8 @@ let
       gnugrep
       gnutar
       iproute2
+      postgresql_16
+      redis
       systemd
       util-linux
       zstd

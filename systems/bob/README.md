@@ -1,167 +1,116 @@
-# Bob NixOS migration
+# Bob
 
-Bob is configured as a single-node NixOS server on its existing 477 GiB NVMe.
-The install is destructive and must only run after the backup in
-[`bob-backup-plan.md`](../../bob-backup-plan.md) has completed, recorded Bob's
-source state, and passed the disposable VM restore test.
+Bob is a single-node NixOS server on ZFS. Its service definitions live in
+[`services.nix`](./services.nix); Docker Compose is not part of the runtime
+model.
 
 ## Service model
 
-| Workload | Choice | Reason |
+| Workload | Runtime | Persistent data |
 |---|---|---|
-| Plex, Murmur, Postfix, NFS, Tailscale, ZeroTier | NixOS modules | Stable native modules, direct systemd supervision, no container layer needed. |
-| Paperless/PostgreSQL/Redis, nginx, ProtonMail Bridge, Jackett, GeoIP updater, Cloudflare Tunnel | Existing Docker Compose | Lowest-risk restoration of current images, environment files, bind mounts, and PostgreSQL major version. |
-| UniFi | Existing Docker Compose | Preserves the application database and existing device adoption. |
-| Kubernetes | Not used | One host has no failover benefit; Kubernetes complicates multicast and local persistent data. |
+| Paperless-ngx | Native NixOS module with native PostgreSQL 16 and Redis | `/home/docker/paperless`, `/home/docker/pgsql/paperless`, `/home/wonko/docker/paperless.env` |
+| Nginx | Native NixOS module | `/home/docker/reverse/{certs,html}` |
+| Jackett | Native NixOS module | `/home/docker/jackett` |
+| Sonarr | Native NixOS module | `/var/lib/sonarr`; shows at `/nfs/Plex/Shows` |
+| rTorrent and ruTorrent | Native NixOS modules | `/var/lib/{rtorrent,rutorrent}`; downloads at `/nfs/Torrents` |
+| Cloudflare Tunnel | Native `cloudflared` systemd service | `/var/lib/cloudflared/tunnel.env` |
+| Plex, Murmur, Postfix, NFS, Tailscale, ZeroTier | Native NixOS modules | Their standard state paths |
+| Proton Mail Bridge | Declarative OCI container | Docker volume `protonmail` |
+| UniFi Network Application | Declarative OCI container | `/home/unifi/config` |
 
-This is deliberately a lift-and-shift first. Convert individual Compose
-services to NixOS modules only after the restored system is stable and each
-application has a tested export/import path.
+UniFi remains containerized because the restored controller is version 7.5
+with MongoDB 3.6. NixOS supplies UniFi 10 with MongoDB 7, and MongoDB does not
+support skipping the intervening major-version upgrades. Proton Mail Bridge
+remains containerized because its headless image and existing authenticated
+state are the reliable server deployment.
 
-NixOS creates fresh Nix and Docker installations. The migration carries only
-the active image archive, Compose definitions and environment files,
-bind-mounted application data, and the `protonmail` named volume; it does not
-copy `/nix`, `/etc/nix`, or Docker engine state.
+The GeoIP updater was removed because no service consumes its databases.
+Sonarr and ruTorrent were absent from the curated Ubuntu-to-NixOS backup, so
+their former local settings, history, and torrent session could not be
+recovered. Their media and download trees remain on Basket and the native
+services use those NFS shares.
+Sonarr is configured with `/nfs/Plex/Shows`, the local rTorrent client, and
+TorrentLeech through Jackett. Existing shows still require a library import
+because the lost Sonarr state included their exact matches, monitoring
+choices, and quality profiles.
 
 ## Network policy
 
 Bob has an internal network at `10.42.0.2`, a management network at
-`10.42.11.2`, and an unnumbered guest bridge. The old external and storage
-bridges are not recreated. Internal, Tailscale, and ZeroTier clients retain
-the existing service access. Management is restricted to the UniFi device
-plane: TCP `8080` and UDP `3478`, `10001`, `1900`, and `5514`. Docker enforces
-the same restriction in its forwarding path.
+`10.42.11.2`, and an unnumbered guest bridge. Internal, Tailscale, and ZeroTier
+clients can reach application ports. Management is restricted to the UniFi
+device plane: TCP `8080` and UDP `3478`, `10001`, `1900`, and `5514`.
+
+Nginx serves the existing HTTPS names for Bob, Basket, Paperless, Jackett,
+Sonarr, and ruTorrent. Paperless also retains its direct port `8001`. The
+rTorrent XML-RPC listener is bound only to `127.0.0.1:9000`. ruTorrent requires
+basic authentication; retrieve the generated initial password once with:
+
+```sh
+sudo cat /var/lib/rutorrent/initial-password
+```
+
+Delete that plaintext file after recording the password. The active password
+hash is `/var/lib/rutorrent/htpasswd`.
 
 ## Storage
 
-Disko destroys `/dev/disk/by-id/nvme-eui.6479a741b05004c5` and creates:
+ZFS datasets back `/`, `/nix`, `/var`, `/var/lib/docker`,
+`/var/lib/plexmediaserver`, `/home`, and `/home/docker/pgsql`. Basket is
+automounted over NFS at:
 
-- a 1 GiB EFI system partition;
-- 1 GiB emergency swap plus compressed zram swap;
-- one ZFS pool, `zpool`, with datasets for `/`, `/nix`, `/var`, Docker, Plex,
-  `/home`, and PostgreSQL;
-- 16 KiB ZFS records for Plex metadata and PostgreSQL, with `zstd`, POSIX ACLs,
-  xattrs, weekly scrubs, and SSD trim.
+- `/nfs/Brian`
+- `/nfs/Plex`
+- `/nfs/Torrents`
 
-The service datasets retain the Ubuntu path layout, so the NFS backup can be
-restored without rewriting Compose bind mounts.
+Basket authorizes `bob.4amlunch.net` for `/Torrents`; that name must resolve on
+Basket to Bob's stable address, `10.42.0.2`. Reload Basket's exports with
+`sudo exportfs -ra` after changing that DNS record. Jackett, Sonarr, and
+rTorrent run as Bob's restricted `media` account (`uid 999`, `gid 2000`).
+Avahi is pinned to UID 992 so it cannot share that NAS identity. UID 999
+matches the existing Shows and Torrents trees created by LinuxServer images.
 
-## Before deployment
+## Build and activate
 
-1. Start the maintenance window and run the final backup with
-   `--leave-stopped` as described in the backup plan:
-
-   ```sh
-   ssh -F none bob 'sudo bash -s -- --leave-stopped /nfs/Brian' < systems/bob/backup.sh
-   ```
-
-   A successful run leaves the recorded application services stopped. Errors,
-   interruptions, and failed verification still restore their original state.
-2. Record the chosen timestamp directory under
-   `/nfs/Brian/bob-backups/<UTC_TIMESTAMP>`.
-3. Confirm the backup contains `metadata/COMPLETE`,
-   `metadata/SOURCE-STOPPED`, the required restore paths, and
-   `metadata/images/active-images.tar`.
-4. Run and review the disposable isolated restore test:
-
-   ```sh
-   nix run .#bob-vm-test -- /nfs/Brian/bob-backups/<UTC_TIMESTAMP>
-   ```
-
-   The result directory must contain `PASS`; see the backup plan for the full
-   validation gates and expected network-related degradation.
-5. Confirm the target disk identity again:
-
-   ```sh
-   ssh -F none bob 'ls -l /dev/disk/by-id/nvme-eui.6479a741b05004c5'
-   ```
-
-6. Fix the local system SSH include before using nixos-anywhere. Ordinary SSH
-   currently rejects its ownership while `ssh -F none` bypasses it:
-
-   ```sh
-   sudo chown root:root /etc/ssh/ssh_config.d/30-libvirt-ssh-proxy.conf
-   sudo chmod 0644 /etc/ssh/ssh_config.d/30-libvirt-ssh-proxy.conf
-   ssh bob true
-   ```
-
-7. Evaluate and build Bob locally:
-
-   ```sh
-   nix build .#nixosConfigurations.bob.config.system.build.toplevel
-   nix run github:nix-community/nixos-anywhere -- \
-     --option timeout 1200 \
-     --flake .#bob \
-     --vm-test
-   ```
-
-   The explicit Nix build timeout prevents a failed VM test from retaining its
-   output lock indefinitely.
-
-## Destructive deployment
-
-Supply the private key that currently logs in as `wonko`. `--copy-host-keys`
-keeps Bob's existing SSH host identity across the reinstall.
+The Makefile chooses the flake configuration from the local hostname:
 
 ```sh
-nix run github:nix-community/nixos-anywhere -- \
-  --flake .#bob \
-  --target-host wonko@bob \
-  --build-on local \
-  --copy-host-keys \
-  -i /path/to/bob-login-key
+make build
+make switch
 ```
 
-Nixos-anywhere kexecs from Ubuntu, destroys the selected NVMe, applies the
-Disko ZFS layout, installs NixOS, and reboots. Do not run this command until the
-NFS backup has its completion and stopped-state markers and its disposable
-restore test has passed.
+Before a service-data migration, create a recursive ZFS snapshot and a
+PostgreSQL logical dump. Do not activate a change that repoints PostgreSQL at
+an existing data directory until the old database writer is stopped and the
+directory is owned by the native `postgres` user.
 
-## Restore
+## Backup and restore
 
-Application services have `ConditionPathExists=/var/lib/bob-restored`, so the
-first NixOS boot exposes only SSH, networking, the NFS backup/Plex automounts,
-and the Docker engine. Restore from the exact verified backup:
+Run a normal backup with:
 
 ```sh
-ssh bob
+sudo systems/bob/backup.sh /nfs/Brian
+```
+
+Use `--leave-stopped` only for a planned recovery or reinstall. The script
+records and stops the active native/OCI service units, saves the two retained
+container images, copies the curated state with ACLs/xattrs/numeric IDs,
+verifies the copy, and restores the original service state unless explicitly
+asked to leave it stopped.
+
+Restore a verified backup with:
+
+```sh
 sudo bob-restore /nfs/Brian/bob-backups/<UTC_TIMESTAMP>
 ```
 
-The restore command:
-
-- copies only the active paths listed in the backup plan;
-- loads every image used by the backed-up running containers and forbids
-  implicit pulls during Compose startup;
-- recreates the `protonmail` Docker volume before restoring its data;
-- maps the Ubuntu Mumble database and password into the NixOS Murmur service;
-- fixes native Plex and Murmur ownership after preserving numeric IDs for
-  container data;
-- starts a fresh declarative Postfix with root mail redirected to `wonko`;
-- writes `/var/lib/bob-restored`, starts native and Compose services, and
-  removes the marker again if startup fails so the restore can be retried.
-
-Samba AD, Sonarr, ruTorrent, Snap and Canonical Livepatch, Docker engine state
-and unused volumes, libvirt, and the old Nix store and daemon configuration are
-not backed up or restored. A live check confirmed that `sierra` is shut off
-with autostart disabled and no managed save; its configured disk and
-installation ISO no longer exist.
-
-## Validation
+Application services are gated by `/var/lib/bob-restored`, so a fresh system
+does not expose empty services before restoration. Validate with:
 
 ```sh
-zpool status
-zfs list
 systemctl --failed
-systemctl status compose-main compose-unifi
+systemctl status nginx postgresql paperless-web jackett sonarr rtorrent
+systemctl status docker-protonmail-bridge docker-unifi-controller
 docker ps
-iptables -S BOB-DOCKER
-findmnt /nfs/Brian
-findmnt /nfs/Plex
+findmnt /nfs/Brian /nfs/Plex /nfs/Torrents
 ```
-
-Check Paperless, Plex, Mumble, UniFi, Postfix port 25, and both Paperless NFS
-exports from their clients. From the management network, verify that only the
-UniFi device-plane ports are reachable. Confirm the same services remain
-available from internal, Tailscale, and ZeroTier before considering the
-migration complete.

@@ -20,11 +20,18 @@ image_archive=$backup/metadata/images/active-images.tar
 )
 
 for path in \
+  home/docker/jackett \
   home/docker/paperless \
   home/docker/pgsql/paperless \
+  home/docker/reverse \
   home/unifi/config \
+  home/wonko/docker/paperless.env \
+  var/lib/cloudflared/tunnel.env \
   var/lib/docker/volumes/protonmail/_data \
-  var/lib/plexmediaserver; do
+  var/lib/plexmediaserver \
+  var/lib/rtorrent \
+  var/lib/rutorrent \
+  var/lib/sonarr; do
   [[ -e $source_root/$path ]] || { echo "required backup path is missing: $path" >&2; exit 1; }
 done
 
@@ -35,9 +42,27 @@ grep -Eq '^[[:space:]]*serverpassword[[:space:]]*=' "$mumble_config" || {
 }
 password=$(sed -n 's/^[[:space:]]*serverpassword[[:space:]]*=[[:space:]]*//p' "$mumble_config" | tail -n 1)
 
-systemctl stop compose-main.service compose-unifi.service \
-  plex.service murmur.service postfix.service nfs-server.service \
-  tailscaled.service zerotierone.service
+systemctl stop \
+  cloudflared-tunnel.service \
+  docker-protonmail-bridge.service \
+  docker-unifi-controller.service \
+  jackett.service \
+  nginx.service \
+  paperless-consumer.service \
+  paperless-scheduler.service \
+  paperless-task-queue.service \
+  paperless-web.service \
+  phpfpm-rutorrent.service \
+  plex.service \
+  murmur.service \
+  postgresql.service \
+  postfix.service \
+  redis-paperless.service \
+  rtorrent.service \
+  sonarr.service \
+  nfs-server.service \
+  tailscaled.service \
+  zerotierone.service
 
 docker image load --input "$image_archive" >/dev/null
 
@@ -45,22 +70,19 @@ rsync -aHAX --numeric-ids --relative \
   "$source_root"/./home/docker/reverse \
   "$source_root"/./home/docker/paperless \
   "$source_root"/./home/docker/pgsql/paperless \
-  "$source_root"/./home/docker/redis \
   "$source_root"/./home/docker/jackett \
   "$source_root"/./home/unifi/config \
-  "$source_root"/./home/wonko/docker/docker-compose.yaml \
-  "$source_root"/./home/wonko/docker/.env \
   "$source_root"/./home/wonko/docker/paperless.env \
-  "$source_root"/./home/wonko/docker/data/geoip \
-  "$source_root"/./home/wonko/unifi/docker-compose.yaml \
+  "$source_root"/./var/lib/cloudflared/tunnel.env \
   "$source_root"/./var/lib/plexmediaserver \
+  "$source_root"/./var/lib/rtorrent \
+  "$source_root"/./var/lib/rutorrent \
+  "$source_root"/./var/lib/sonarr \
   "$source_root"/./var/lib/mumble-server \
   "$source_root"/./var/lib/nfs \
   "$source_root"/./var/lib/tailscale \
   "$source_root"/./var/lib/zerotier-one \
   /
-
-rm -f /home/docker/reverse/config/conf.d/{rancher,rutorrent,sonarr}.conf
 
 docker volume create protonmail >/dev/null
 protonmail=$(docker volume inspect --format '{{ .Mountpoint }}' protonmail)
@@ -76,14 +98,66 @@ printf 'MURMURD_PASSWORD="%s"\n' "$password" > /var/lib/mumble-server/murmurd.en
 chmod 0600 /var/lib/mumble-server/murmurd.env
 chown -R murmur:murmur /var/lib/mumble-server
 chown -R plex:plex /var/lib/plexmediaserver
+chown -R media:media /home/docker/jackett
+chown -R paperless:paperless /home/docker/paperless
+chown -R postgres:postgres /home/docker/pgsql/paperless
+chown -R media:nginx /var/lib/rtorrent
+chown root:nginx \
+  /home/docker/reverse/certs \
+  /home/docker/reverse/certs/4amlunch.net \
+  /home/docker/reverse/certs/4amlunch.net/{fullchain,privkey}.pem
+chmod 0750 /home/docker/reverse/certs /home/docker/reverse/certs/4amlunch.net
+chmod 0640 /home/docker/reverse/certs/4amlunch.net/{fullchain,privkey}.pem
+chown -R rutorrent:rutorrent /var/lib/rutorrent
+chown root:rutorrent /var/lib/rutorrent
+chmod 0751 /var/lib/rutorrent
+chown -R media:media /var/lib/sonarr
+chown root:root /var/lib/cloudflared/tunnel.env
+chmod 0600 /var/lib/cloudflared/tunnel.env
+chown root:nginx /var/lib/rutorrent/htpasswd
+chmod 0640 /var/lib/rutorrent/htpasswd
 
-touch "$marker"
-if ! systemctl start tailscaled.service zerotierone.service nfs-server.service postfix.service murmur.service plex.service \
-  || ! systemctl start compose-main.service compose-unifi.service; then
+printf '%s\n' \
+  'DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '\''postgres'\'') THEN CREATE ROLE postgres WITH LOGIN SUPERUSER; END IF; END $$;' |
+  runuser -u postgres -- postgres --single -D /home/docker/pgsql/paperless postgres >/dev/null
+
+restore_failed() {
   rm -f "$marker"
   echo "service startup failed; restore marker removed so the restore can be retried" >&2
   exit 1
-fi
+}
+
+touch "$marker"
+systemctl start postgresql.service || restore_failed
+for database in paperless postgres template1; do
+  if [[ $(runuser -u postgres -- psql -d postgres -Atc \
+    "SELECT datcollversion IS DISTINCT FROM pg_database_collation_actual_version(oid) FROM pg_database WHERE datname = '$database'") == t ]]; then
+    runuser -u postgres -- reindexdb --dbname="$database" || restore_failed
+    runuser -u postgres -- psql -d postgres -v ON_ERROR_STOP=1 \
+      -c "ALTER DATABASE \"$database\" REFRESH COLLATION VERSION;" || restore_failed
+  fi
+done
+
+systemctl start \
+  tailscaled.service \
+  zerotierone.service \
+  nfs-server.service \
+  postfix.service \
+  murmur.service \
+  plex.service \
+  redis-paperless.service \
+  paperless-consumer.service \
+  paperless-scheduler.service \
+  paperless-task-queue.service \
+  paperless-web.service \
+  jackett.service \
+  rtorrent.service \
+  phpfpm-rutorrent.service \
+  sonarr.service \
+  nginx.service \
+  cloudflared-tunnel.service \
+  docker-protonmail-bridge.service \
+  docker-unifi-controller.service || restore_failed
 
 echo "restore complete"
 systemctl --no-pager --failed || true

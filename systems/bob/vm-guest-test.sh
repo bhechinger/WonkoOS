@@ -24,7 +24,7 @@ finish() {
     echo "Failed checks: $failures"
     echo
     echo "Expected isolation-related degradation (not test failures):"
-    echo "- Cloudflare Tunnel and GeoIP updates cannot reach the Internet."
+    echo "- Cloudflare Tunnel cannot reach the Internet."
     echo "- Tailscale and ZeroTier cannot reach their control planes."
     echo "- Proton Mail Bridge cannot reach Proton."
     echo "- UniFi adoption, Plex media on NAS, and external SMTP are unavailable."
@@ -82,14 +82,33 @@ http_ready() {
   return 1
 }
 
-paperless_healthy() {
-  local attempt health
-  for ((attempt = 0; attempt < 120; attempt++)); do
-    health=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{end}}' paperless 2>/dev/null || true)
-    [[ $health == healthy ]] && return 0
-    sleep 5
-  done
-  return 1
+rutorrent_auth_required() {
+  [[ $(curl --insecure --silent --max-time 5 \
+    --output /dev/null --write-out '%{http_code}' \
+    --resolve rutorrent.4amlunch.net:443:127.0.0.1 \
+    https://rutorrent.4amlunch.net/) == 401 ]]
+}
+
+rutorrent_auth_works() {
+  local user password code
+  user=$(sed -n 's/:.*//p' /var/lib/rutorrent/htpasswd | head -n 1)
+  password=$(cat /var/lib/rutorrent/initial-password)
+  code=$(curl --insecure --silent --max-time 5 \
+    --user "$user:$password" --output /dev/null --write-out '%{http_code}' \
+    --resolve rutorrent.4amlunch.net:443:127.0.0.1 \
+    https://rutorrent.4amlunch.net/)
+  unset password
+  [[ $code == 200 ]]
+}
+
+postgres_role_ready() {
+  [[ $(sudo -u postgres psql -d postgres -Atc \
+    "SELECT rolsuper AND rolcanlogin FROM pg_roles WHERE rolname = 'postgres'") == t ]]
+}
+
+postgres_collations_current() {
+  [[ $(sudo -u postgres psql -d postgres -Atc \
+    'SELECT count(*) FROM pg_database WHERE datallowconn AND datcollversion IS DISTINCT FROM pg_database_collation_actual_version(oid)') == 0 ]]
 }
 
 : > "$checks"
@@ -113,6 +132,7 @@ fi
 record PASS staged-backup-checksum
 
 install -d "$restore_source"
+install -d /nfs/Plex/Shows /nfs/Torrents
 if ! zstd -dc /tmp/shared/backup.tar.zst \
   | tar --acls --xattrs --numeric-owner -xf - -C "$restore_source"; then
   record FAIL staged-backup-extraction
@@ -134,19 +154,25 @@ check restore-marker test -e /var/lib/bob-restored
 for unit in \
   docker.service plex.service murmur.service postfix.service nfs-server.service \
   avahi-daemon.service tailscaled.service zerotierone.service \
-  compose-main.service compose-unifi.service; do
+  docker-protonmail-bridge.service docker-unifi-controller.service \
+  jackett.service nginx.service paperless-consumer.service \
+  paperless-scheduler.service paperless-task-queue.service paperless-web.service \
+  phpfpm-rutorrent.service postgresql.service redis-paperless.service \
+  rtorrent.service sonarr.service; do
   check "unit:$unit" systemctl is-active --quiet "$unit"
 done
 
-for container in \
-  reverse paperless paperless-db paperless-broker protonmail-bridge jackett unifi-controller; do
+for container in protonmail-bridge unifi-controller; do
   check "container:$container" container_running "$container"
 done
 check container-absent:sonarr container_absent sonarr
 check container-absent:rutorrent container_absent rutorrent
-check paperless-health paperless_healthy
-check postgres-readiness docker exec paperless-db pg_isready
-check redis-readiness docker exec paperless-broker redis-cli ping
+check postgres-readiness pg_isready
+check postgres-role postgres_role_ready
+check postgres-collations postgres_collations_current
+check redis-readiness redis-cli -s /run/redis-paperless/redis.sock ping
+check service-uids test "$(id -u avahi)" -ne "$(id -u media)"
+check rtorrent-socket-group test "$(stat -c %G /run/rtorrent/rpc.sock)" = nginx
 
 check plex-http http_ready http://127.0.0.1:32400/identity 60
 check plex-library-database test -s \
@@ -161,6 +187,9 @@ check nfs-export-export grep -Fq '/home/docker/paperless/export' /var/lib/nfs/et
 check reverse-http http_ready http://127.0.0.1/ 24
 check paperless-http http_ready http://127.0.0.1:8001/ 24
 check jackett-http http_ready http://127.0.0.1:9117/ 24
+check sonarr-http http_ready http://127.0.0.1:8989/ 24
+check rutorrent-https-auth rutorrent_auth_required
+check rutorrent-https-login rutorrent_auth_works
 check unifi-https http_ready https://127.0.0.1:8443/ 60
 
 if protonmail=$(docker volume inspect --format '{{.Mountpoint}}' protonmail 2>/dev/null) \
@@ -171,10 +200,8 @@ else
   failures=$((failures + 1))
 fi
 
-for container in cloudflared-tunnel geoip-updater; do
-  check "expected-degraded-container:$container" \
-    docker container inspect --format '{{.Name}}' "$container"
-done
+check expected-degraded-unit:cloudflared-tunnel \
+  systemctl is-enabled --quiet cloudflared-tunnel.service
 
 if systemctl --failed --plain --no-legend | grep -q .; then
   record FAIL unexpected-failed-units

@@ -40,29 +40,19 @@ rm -f "$probe"
   exit 1
 }
 
-compose_files=(
-  /home/wonko/docker/docker-compose.yaml
-  /home/wonko/unifi/docker-compose.yaml
-)
-compose_names=(main unifi)
-for file in "${compose_files[@]}"; do
-  [[ -f $file ]] || { echo "missing Compose file: $file" >&2; exit 1; }
-done
-
 paths=(
   /home/docker/reverse
   /home/docker/paperless
   /home/docker/pgsql/paperless
-  /home/docker/redis
   /home/docker/jackett
   /home/unifi/config
-  /home/wonko/docker/docker-compose.yaml
-  /home/wonko/docker/.env
   /home/wonko/docker/paperless.env
-  /home/wonko/docker/data/geoip
-  /home/wonko/unifi/docker-compose.yaml
+  /var/lib/cloudflared/tunnel.env
   /var/lib/docker/volumes/protonmail/_data
   /var/lib/plexmediaserver
+  /var/lib/rtorrent
+  /var/lib/rutorrent
+  /var/lib/sonarr
   /etc/mumble-server.ini
   /var/lib/mumble-server
   /etc/exports
@@ -75,14 +65,26 @@ for path in "${paths[@]}"; do
 done
 
 native_units=(
-  plexmediaserver.service
-  mumble-server.service
+  cloudflared-tunnel.service
+  docker-protonmail-bridge.service
+  docker-unifi-controller.service
+  jackett.service
+  nginx.service
+  paperless-consumer.service
+  paperless-scheduler.service
+  paperless-task-queue.service
+  paperless-web.service
+  phpfpm-rutorrent.service
+  plex.service
+  murmur.service
+  postgresql.service
   postfix.service
+  redis-paperless.service
+  rtorrent.service
+  sonarr.service
   nfs-server.service
-  nfs-kernel-server.service
   tailscaled.service
   zerotier-one.service
-  ntp.service
 )
 
 install -d -m 0700 "$backup" "$rootfs" "$metadata" "$metadata/images"
@@ -100,11 +102,6 @@ for unit in "${native_units[@]}"; do
   fi
 done
 
-for index in "${!compose_files[@]}"; do
-  docker compose -f "${compose_files[$index]}" ps --services --status running \
-    | sort -u > "$metadata/compose-${compose_names[$index]}-running.txt"
-done
-
 mapfile -t images < <(docker ps --format '{{.Image}}' | sort -u)
 (( ${#images[@]} > 0 )) || { echo "no running container images found" >&2; exit 1; }
 printf '%s\n' "${images[@]}" > "$metadata/images/active-images.txt"
@@ -117,21 +114,12 @@ docker image save --output "$metadata/images/active-images.tar" "${images[@]}"
 )
 
 restart_source() {
-  local failed=0 index unit
-  local -a services active_units
+  local failed=0 unit
+  local -a active_units
 
   systemctl start docker.service || failed=1
-  for index in "${!compose_files[@]}"; do
-    mapfile -t services < "$metadata/compose-${compose_names[$index]}-running.txt"
-    if (( ${#services[@]} > 0 )); then
-      docker compose -f "${compose_files[$index]}" start "${services[@]}" || failed=1
-    fi
-  done
-
   mapfile -t active_units < "$metadata/native-units-active.txt"
-  for unit in "${active_units[@]}"; do
-    systemctl start "$unit" || failed=1
-  done
+  systemctl start "${active_units[@]}" || failed=1
 
   sleep 5
   if ! docker ps --format '{{.Names}}' | sort -u > "$metadata/containers-running-after.txt"; then
@@ -202,15 +190,7 @@ trap 'exit 143' TERM
 
 shutdown_started=1
 mapfile -t active_units < "$metadata/native-units-active.txt"
-for unit in "${active_units[@]}"; do
-  systemctl stop "$unit"
-done
-for index in "${!compose_files[@]}"; do
-  mapfile -t services < "$metadata/compose-${compose_names[$index]}-running.txt"
-  if (( ${#services[@]} > 0 )); then
-    docker compose -f "${compose_files[$index]}" stop "${services[@]}"
-  fi
-done
+systemctl stop "${active_units[@]}"
 systemctl stop docker.service docker.socket containerd.service
 
 plex_sqlite='/usr/lib/plexmediaserver/Plex SQLite'

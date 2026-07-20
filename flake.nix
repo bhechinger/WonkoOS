@@ -223,10 +223,7 @@
             management = firewall.interfaces.management;
             vyprvpn = deepthought.services.openvpn.servers.vyprvpn-miami;
             vyprvpnProfile = builtins.readFile ./systems/deepthought/openvpn/vyprvpn-miami.ovpn;
-            composeServices = [
-              config.systemd.services.compose-main
-              config.systemd.services.compose-unifi
-            ];
+            ociContainers = config.virtualisation.oci-containers.containers;
           in
           assert config.services.tailscale.enable;
           assert config.services.zerotierone.enable;
@@ -259,6 +256,17 @@
           assert !config.systemd.network.wait-online.anyInterface;
           assert lib.elem "--interface=internal:routable" config.systemd.network.wait-online.extraArgs;
           assert !(config.systemd.services ? compose-ad);
+          assert !(config.systemd.services ? compose-main);
+          assert !(config.systemd.services ? compose-unifi);
+          assert config.services.jackett.enable;
+          assert config.services.paperless.enable;
+          assert config.services.paperless.database.createLocally;
+          assert config.services.rtorrent.enable;
+          assert config.services.rutorrent.enable;
+          assert config.services.sonarr.enable;
+          assert config.services.rtorrent.group == "nginx";
+          assert config.users.users.avahi.uid == 992;
+          assert config.users.users.media.uid == 999;
           assert config.services.postfix.rootAlias == "wonko";
           assert firewall.allowedTCPPorts == [ ];
           assert firewall.allowedUDPPorts == [ ];
@@ -277,12 +285,16 @@
               5514
               10001
             ];
-          assert lib.all (
-            service: lib.hasInfix "--pull never" service.serviceConfig.ExecStart
-          ) composeServices;
+          assert
+            builtins.attrNames ociContainers == [
+              "protonmail-bridge"
+              "unifi-controller"
+            ];
+          assert lib.all (container: container.pull == "never") (builtins.attrValues ociContainers);
           assert config.virtualisation.docker.storageDriver == "zfs";
           assert lib.any (mount: mount.what == "10.42.0.30:/Brian") config.systemd.mounts;
           assert lib.any (mount: mount.what == "10.42.0.30:/Plex") config.systemd.mounts;
+          assert lib.any (mount: mount.what == "10.42.0.30:/Torrents") config.systemd.mounts;
           assert vm.virtualisation.docker.storageDriver == "overlay2";
           assert vm.virtualisation.restrictNetwork;
           assert vm.virtualisation.forwardPorts == [ ];

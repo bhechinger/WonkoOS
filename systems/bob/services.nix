@@ -7,7 +7,35 @@
 
 let
   restoreMarker = "/var/lib/bob-restored";
-  compose = lib.getExe pkgs.docker-compose;
+  certificateDirectory = "/home/docker/reverse/certs/4amlunch.net";
+  paperlessLocations = {
+    "/" = {
+      proxyPass = "http://paperless";
+      proxyWebsockets = true;
+      extraConfig = ''
+        proxy_set_header X-ProxyScheme "http";
+        proxy_set_header X-ProxyHost $http_host;
+        proxy_set_header X-ProxyPort 8000;
+        proxy_set_header X-ProxyContextPath "";
+        add_header Referrer-Policy "strict-origin-when-cross-origin";
+      '';
+    };
+    "/static/" = {
+      root = config.services.paperless.package;
+      extraConfig = ''
+        rewrite ^/(.*)$ /lib/paperless-ngx/$1 break;
+      '';
+    };
+    "/ws/status" = {
+      proxyPass = "http://paperless";
+      proxyWebsockets = true;
+    };
+  };
+  tls = {
+    onlySSL = true;
+    sslCertificate = "${certificateDirectory}/fullchain.pem";
+    sslCertificateKey = "${certificateDirectory}/privkey.pem";
+  };
   dockerFirewall = pkgs.writeShellApplication {
     name = "bob-docker-firewall";
     runtimeInputs = [ pkgs.iptables ];
@@ -38,40 +66,32 @@ let
       gnugrep
       gnused
       rsync
+      config.services.postgresql.package
       systemd
+      util-linux
     ];
     text = builtins.readFile ./restore.sh;
-  };
-  mkComposeService = directory: services: {
-    after = [
-      "docker.service"
-      "network-online.target"
-    ];
-    requires = [ "docker.service" ];
-    wants = [ "network-online.target" ];
-    wantedBy = [ "multi-user.target" ];
-    unitConfig.ConditionPathExists = [
-      restoreMarker
-      "${directory}/docker-compose.yaml"
-    ];
-    serviceConfig = {
-      Type = "oneshot";
-      RemainAfterExit = true;
-      WorkingDirectory = directory;
-      ExecStart = "${compose} -f ${directory}/docker-compose.yaml up -d --pull never --remove-orphans ${lib.escapeShellArgs services}";
-      ExecStop = "-${compose} -f ${directory}/docker-compose.yaml stop ${lib.escapeShellArgs services}";
-      TimeoutStartSec = "infinity";
-      TimeoutStopSec = "5min";
-    };
   };
 in
 {
   environment.systemPackages = [ bobRestore ];
 
+  networking.extraHosts = ''
+    127.0.0.1 reverse paperless jackett sonarr
+  '';
+
   services = {
     avahi = {
       enable = true;
       nssmdns4 = true;
+    };
+
+    jackett = {
+      enable = true;
+      dataDir = "/home/docker/jackett/config/Jackett";
+      group = "media";
+      openFirewall = false;
+      user = "media";
     };
 
     murmur = {
@@ -88,6 +108,99 @@ in
         /home/docker/paperless/consume 10.42.0.10(rw,sync,no_subtree_check,root_squash)
         /home/docker/paperless/export 10.42.0.10(rw,sync,no_subtree_check,root_squash)
       '';
+    };
+
+    nginx = {
+      enable = true;
+      recommendedProxySettings = true;
+      recommendedTlsSettings = true;
+      upstreams.paperless.servers."127.0.0.1:8000" = { };
+      virtualHosts = {
+        "basket.4amlunch.net" = tls // {
+          serverAliases = [
+            "basket"
+            "basket.4amlunch.internal"
+          ];
+          locations."/".proxyPass = "https://10.42.0.30:8443";
+        };
+        "bob.4amlunch.net" = tls // {
+          serverAliases = [
+            "bob"
+            "bob.4amlunch.internal"
+          ];
+          root = "/home/docker/reverse/html";
+        };
+        "hamburgerking.pt".root = "/home/docker/reverse/html/hbk";
+        "jackett.4amlunch.net" = tls // {
+          serverAliases = [
+            "jackett"
+            "jackett.4amlunch.internal"
+          ];
+          locations."/".proxyPass = "http://127.0.0.1:9117";
+        };
+        "paperless.4amlunch.net" = tls // {
+          serverAliases = [
+            "paperless"
+            "paperless.4amlunch.internal"
+          ];
+          locations = paperlessLocations;
+        };
+        paperless-direct = {
+          default = true;
+          listen = [
+            {
+              addr = "0.0.0.0";
+              port = 8001;
+            }
+            {
+              addr = "[::]";
+              port = 8001;
+            }
+          ];
+          locations = paperlessLocations;
+        };
+        "rtorrent-rpc" = {
+          listen = [
+            {
+              addr = "127.0.0.1";
+              port = 9000;
+            }
+          ];
+          locations."/RPC2".extraConfig = ''
+            include ${pkgs.nginx}/conf/scgi_params;
+            scgi_pass unix:${config.services.rtorrent.rpcSocket};
+          '';
+        };
+        "rutorrent.4amlunch.net" = tls // {
+          basicAuthFile = "/var/lib/rutorrent/htpasswd";
+          serverAliases = [
+            "rutorrent"
+            "rutorrent.4amlunch.internal"
+          ];
+        };
+        "sonarr.4amlunch.net" = tls // {
+          serverAliases = [
+            "sonarr"
+            "sonarr.4amlunch.internal"
+          ];
+          locations."/".proxyPass = "http://127.0.0.1:8989";
+        };
+      };
+    };
+
+    paperless = {
+      enable = true;
+      address = "127.0.0.1";
+      port = 8000;
+      dataDir = "/home/docker/paperless/data";
+      mediaDir = "/home/docker/paperless/media";
+      consumptionDir = "/home/docker/paperless/consume";
+      consumptionDirIsPublic = true;
+      database.createLocally = true;
+      environmentFile = "/home/wonko/docker/paperless.env";
+      # Include both installed OCR languages. paperless.env keeps English as
+      # the existing runtime default.
+      settings.PAPERLESS_OCR_LANGUAGE = "eng+por";
     };
 
     plex = {
@@ -129,6 +242,32 @@ in
       };
     };
 
+    postgresql = {
+      dataDir = "/home/docker/pgsql/paperless";
+      package = pkgs.postgresql_16;
+    };
+
+    rtorrent = {
+      enable = true;
+      downloadDir = "/nfs/Torrents";
+      group = "nginx";
+      openFirewall = false;
+      user = "media";
+    };
+
+    rutorrent = {
+      enable = true;
+      hostName = "rutorrent.4amlunch.net";
+      nginx.enable = true;
+    };
+
+    sonarr = {
+      enable = true;
+      group = "media";
+      openFirewall = false;
+      user = "media";
+    };
+
     tailscale = {
       enable = true;
       openFirewall = false;
@@ -142,14 +281,65 @@ in
     };
   };
 
-  users.users.plex.extraGroups = [
-    "render"
-    "video"
-  ];
+  users = {
+    groups.media.gid = 2000;
+    users = {
+      avahi.uid = 992;
+      media = {
+        description = "Shared media service account";
+        group = "media";
+        isSystemUser = true;
+        uid = 999;
+      };
+      plex.extraGroups = [
+        "render"
+        "video"
+      ];
+    };
+  };
 
-  virtualisation.docker = {
-    enable = true;
-    storageDriver = "zfs";
+  virtualisation = {
+    docker = {
+      enable = true;
+      storageDriver = "zfs";
+    };
+    oci-containers = {
+      backend = "docker";
+      containers = {
+        protonmail-bridge = {
+          image = "shenxn/protonmail-bridge:latest";
+          pull = "never";
+          ports = [
+            "1025:25"
+            "1143:143"
+          ];
+          volumes = [ "protonmail:/root" ];
+        };
+        unifi-controller = {
+          image = "lscr.io/linuxserver/unifi-controller:latest";
+          pull = "never";
+          environment = {
+            MEM_LIMIT = "1024";
+            MEM_STARTUP = "1024";
+            PGID = "1000";
+            PUID = "1000";
+            TZ = "Etc/UTC";
+          };
+          ports = [
+            "8443:8443"
+            "3478:3478/udp"
+            "10001:10001/udp"
+            "8080:8080"
+            "1900:1900/udp"
+            "8843:8843"
+            "8880:8880"
+            "6789:6789"
+            "5514:5514/udp"
+          ];
+          volumes = [ "/home/unifi/config:/config" ];
+        };
+      };
+    };
   };
 
   systemd = {
@@ -166,6 +356,12 @@ in
         type = "nfs4";
         mountConfig.Options = "noatime";
       }
+      {
+        what = "10.42.0.30:/Torrents";
+        where = "/nfs/Torrents";
+        type = "nfs4";
+        mountConfig.Options = "noatime";
+      }
     ];
     automounts = lib.mkIf (config.networking.hostName == "bob") [
       {
@@ -178,28 +374,110 @@ in
         wantedBy = [ "multi-user.target" ];
         automountConfig.TimeoutIdleSec = "600";
       }
+      {
+        where = "/nfs/Torrents";
+        wantedBy = [ "multi-user.target" ];
+        automountConfig.TimeoutIdleSec = "600";
+      }
     ];
 
     services = {
-      compose-main = mkComposeService "/home/wonko/docker" [
-        "reverse"
-        "paperless"
-        "paperless-db"
-        "paperless-broker"
-        "protonmail-bridge"
-        "jackett"
-        "geoip-updater"
-        "tunnel"
-      ];
-      compose-unifi = mkComposeService "/home/wonko/unifi" [ "unifi-controller" ];
+      cloudflared-tunnel = {
+        after = [
+          "network-online.target"
+          "nginx.service"
+        ];
+        wants = [ "network-online.target" ];
+        wantedBy = [ "multi-user.target" ];
+        unitConfig.ConditionPathExists = [
+          restoreMarker
+          "/var/lib/cloudflared/tunnel.env"
+        ];
+        serviceConfig = {
+          DynamicUser = true;
+          EnvironmentFile = "/var/lib/cloudflared/tunnel.env";
+          ExecStart = "${lib.getExe pkgs.cloudflared} tunnel --no-autoupdate run";
+          Restart = "always";
+          RestartSec = "5s";
+        };
+      };
 
       docker.postStart = lib.getExe dockerFirewall;
+      docker-protonmail-bridge.unitConfig.ConditionPathExists = restoreMarker;
+      docker-unifi-controller.unitConfig.ConditionPathExists = restoreMarker;
+
+      jackett = {
+        serviceConfig = {
+          BindPaths = [ "/home/docker/jackett/downloads:/downloads" ];
+          ReadWritePaths = [ "/home/docker/jackett/downloads" ];
+        };
+        unitConfig.ConditionPathExists = restoreMarker;
+      };
       murmur.unitConfig.ConditionPathExists = restoreMarker;
+      nginx.unitConfig.ConditionPathExists = [
+        restoreMarker
+        "${certificateDirectory}/fullchain.pem"
+        "${certificateDirectory}/privkey.pem"
+        "/var/lib/rutorrent/htpasswd"
+      ];
+      nginx.serviceConfig.ProtectHome = lib.mkForce "read-only";
       "nfs-server".unitConfig.ConditionPathExists = restoreMarker;
+      paperless-consumer.unitConfig.ConditionPathExists = restoreMarker;
+      paperless-scheduler.unitConfig.ConditionPathExists = restoreMarker;
+      paperless-task-queue.unitConfig.ConditionPathExists = restoreMarker;
+      paperless-web.unitConfig.ConditionPathExists = restoreMarker;
+      phpfpm-rutorrent.unitConfig.ConditionPathExists = restoreMarker;
       plex.unitConfig.ConditionPathExists = restoreMarker;
       postfix.unitConfig.ConditionPathExists = restoreMarker;
+      postgresql.unitConfig.ConditionPathExists = restoreMarker;
+      postgresql.serviceConfig.ProtectHome = lib.mkForce "read-only";
+      rtorrent = {
+        after = lib.optionals (config.networking.hostName == "bob") [ "nfs-Torrents.mount" ];
+        requires = lib.optionals (config.networking.hostName == "bob") [ "nfs-Torrents.mount" ];
+        unitConfig.ConditionPathExists = restoreMarker;
+      };
+      rutorrent-setup.unitConfig.ConditionPathExists = restoreMarker;
+      sonarr = {
+        after = lib.optionals (config.networking.hostName == "bob") [
+          "nfs-Plex.mount"
+          "nfs-Torrents.mount"
+        ];
+        requires = lib.optionals (config.networking.hostName == "bob") [
+          "nfs-Plex.mount"
+          "nfs-Torrents.mount"
+        ];
+        unitConfig.ConditionPathExists = restoreMarker;
+      };
       tailscaled.unitConfig.ConditionPathExists = restoreMarker;
       zerotierone.unitConfig.ConditionPathExists = restoreMarker;
+    };
+
+    tmpfiles.settings."10-bob-native-services" = {
+      "/home/docker".z = {
+        group = "-";
+        mode = "0711";
+        user = "-";
+      };
+      "/home/docker/jackett/downloads".d = {
+        group = "media";
+        mode = "0770";
+        user = "media";
+      };
+      "/var/lib/rutorrent".z = {
+        group = "rutorrent";
+        mode = "0751";
+        user = "root";
+      };
+      "/var/lib/rutorrent/htpasswd".z = {
+        group = "nginx";
+        mode = "0640";
+        user = "root";
+      };
+      "/var/lib/sonarr/.config/NzbDrone".d = {
+        group = "media";
+        mode = "0750";
+        user = "media";
+      };
     };
   };
 }

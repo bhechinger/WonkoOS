@@ -1,73 +1,64 @@
-# bob service data map
+# Bob service data map
 
-Collected from `bob` over SSH. Paths are on `bob`.
+Paths are on Bob unless noted otherwise.
 
-## Storage base
+## Native services
 
-- `/` is `/dev/mapper/ubuntu--vg-ubuntu--lv` (`ext4`).
-- `/boot` is `/dev/nvme0n1p2`; `/boot/efi` is `/dev/nvme0n1p1`.
-- No separate persistent mount was found for `/home`, `/var`, `/var/lib/docker`, `/nix`, or service data directories. They all live on `/`.
-- Docker root: `/var/lib/docker` (`25G` total); the engine state is not migrated.
+| Service | Persistent data | Notes |
+|---|---|---|
+| Paperless-ngx | `/home/docker/paperless/{consume,data,export,media}` | `consume` and `export` are NFS-exported to `10.42.0.10` |
+| PostgreSQL 16 | `/home/docker/pgsql/paperless` | Paperless database cluster; stop PostgreSQL before raw backup |
+| Redis | None required | Paperless broker state is disposable |
+| Nginx | `/home/docker/reverse/{certs,html}` | Virtual-host configuration is declarative in `systems/bob/services.nix` |
+| Cloudflared | `/var/lib/cloudflared/tunnel.env` | Root-only tunnel token |
+| Jackett | `/home/docker/jackett` | Native data directory is `/home/docker/jackett/config/Jackett` |
+| Sonarr | `/var/lib/sonarr` | Shows are on Basket at `/nfs/Plex/Shows` |
+| rTorrent | `/var/lib/rtorrent` | Downloads are on Basket at `/nfs/Torrents` |
+| ruTorrent | `/var/lib/rutorrent` | Includes profile data and HTTP basic-auth files |
+| Plex | `/var/lib/plexmediaserver` | Media is on Basket at `/nfs/Plex` |
+| Murmur | `/var/lib/mumble-server`, `/etc/mumble-server.ini` | Password is mapped into `murmurd.env` on restore |
+| NFS server | `/var/lib/nfs`, declarative exports | Exports Paperless consume/export |
+| Tailscale | `/var/lib/tailscale` | Node identity |
+| ZeroTier | `/var/lib/zerotier-one` | Node identity and joined network |
+| Postfix | Declarative configuration | No mail spool is preserved |
 
-## Docker / Compose data
+Paperless's secret-bearing runtime settings remain in
+`/home/wonko/docker/paperless.env`; Docker-only `USERMAP_UID` and
+`USERMAP_GID` entries are harmless but unused.
 
-| Service / container | Persistent data on host | Size observed | Notes |
-|---|---|---:|---|
-| `reverse` | `/home/docker/reverse/config`, `/home/docker/reverse/certs`, `/home/docker/reverse/html` | `/home/docker/reverse`: `272K` | nginx config, certs, static HTML |
-| `paperless` | `/home/docker/paperless/{consume,data,export,media}` | `/home/docker/paperless`: `1.8G` | Paperless app data/documents; `consume` and `export` are also NFS-exported to `10.42.0.10` |
-| `paperless-db` | `/home/docker/pgsql/paperless` | `131M` | PostgreSQL data directory |
-| `paperless-broker` | `/home/docker/redis` | `8.0K` | Redis data |
-| `protonmail-bridge` | `/var/lib/docker/volumes/protonmail/_data` | `1.8G` | Docker named volume mounted at container `/root` |
-| `jackett` | `/home/docker/jackett/config`, `/home/docker/jackett/downloads` | `/home/docker/jackett`: `23M` | Jackett config/download handoff |
-| `geoip-updater` | `/home/wonko/docker/data/geoip` | `72M` | GeoIP database output |
-| `unifi-controller` | `/home/unifi/config` | `836M` | UniFi controller config/database |
-| `sonarr` | `/home/docker/sonarr/config`, `/var/lib/docker/volumes/docker_torrent-data/_data` | config `156M`; volume `4K` | Container is exited but data remains |
-| `rutorrent` | `/home/docker/rutorrent/data`, `/home/docker/rutorrent/passwd`, `/var/lib/docker/volumes/docker_torrent-data/_data` | `/home/docker/rutorrent`: `95M`; torrent volume `4K` | Container is exited but data remains |
-| `cloudflared-tunnel` | no Docker mount found | n/a | Persistent config, if any, is likely in compose/env or Cloudflare-side, not a container mount |
+## Declarative OCI services
 
-Compose files that define the active containers:
+| Service | Persistent data | Reason it remains containerized |
+|---|---|---|
+| Proton Mail Bridge | Docker volume `protonmail` | Preserves the authenticated headless Bridge state |
+| UniFi Network Application 7.5 | `/home/unifi/config` | Its MongoDB 3.6 database cannot jump directly to the MongoDB 7 used by the current native UniFi module |
 
-- `/home/wonko/docker/docker-compose.yaml`
-- `/home/wonko/unifi/docker-compose.yaml`
+Compose is no longer used. Docker's layer, network, log, and daemon state are
+not backed up; the backup contains portable image archives for only these two
+containers.
 
-The migration keeps these Compose definitions, their referenced environment
-files, the bind-mounted application data above, and the `protonmail` volume.
-It does not copy Docker's layer, container, network, log, or daemon state.
+## Basket NFS data
 
-## Systemd service data
+| Mount | Source | Consumers |
+|---|---|---|
+| `/nfs/Brian` | `10.42.0.30:/Brian` | Bob backups |
+| `/nfs/Plex` | `10.42.0.30:/Plex` | Plex and Sonarr |
+| `/nfs/Torrents` | `10.42.0.30:/Torrents` | rTorrent and Sonarr |
 
-| Service | Persistent data / config | Size observed | Notes |
-|---|---|---:|---|
-| `plexmediaserver.service` | `/var/lib/plexmediaserver` | `6.9G` | Main Plex library/config/cache; runs as `plex` |
-| `mumble-server.service` | `/etc/mumble-server.ini`, `/var/lib/mumble-server` | `16K`, `120K` | Mumble config and server state |
-| NFS stack: `nfs-server`, `nfs-*`, `rpc-*` | `/etc/exports`, `/var/lib/nfs` | `4K`, `84K` | Exports `/home/docker/paperless/consume` and `/home/docker/paperless/export` to `10.42.0.10` |
-| `tailscaled.service` | `/var/lib/tailscale` | `48K` | Tailscale node state/key material |
-| `zerotier-one.service` | `/var/lib/zerotier-one` | `92K` | ZeroTier identity/network state |
-| `ntp.service` | package config under `/etc`; runtime drift/state is small/default | n/a | No app data directory identified |
+Basket authorizes `bob.4amlunch.net` for `/Torrents`; Basket must resolve it to
+`10.42.0.2` and reload its exports after a DNS change. Bob's restricted
+`media` account is UID 999/GID 2000. Jackett, Sonarr, and rTorrent use its UID
+because it already owns the NAS media/download trees created by the former
+LinuxServer containers. Avahi is pinned separately to UID 992.
 
-Other `wonko` user units seen were baseline/inactive session agents (`dbus`, `gpg-agent`, `dirmngr`, `snapd.session-agent`, `gnome-keyring`, `session-migration`) with package-owned unit files under `/usr/lib/systemd/user`.
+## Unrecoverable legacy state
 
-`chatgpt` had no active user manager, no linger entry, and no user service files under `/home/chatgpt/.config/systemd/user`.
+The Ubuntu-to-NixOS backup deliberately omitted `/home/docker/sonarr`,
+`/home/docker/rutorrent`, and the Docker `torrent-data` volume. Those paths do
+not exist on the rebuilt Bob and neither retained backup contains them.
+Consequently, Sonarr history/settings and the old rTorrent session/auth files
+cannot be restored. The actual shows and downloaded payloads live on Basket
+and were not lost.
 
-## Ignored legacy Paperless volumes
-
-The empty `docker_paperless-{consume,data,export,media,pgsql-data}` volumes were
-created by an older Compose definition on 2024-06-08. No container attaches to
-them and the current Compose file no longer declares them. Current Paperless,
-PostgreSQL, and Redis data lives in the bind mounts listed above, so these
-legacy volumes are not backed up or restored.
-
-There are also many anonymous Docker volumes under `/var/lib/docker/volumes/<hash>/_data`; I did not map them to old containers because they are not mounted by the current service set.
-
-## Biggest service data locations
-
-1. `/var/lib/plexmediaserver` — `6.9G`
-2. `/home/docker/paperless` — `1.8G`
-3. `/var/lib/docker/volumes/protonmail/_data` — `1.8G`
-4. `/home/unifi/config` — `836M`
-
-## Notes / gaps
-
-- I did not dump compose/env contents to avoid exposing secrets. Mounts and paths came from Docker inspect and targeted filesystem checks.
-- `cloudflared-tunnel` has no mounted local data; its durable state may be in compose/env or Cloudflare.
-- `sonarr` and `rutorrent` are inactive/exited but still have service definitions or data paths.
+The old GeoIP databases remain non-authoritative leftovers and are no longer
+updated because no active service references them.
