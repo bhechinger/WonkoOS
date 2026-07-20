@@ -1,8 +1,7 @@
 # Bob
 
 Bob is a single-node NixOS server on ZFS. Its service definitions live in
-[`services.nix`](./services.nix); Docker Compose is not part of the runtime
-model.
+[`services/`](./services/); Docker Compose is not part of the runtime model.
 
 ## Service model
 

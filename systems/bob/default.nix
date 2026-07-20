@@ -19,7 +19,7 @@ in
     (modulesPath + "/installer/scan/not-detected.nix")
     ./disko.nix
     ./networking.nix
-    ./services.nix
+    ./services
     ./vm-test.nix
   ];
 
