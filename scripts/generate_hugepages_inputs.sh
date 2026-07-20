@@ -6,7 +6,12 @@ output="${1:-systems/${host_name}/hugepages-inputs.nix}"
 
 kernel_release="$(uname -r)"
 huge_page_size_kib="$(awk '/Hugepagesize/ { print $2; exit }' /proc/meminfo)"
-segment_sizes="$(awk 'NR > 1 && $4 ~ /^[0-9]+$/ { print $4 }' /proc/sysvipc/shm | sort -n | tr '\n' ' ')"
+segment_sizes="$(awk 'NR > 1 && $4 ~ /^[0-9]+$/ { print $4 }' /proc/sysvipc/shm | sort -n | paste -sd ' ' -)"
+segment_list=" "
+if [[ -n $segment_sizes ]]; then
+  segment_list=" $segment_sizes "
+fi
+
 huge_page_size_bytes=$((huge_page_size_kib * 1024))
 
 hugepage_count() {
@@ -46,7 +51,7 @@ cat > "$tmp" <<NIX
 {
   kernelRelease = "$kernel_release";
   hugePageSizeKiB = $huge_page_size_kib;
-  sharedMemorySegmentsBytes = [ $segment_sizes ];
+  sharedMemorySegmentsBytes = [$segment_list];
 }
 NIX
 

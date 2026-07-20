@@ -9,6 +9,7 @@
 
 let
   wonkoKeys = import ../../common/wonko-keys.nix;
+  hugepages = import ../../common/hugepages.nix (import ./hugepages-inputs.nix);
 in
 {
   imports = [
@@ -29,6 +30,7 @@ in
       "usb_storage"
       "xhci_pci"
     ];
+    kernel = { inherit (hugepages) sysctl; };
     kernelModules = [ "kvm-intel" ];
     loader = {
       systemd-boot.enable = true;
@@ -69,6 +71,7 @@ in
 
   security.sudo.wheelNeedsPassword = false;
 
+  programs.nh.enable = true;
   programs.zsh.enable = true;
 
   services = {
@@ -104,6 +107,7 @@ in
 
   environment.systemPackages = with pkgs; [
     git
+    gnumake
     kitty.terminfo
     rsync
     tmux
