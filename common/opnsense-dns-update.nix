@@ -10,7 +10,7 @@ let
     text = ''
       export OPNSENSE_URL=https://sierra.4amlunch.internal
       export OPNSENSE_NETRC=/run/secrets/opnsense-api-netrc
-      export DNS_DOMAIN=4amlunch.internal
+      export DNS_DOMAIN=4amlunch.net
       export DNS_TYPE=A
       export DNS_DESCRIPTION="Managed by WonkoOS"
       ${builtins.readFile ../scripts/opnsense-dns-sync.sh}
@@ -19,7 +19,7 @@ let
 in
 { hostname, address }:
 {
-  description = "Update OPNsense DNS for ${hostname}.4amlunch.internal";
+  description = "Update OPNsense DNS for ${hostname}.4amlunch.net";
   after = [
     "network-online.target"
     "sops-install-secrets.service"

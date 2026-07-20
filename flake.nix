@@ -310,7 +310,23 @@
           assert lib.all (container: container.pull == "never") (builtins.attrValues ociContainers);
           assert lib.elem "network-online.target" dnsUpdate.after;
           assert lib.elem "sops-install-secrets.service" dnsUpdate.requires;
-          assert lib.hasInfix "cache 10.42.0.2" dnsUpdate.serviceConfig.ExecStart;
+          assert lib.all
+            (
+              hostname:
+              let
+                update = config.systemd.services."opnsense-dns-${hostname}";
+              in
+              update.description == "Update OPNsense DNS for ${hostname}.4amlunch.net"
+              && lib.hasInfix "${hostname} 10.42.0.2" update.serviceConfig.ExecStart
+            )
+            [
+              "bob"
+              "cache"
+              "jackett"
+              "paperless"
+              "rutorrent"
+              "sonarr"
+            ];
           assert dnsUpdate.serviceConfig.RemainAfterExit;
           assert config.sops.age.sshKeyPaths == [ "/etc/ssh/ssh_host_ed25519_key" ];
           assert config.sops.secrets.opnsense-api-netrc.mode == "0400";

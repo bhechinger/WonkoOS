@@ -7,6 +7,12 @@
 
 let
   mkOpnsenseDnsUpdate = import ../../../common/opnsense-dns-update.nix { inherit lib pkgs; };
+  mkBobDnsUpdate =
+    hostname:
+    mkOpnsenseDnsUpdate {
+      inherit hostname;
+      address = "10.42.0.2";
+    };
 in
 {
   sops = lib.mkIf (config.networking.hostName == "bob") {
@@ -19,10 +25,12 @@ in
     };
   };
 
-  systemd.services.opnsense-dns-cache =
-    lib.mkIf (config.networking.hostName == "bob")
-      (mkOpnsenseDnsUpdate {
-        hostname = "cache";
-        address = "10.42.0.2";
-      });
+  systemd.services = lib.mkIf (config.networking.hostName == "bob") {
+    opnsense-dns-bob = mkBobDnsUpdate "bob";
+    opnsense-dns-cache = mkBobDnsUpdate "cache";
+    opnsense-dns-jackett = mkBobDnsUpdate "jackett";
+    opnsense-dns-paperless = mkBobDnsUpdate "paperless";
+    opnsense-dns-rutorrent = mkBobDnsUpdate "rutorrent";
+    opnsense-dns-sonarr = mkBobDnsUpdate "sonarr";
+  };
 }
