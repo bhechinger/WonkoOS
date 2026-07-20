@@ -6,7 +6,6 @@ trap 'rm -rf "$tmp"' EXIT
 
 export OPNSENSE_URL=https://sierra.4amlunch.net
 export OPNSENSE_NETRC="$tmp/netrc"
-export OPNSENSE_PINNED_PUBLIC_KEY=sha256//test
 export DNS_DOMAIN=4amlunch.net
 export DNS_TYPE=A
 export DNS_DESCRIPTION="Managed by WonkoOS"
@@ -21,6 +20,15 @@ printf '%s\n' \
 printf '#!%s\n' "$BASH" >"$CURL"
 cat >>"$CURL" <<'EOF'
 set -euo pipefail
+
+for arg in "$@"; do
+  case "$arg" in
+    --insecure | --pinnedpubkey)
+      echo "TLS verification must not be disabled" >&2
+      exit 1
+      ;;
+  esac
+done
 
 url=${!#}
 printf '%s\n' "$url" >>"$CALLS"

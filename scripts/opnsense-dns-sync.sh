@@ -13,7 +13,6 @@ DNS_VALUE=$2
 
 : "${OPNSENSE_URL:?OPNSENSE_URL is required}"
 : "${OPNSENSE_NETRC:?OPNSENSE_NETRC is required}"
-: "${OPNSENSE_PINNED_PUBLIC_KEY:?OPNSENSE_PINNED_PUBLIC_KEY is required}"
 : "${DNS_DOMAIN:?DNS_DOMAIN is required}"
 : "${DNS_TYPE:?DNS_TYPE is required}"
 : "${DNS_DESCRIPTION:?DNS_DESCRIPTION is required}"
@@ -32,12 +31,8 @@ api_post() {
   local data=${2-}
   [[ -n "$data" ]] || data='{}'
 
-  # OPNsense's self-signed certificate has a stale hostname; the public-key
-  # pin still authenticates it before curl sends or receives API data.
   "$CURL" \
     --fail-with-body \
-    --insecure \
-    --pinnedpubkey "$OPNSENSE_PINNED_PUBLIC_KEY" \
     --silent \
     --show-error \
     --netrc-file "$OPNSENSE_NETRC" \
