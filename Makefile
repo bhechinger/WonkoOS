@@ -1,4 +1,4 @@
-.PHONY: hugepages-inputs boot switch build
+.PHONY: hugepages-inputs boot switch build deploy-bob
 
 HOST := $(shell hostname -s)
 
@@ -13,3 +13,6 @@ switch: hugepages-inputs
 
 build: hugepages-inputs
 	nh os build -H $(HOST) .
+
+deploy-bob:
+	nh os switch -H bob --target-host wonko@bob.4amlunch.net --elevation-strategy passwordless .
