@@ -328,6 +328,7 @@
               "sonarr"
             ];
           assert dnsUpdate.serviceConfig.RemainAfterExit;
+          assert config.systemd.services ? sops-install-secrets;
           assert config.sops.age.sshKeyPaths == [ "/etc/ssh/ssh_host_ed25519_key" ];
           assert config.sops.secrets.opnsense-api-netrc.mode == "0400";
           assert !(vm.systemd.services ? opnsense-dns-cache);

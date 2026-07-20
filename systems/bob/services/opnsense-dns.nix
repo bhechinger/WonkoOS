@@ -16,6 +16,7 @@ let
 in
 {
   sops = lib.mkIf (config.networking.hostName == "bob") {
+    useSystemdActivation = true;
     age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
     secrets.opnsense-api-netrc = {
       sopsFile = ../secrets/opnsense.sops;
