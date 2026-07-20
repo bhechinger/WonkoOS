@@ -72,6 +72,7 @@ let
     ];
     text = builtins.readFile ./restore.sh;
   };
+  mkOpnsenseDnsUpdate = import ../../common/opnsense-dns-update.nix { inherit lib pkgs; };
 in
 {
   environment.systemPackages = [ bobRestore ];
@@ -79,6 +80,16 @@ in
   networking.extraHosts = ''
     127.0.0.1 reverse paperless jackett sonarr
   '';
+
+  sops = lib.mkIf (config.networking.hostName == "bob") {
+    age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
+    secrets.opnsense-api-netrc = {
+      sopsFile = ./secrets/opnsense.sops;
+      format = "yaml";
+      key = "netrc";
+      mode = "0400";
+    };
+  };
 
   services = {
     avahi = {
@@ -401,6 +412,11 @@ in
           RestartSec = "5s";
         };
       };
+
+      opnsense-dns-cache = lib.mkIf (config.networking.hostName == "bob") (mkOpnsenseDnsUpdate {
+        hostname = "cache";
+        address = "10.42.0.2";
+      });
 
       docker.postStart = lib.getExe dockerFirewall;
       docker-protonmail-bridge.unitConfig.ConditionPathExists = restoreMarker;

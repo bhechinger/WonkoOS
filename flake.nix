@@ -179,6 +179,22 @@
             touch "$out"
           '';
 
+        opnsense-dns-sync =
+          pkgs.runCommand "opnsense-dns-sync-test"
+            {
+              nativeBuildInputs = with pkgs; [
+                bash
+                jq
+                shellcheck
+              ];
+            }
+            ''
+              bash -n ${./scripts/opnsense-dns-sync.sh} ${./scripts/opnsense-dns-sync-test.sh}
+              shellcheck -s bash ${./scripts/opnsense-dns-sync.sh} ${./scripts/opnsense-dns-sync-test.sh}
+              bash ${./scripts/opnsense-dns-sync-test.sh} ${./scripts/opnsense-dns-sync.sh}
+              touch "$out"
+            '';
+
         storage-layout =
           let
             config = self.nixosConfigurations.deepthought.config;
@@ -224,6 +240,7 @@
             vyprvpn = deepthought.services.openvpn.servers.vyprvpn-miami;
             vyprvpnProfile = builtins.readFile ./systems/deepthought/openvpn/vyprvpn-miami.ovpn;
             ociContainers = config.virtualisation.oci-containers.containers;
+            dnsUpdate = config.systemd.services.opnsense-dns-cache;
           in
           assert config.services.tailscale.enable;
           assert config.services.zerotierone.enable;
@@ -291,6 +308,14 @@
               "unifi-controller"
             ];
           assert lib.all (container: container.pull == "never") (builtins.attrValues ociContainers);
+          assert lib.elem "network-online.target" dnsUpdate.after;
+          assert lib.elem "sops-install-secrets.service" dnsUpdate.requires;
+          assert lib.hasInfix "cache 10.42.0.2" dnsUpdate.serviceConfig.ExecStart;
+          assert dnsUpdate.serviceConfig.RemainAfterExit;
+          assert config.sops.age.sshKeyPaths == [ "/etc/ssh/ssh_host_ed25519_key" ];
+          assert config.sops.secrets.opnsense-api-netrc.mode == "0400";
+          assert !(vm.systemd.services ? opnsense-dns-cache);
+          assert !(vm.sops.secrets ? opnsense-api-netrc);
           assert config.virtualisation.docker.storageDriver == "zfs";
           assert lib.any (mount: mount.what == "10.42.0.30:/Brian") config.systemd.mounts;
           assert lib.any (mount: mount.what == "10.42.0.30:/Plex") config.systemd.mounts;

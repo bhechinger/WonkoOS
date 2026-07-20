@@ -15,6 +15,7 @@ in
   imports = [
     inputs.determinate.nixosModules.default
     inputs.disko.nixosModules.disko
+    inputs.sops-nix.nixosModules.sops
     (modulesPath + "/installer/scan/not-detected.nix")
     ./disko.nix
     ./networking.nix
