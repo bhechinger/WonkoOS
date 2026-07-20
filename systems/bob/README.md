@@ -2,8 +2,8 @@
 
 Bob is configured as a single-node NixOS server on its existing 477 GiB NVMe.
 The install is destructive and must only run after the backup in
-[`bob-backup-plan.md`](../../bob-backup-plan.md) has completed and passed its
-dry-run verification.
+[`bob-backup-plan.md`](../../bob-backup-plan.md) has completed, recorded Bob's
+source state, and passed the disposable VM restore test.
 
 ## Service model
 
@@ -17,6 +17,11 @@ dry-run verification.
 This is deliberately a lift-and-shift first. Convert individual Compose
 services to NixOS modules only after the restored system is stable and each
 application has a tested export/import path.
+
+NixOS creates fresh Nix and Docker installations. The migration carries only
+the active image archive, Compose definitions and environment files,
+bind-mounted application data, and the `protonmail` named volume; it does not
+copy `/nix`, `/etc/nix`, or Docker engine state.
 
 ## Network policy
 
@@ -43,19 +48,35 @@ restored without rewriting Compose bind mounts.
 
 ## Before deployment
 
-1. Review and run `systems/bob/backup.sh` as described in the backup plan; it
-   leaves Ubuntu's application services down.
+1. Start the maintenance window and run the final backup with
+   `--leave-stopped` as described in the backup plan:
+
+   ```sh
+   ssh -F none bob 'sudo bash -s -- --leave-stopped /nfs/Brian' < systems/bob/backup.sh
+   ```
+
+   A successful run leaves the recorded application services stopped. Errors,
+   interruptions, and failed verification still restore their original state.
 2. Record the chosen timestamp directory under
    `/nfs/Brian/bob-backups/<UTC_TIMESTAMP>`.
-3. Confirm the backup contains `metadata/COMPLETE`, the required restore paths,
-   and `metadata/images/active-images.tar`.
-4. Confirm the target disk identity again:
+3. Confirm the backup contains `metadata/COMPLETE`,
+   `metadata/SOURCE-STOPPED`, the required restore paths, and
+   `metadata/images/active-images.tar`.
+4. Run and review the disposable isolated restore test:
+
+   ```sh
+   nix run .#bob-vm-test -- /nfs/Brian/bob-backups/<UTC_TIMESTAMP>
+   ```
+
+   The result directory must contain `PASS`; see the backup plan for the full
+   validation gates and expected network-related degradation.
+5. Confirm the target disk identity again:
 
    ```sh
    ssh -F none bob 'ls -l /dev/disk/by-id/nvme-eui.6479a741b05004c5'
    ```
 
-5. Fix the local system SSH include before using nixos-anywhere. Ordinary SSH
+6. Fix the local system SSH include before using nixos-anywhere. Ordinary SSH
    currently rejects its ownership while `ssh -F none` bypasses it:
 
    ```sh
@@ -64,12 +85,18 @@ restored without rewriting Compose bind mounts.
    ssh bob true
    ```
 
-6. Evaluate and build Bob locally:
+7. Evaluate and build Bob locally:
 
    ```sh
    nix build .#nixosConfigurations.bob.config.system.build.toplevel
-   nix run github:nix-community/nixos-anywhere -- --flake .#bob --vm-test
+   nix run github:nix-community/nixos-anywhere -- \
+     --option timeout 1200 \
+     --flake .#bob \
+     --vm-test
    ```
+
+   The explicit Nix build timeout prevents a failed VM test from retaining its
+   output lock indefinitely.
 
 ## Destructive deployment
 
@@ -87,7 +114,8 @@ nix run github:nix-community/nixos-anywhere -- \
 
 Nixos-anywhere kexecs from Ubuntu, destroys the selected NVMe, applies the
 Disko ZFS layout, installs NixOS, and reboots. Do not run this command until the
-NFS backup has been independently verified.
+NFS backup has its completion and stopped-state markers and its disposable
+restore test has passed.
 
 ## Restore
 
@@ -109,15 +137,15 @@ The restore command:
 - maps the Ubuntu Mumble database and password into the NixOS Murmur service;
 - fixes native Plex and Murmur ownership after preserving numeric IDs for
   container data;
-- retains old Postfix configuration under `/var/lib/bob-legacy` for inspection,
-  while the active Postfix configuration is declarative;
+- starts a fresh declarative Postfix with root mail redirected to `wonko`;
 - writes `/var/lib/bob-restored`, starts native and Compose services, and
   removes the marker again if startup fails so the restore can be retried.
 
-Samba AD, Sonarr, ruTorrent, Minecraft, Rancher, Authentik, anonymous Docker
-volumes, Canonical Livepatch, libvirt, and the old Nix store are not restored.
-The stopped `sierra` definition remains only in the NFS backup; no VM disk was
-found and libvirt is not enabled on NixOS.
+Samba AD, Sonarr, ruTorrent, Snap and Canonical Livepatch, Docker engine state
+and unused volumes, libvirt, and the old Nix store and daemon configuration are
+not backed up or restored. A live check confirmed that `sierra` is shut off
+with autostart disabled and no managed save; its configured disk and
+installation ISO no longer exist.
 
 ## Validation
 

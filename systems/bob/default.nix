@@ -18,6 +18,7 @@ in
     ./disko.nix
     ./networking.nix
     ./services.nix
+    ./vm-test.nix
   ];
 
   boot = {

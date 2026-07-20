@@ -86,6 +86,22 @@
         ];
       };
       inherit (nixpkgs) lib;
+      bobVmTest = pkgs.writeShellApplication {
+        name = "bob-vm-test";
+        runtimeInputs = with pkgs; [
+          coreutils
+          gnugrep
+          gnutar
+          procps
+          zstd
+        ];
+        text = ''
+          export BOB_COREUTILS=${pkgs.coreutils}/bin
+          export BOB_TAR=${lib.getExe pkgs.gnutar}
+          export BOB_VM_RUNNER=${lib.getExe self.nixosConfigurations.bob.config.system.build.vm}
+          ${builtins.readFile ./systems/bob/vm-test.sh}
+        '';
+      };
     in
     {
       nixosConfigurations = {
@@ -141,12 +157,19 @@
 
       packages.${system} = {
         inherit (inputs.disko.packages.${system}) disko disko-install;
+        bob-vm-test = bobVmTest;
+      };
+
+      apps.${system}.bob-vm-test = {
+        type = "app";
+        program = lib.getExe bobVmTest;
       };
 
       formatter.${system} = pkgs.nixfmt-tree;
 
       checks.${system} = {
         bob = self.nixosConfigurations.bob.config.system.build.toplevel;
+        bob-vm = self.nixosConfigurations.bob.config.system.build.vm;
         nixos = self.nixosConfigurations.deepthought.config.system.build.toplevel;
         home = self.homeConfigurations.wonko.activationPackage;
 
@@ -194,6 +217,7 @@
         bob-policy =
           let
             config = self.nixosConfigurations.bob.config;
+            vm = config.virtualisation.vmVariant;
             deepthought = self.nixosConfigurations.deepthought.config;
             firewall = config.networking.firewall;
             management = firewall.interfaces.management;
@@ -235,6 +259,7 @@
           assert !config.systemd.network.wait-online.anyInterface;
           assert lib.elem "--interface=internal:routable" config.systemd.network.wait-online.extraArgs;
           assert !(config.systemd.services ? compose-ad);
+          assert config.services.postfix.rootAlias == "wonko";
           assert firewall.allowedTCPPorts == [ ];
           assert firewall.allowedUDPPorts == [ ];
           assert
@@ -255,13 +280,35 @@
           assert lib.all (
             service: lib.hasInfix "--pull never" service.serviceConfig.ExecStart
           ) composeServices;
+          assert config.virtualisation.docker.storageDriver == "zfs";
+          assert lib.any (mount: mount.what == "10.42.0.30:/Brian") config.systemd.mounts;
+          assert lib.any (mount: mount.what == "10.42.0.30:/Plex") config.systemd.mounts;
+          assert vm.virtualisation.docker.storageDriver == "overlay2";
+          assert vm.virtualisation.restrictNetwork;
+          assert vm.virtualisation.forwardPorts == [ ];
+          assert !vm.networking.firewall.enable;
+          assert vm.networking.useDHCP;
+          assert !vm.networking.useNetworkd;
+          assert lib.all (mount: !lib.hasPrefix "10.42.0.30:" mount.what) vm.systemd.mounts;
+          assert vm.systemd.automounts == [ ];
+          assert vm.boot.zfs.extraPools == [ ];
+          assert !vm.services.zfs.autoScrub.enable;
+          assert !vm.services.zfs.trim.enable;
+          assert vm.virtualisation.memorySize == 12288;
+          assert vm.virtualisation.cores == 4;
+          assert vm.virtualisation.diskSize == 65536;
+          assert lib.elem "ro" vm.fileSystems."/tmp/shared".options;
           pkgs.runCommand "bob-policy-test" { } ''
             touch "$out"
           '';
 
         bob-shell = pkgs.runCommand "bob-shell-check" { nativeBuildInputs = [ pkgs.shellcheck ]; } ''
-          bash -n ${./systems/bob/backup.sh} ${./systems/bob/restore.sh} ${./repl.sh}
-          shellcheck -s bash ${./systems/bob/backup.sh} ${./systems/bob/restore.sh} ${./repl.sh}
+          bash -n ${./systems/bob/backup.sh} ${./systems/bob/restore.sh} \
+            ${./systems/bob/vm-test.sh} ${./systems/bob/vm-guest-test.sh} ${./repl.sh}
+          shellcheck -s bash ${./systems/bob/backup.sh} ${./systems/bob/restore.sh} \
+            ${./systems/bob/vm-test.sh} ${./systems/bob/vm-guest-test.sh} ${./repl.sh}
+          ! grep -Eq '(/etc|/var/lib)/libvirt|/var/lib/machines|libvirt(d|-guests)\.service|/etc/postfix|/var/(spool/postfix|mail|snap)|canonical-livepatch' \
+            ${./systems/bob/backup.sh} ${./systems/bob/restore.sh}
           touch "$out"
         '';
 

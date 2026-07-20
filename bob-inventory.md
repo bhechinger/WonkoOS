@@ -54,11 +54,6 @@ Docker was queried as `wonko`. All containers below are compose-managed except w
 - Active user manager: yes (`/run/user/1000`)
 - Linger enabled: yes
 - Active app-like user services: none found.
-- Enabled/operator-managed user units:
-  - `minecraft@perfect-world.service`: enabled, inactive/dead.
-    - Unit file: `/home/wonko/.config/systemd/user/minecraft@.service`
-    - Working directory: `/home/minecraft/perfect-world`
-    - Start command: `/usr/bin/screen -DmS mc-perfect-world /home/wonko/minecraft/perfect-world/run.sh`
 
 Baseline/inactive user units seen for `wonko`: `dbus.service`, `dirmngr.service`, `gpg-agent.service`, `pk-debconf-helper.service`, `snapd.session-agent.service`, `gnome-keyring.service`, `session-migration.service`. `podman.service` appeared as `not-found`.
 
@@ -88,4 +83,3 @@ Omitted from the main table unless relevant above: normal Ubuntu/systemd plumbin
 
 - `nix-daemon.service` is linked from `/etc/systemd/system/nix-daemon.service` but was inactive/dead during collection.
 - `sonarr` and `rutorrent` have restart policies but are exited. If they should be part of the active server set, they need investigation separately.
-- `minecraft@perfect-world.service` is enabled for `wonko` but inactive; its install target is `multi-user.target` inside the user unit tree, which is unusual for a user service.

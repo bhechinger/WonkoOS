@@ -4,6 +4,20 @@
   ...
 }:
 
+let
+  qnap = pkgs.rustPlatform.buildRustPackage rec {
+    pname = "qnap";
+    version = "0.1.12";
+    src = pkgs.fetchFromGitHub {
+      owner = "rvben";
+      repo = "qnap-cli";
+      tag = "v${version}";
+      hash = "sha256-Xz75WZeztKHhs3PYsUu38fRBY2YsgCBbml1Lv9yCbfI=";
+    };
+    cargoHash = "sha256-DKtJ8IPCYq3fOdHZCcpl2mxMKCRho9AmiTol0egpyc8=";
+    env.NO_COLOR = "1";
+  };
+in
 {
   home.packages = with pkgs; [
     ncdu
@@ -47,6 +61,7 @@
     inxi
     mesa-demos
     whatsie
+    qnap
   ];
 
   programs = {

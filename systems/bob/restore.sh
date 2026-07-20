@@ -28,8 +28,12 @@ for path in \
   [[ -e $source_root/$path ]] || { echo "required backup path is missing: $path" >&2; exit 1; }
 done
 
-password=$(sed -n 's/^[[:space:]]*serverpassword[[:space:]]*=[[:space:]]*//p' "$source_root/etc/mumble-server.ini" | tail -n 1)
-[[ -n $password ]] || { echo "Mumble server password is missing or empty" >&2; exit 1; }
+mumble_config=$source_root/etc/mumble-server.ini
+grep -Eq '^[[:space:]]*serverpassword[[:space:]]*=' "$mumble_config" || {
+  echo "Mumble server password setting is missing" >&2
+  exit 1
+}
+password=$(sed -n 's/^[[:space:]]*serverpassword[[:space:]]*=[[:space:]]*//p' "$mumble_config" | tail -n 1)
 
 systemctl stop compose-main.service compose-unifi.service \
   plex.service murmur.service postfix.service nfs-server.service \
@@ -56,6 +60,8 @@ rsync -aHAX --numeric-ids --relative \
   "$source_root"/./var/lib/zerotier-one \
   /
 
+rm -f /home/docker/reverse/config/conf.d/{rancher,rutorrent,sonarr}.conf
+
 docker volume create protonmail >/dev/null
 protonmail=$(docker volume inspect --format '{{ .Mountpoint }}' protonmail)
 rsync -aHAX --numeric-ids "$source_root/var/lib/docker/volumes/protonmail/_data/" "$protonmail/"
@@ -71,10 +77,6 @@ chmod 0600 /var/lib/mumble-server/murmurd.env
 chown -R murmur:murmur /var/lib/mumble-server
 chown -R plex:plex /var/lib/plexmediaserver
 
-install -d -m 0700 /var/lib/bob-legacy/etc /var/lib/bob-legacy/var/spool
-rsync -aHAX --numeric-ids "$source_root/etc/postfix/" /var/lib/bob-legacy/etc/postfix/
-rsync -aHAX --numeric-ids "$source_root/var/spool/postfix/" /var/lib/bob-legacy/var/spool/postfix/
-
 touch "$marker"
 if ! systemctl start tailscaled.service zerotierone.service nfs-server.service postfix.service murmur.service plex.service \
   || ! systemctl start compose-main.service compose-unifi.service; then
@@ -83,6 +85,6 @@ if ! systemctl start tailscaled.service zerotierone.service nfs-server.service p
   exit 1
 fi
 
-echo "restore complete; legacy Postfix files are retained under /var/lib/bob-legacy"
+echo "restore complete"
 systemctl --no-pager --failed || true
 docker ps --format 'table {{.Names}}\t{{.Status}}'

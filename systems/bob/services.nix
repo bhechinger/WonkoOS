@@ -1,4 +1,5 @@
 {
+  config,
   lib,
   pkgs,
   ...
@@ -91,12 +92,13 @@ in
 
     plex = {
       enable = true;
-      dataDir = "/var/lib/plexmediaserver";
+      dataDir = "/var/lib/plexmediaserver/Library/Application Support";
       openFirewall = false;
     };
 
     postfix = {
       enable = true;
+      rootAlias = "wonko";
       settings.main = {
         append_dot_mydomain = "no";
         inet_interfaces = [ "all" ];
@@ -151,7 +153,7 @@ in
   };
 
   systemd = {
-    mounts = [
+    mounts = lib.mkIf (config.networking.hostName == "bob") [
       {
         what = "10.42.0.30:/Brian";
         where = "/nfs/Brian";
@@ -165,7 +167,7 @@ in
         mountConfig.Options = "noatime";
       }
     ];
-    automounts = [
+    automounts = lib.mkIf (config.networking.hostName == "bob") [
       {
         where = "/nfs/Brian";
         wantedBy = [ "multi-user.target" ];
