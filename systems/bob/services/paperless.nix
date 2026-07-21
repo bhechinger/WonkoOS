@@ -11,15 +11,28 @@
     consumptionDirIsPublic = true;
     database.createLocally = true;
     environmentFile = "/home/wonko/docker/paperless.env";
-    # Include both installed OCR languages. paperless.env keeps English as
-    # the existing runtime default.
-    settings.PAPERLESS_OCR_LANGUAGE = "eng+por";
+    settings = {
+      PAPERLESS_OCR_LANGUAGE = "eng+por";
+      PAPERLESS_PROXY_SSL_HEADER = [
+        "HTTP_X_FORWARDED_PROTO"
+        "https"
+      ];
+      PAPERLESS_URL = "https://paperless.4amlunch.net";
+    };
   };
 
-  systemd.services = {
-    paperless-consumer.unitConfig.ConditionPathExists = bobRestoreMarker;
-    paperless-scheduler.unitConfig.ConditionPathExists = bobRestoreMarker;
-    paperless-task-queue.unitConfig.ConditionPathExists = bobRestoreMarker;
-    paperless-web.unitConfig.ConditionPathExists = bobRestoreMarker;
+  systemd = {
+    services = {
+      paperless-consumer.unitConfig.ConditionPathExists = bobRestoreMarker;
+      paperless-scheduler.unitConfig.ConditionPathExists = bobRestoreMarker;
+      paperless-task-queue.unitConfig.ConditionPathExists = bobRestoreMarker;
+      paperless-web.unitConfig.ConditionPathExists = bobRestoreMarker;
+    };
+
+    tmpfiles.settings."10-bob-native-services"."/home/wonko/docker/paperless.env".z = {
+      group = "root";
+      mode = "0600";
+      user = "root";
+    };
   };
 }

@@ -42,8 +42,18 @@ device plane: TCP `8080` and UDP `3478`, `10001`, `1900`, and `5514`.
 
 Nginx serves the existing HTTPS names for Bob, Basket, Paperless, Jackett,
 Sonarr, and ruTorrent. Paperless also retains its direct port `8001`. The
-rTorrent XML-RPC listener is bound only to `127.0.0.1:9000`. ruTorrent requires
-basic authentication; retrieve the generated initial password once with:
+rTorrent XML-RPC listener is bound only to `127.0.0.1:9000`.
+
+Only `paperless.4amlunch.net` is published to the Internet through Bob's
+remotely managed Cloudflare Tunnel. Its published application route uses
+`https://localhost:443`, with both Origin Server Name and HTTP Host Header set
+to `paperless.4amlunch.net` and TLS verification enabled. Paperless uses its
+native login; no Cloudflare Access policy is configured. The other Bob service
+names remain private. Paperless's remaining runtime secrets stay in the
+root-owned, mode `0600` `/home/wonko/docker/paperless.env` file.
+
+ruTorrent requires basic authentication; retrieve the generated initial
+password once with:
 
 ```sh
 sudo cat /var/lib/rutorrent/initial-password

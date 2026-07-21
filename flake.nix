@@ -279,6 +279,17 @@
           assert config.services.jackett.enable;
           assert config.services.paperless.enable;
           assert config.services.paperless.database.createLocally;
+          assert config.services.paperless.settings.PAPERLESS_URL == "https://paperless.4amlunch.net";
+          assert
+            config.services.paperless.settings.PAPERLESS_PROXY_SSL_HEADER == [
+              "HTTP_X_FORWARDED_PROTO"
+              "https"
+            ];
+          assert
+            config.systemd.tmpfiles.settings."10-bob-native-services"."/home/wonko/docker/paperless.env".z.mode
+            == "0600";
+          assert lib.hasInfix "proxy_cookie_flags ~ secure;"
+            config.services.nginx.virtualHosts."paperless.4amlunch.net".extraConfig;
           assert config.services.rtorrent.enable;
           assert config.services.rutorrent.enable;
           assert config.services.sonarr.enable;

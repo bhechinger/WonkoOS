@@ -12,10 +12,6 @@ let
       proxyPass = "http://paperless";
       proxyWebsockets = true;
       extraConfig = ''
-        proxy_set_header X-ProxyScheme "http";
-        proxy_set_header X-ProxyHost $http_host;
-        proxy_set_header X-ProxyPort 8000;
-        proxy_set_header X-ProxyContextPath "";
         add_header Referrer-Policy "strict-origin-when-cross-origin";
       '';
     };
@@ -73,6 +69,9 @@ in
         locations."/".proxyPass = "http://127.0.0.1:9117";
       };
       "paperless.4amlunch.net" = tls // {
+        extraConfig = ''
+          proxy_cookie_flags ~ secure;
+        '';
         locations = paperlessLocations;
       };
       paperless-direct = {
