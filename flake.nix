@@ -86,22 +86,6 @@
         ];
       };
       inherit (nixpkgs) lib;
-      bobVmTest = pkgs.writeShellApplication {
-        name = "bob-vm-test";
-        runtimeInputs = with pkgs; [
-          coreutils
-          gnugrep
-          gnutar
-          procps
-          zstd
-        ];
-        text = ''
-          export BOB_COREUTILS=${pkgs.coreutils}/bin
-          export BOB_TAR=${lib.getExe pkgs.gnutar}
-          export BOB_VM_RUNNER=${lib.getExe self.nixosConfigurations.bob.config.system.build.vm}
-          ${builtins.readFile ./systems/bob/vm-test.sh}
-        '';
-      };
     in
     {
       nixosConfigurations = {
@@ -157,19 +141,12 @@
 
       packages.${system} = {
         inherit (inputs.disko.packages.${system}) disko disko-install;
-        bob-vm-test = bobVmTest;
-      };
-
-      apps.${system}.bob-vm-test = {
-        type = "app";
-        program = lib.getExe bobVmTest;
       };
 
       formatter.${system} = pkgs.nixfmt-tree;
 
       checks.${system} = {
         bob = self.nixosConfigurations.bob.config.system.build.toplevel;
-        bob-vm = self.nixosConfigurations.bob.config.system.build.vm;
         nixos = self.nixosConfigurations.deepthought.config.system.build.toplevel;
         home = self.homeConfigurations.wonko.activationPackage;
 
@@ -233,14 +210,13 @@
         bob-policy =
           let
             config = self.nixosConfigurations.bob.config;
-            vm = config.virtualisation.vmVariant;
             deepthought = self.nixosConfigurations.deepthought.config;
             firewall = config.networking.firewall;
+            internal = firewall.interfaces.internal;
             management = firewall.interfaces.management;
             vyprvpn = deepthought.services.openvpn.servers.vyprvpn-miami;
             vyprvpnProfile = builtins.readFile ./systems/deepthought/openvpn/vyprvpn-miami.ovpn;
-            ociContainers = config.virtualisation.oci-containers.containers;
-            dnsUpdate = config.systemd.services.opnsense-dns-cache;
+            dnsUpdate = config.systemd.services.opnsense-dns-bob;
           in
           assert config.services.tailscale.enable;
           assert config.services.zerotierone.enable;
@@ -260,16 +236,12 @@
           assert !(config.systemd.network.links ? "10-storage");
           assert
             builtins.attrNames config.networking.bridges == [
-              "guest"
               "internal"
               "management"
             ];
-          assert
-            builtins.attrNames config.networking.vlans == [
-              "vlan.410"
-              "vlan.420"
-            ];
+          assert builtins.attrNames config.networking.vlans == [ "vlan.420" ];
           assert !(config.networking.interfaces ? storage);
+          assert !(config.networking.interfaces ? guest);
           assert config.networking.nameservers == [ "10.42.0.1" ];
           assert !config.systemd.network.wait-online.anyInterface;
           assert lib.elem "--interface=internal:routable" config.systemd.network.wait-online.extraArgs;
@@ -279,24 +251,40 @@
           assert config.services.jackett.enable;
           assert config.services.paperless.enable;
           assert config.services.paperless.database.createLocally;
+          assert !config.services.paperless.consumptionDirIsPublic;
           assert config.services.paperless.settings.PAPERLESS_URL == "https://paperless.4amlunch.net";
+          assert
+            config.services.paperless.settings.PAPERLESS_EMAIL_CERTIFICATE_LOCATION
+            == "/var/lib/paperless/proton-bridge-ca.pem";
           assert
             config.services.paperless.settings.PAPERLESS_PROXY_SSL_HEADER == [
               "HTTP_X_FORWARDED_PROTO"
               "https"
             ];
-          assert
-            config.systemd.tmpfiles.settings."10-bob-native-services"."/home/wonko/docker/paperless.env".z.mode
-            == "0600";
+          assert config.services.paperless.environmentFile == config.sops.secrets.paperless-environment.path;
           assert lib.hasInfix "proxy_cookie_flags ~ secure;"
             config.services.nginx.virtualHosts."paperless.4amlunch.net".extraConfig;
+          assert !(config.services.nginx.virtualHosts ? "basket.4amlunch.net");
+          assert !(config.services.nginx.virtualHosts ? paperless-direct);
+          assert config.services.nginx.virtualHosts._default.rejectSSL;
           assert config.services.rtorrent.enable;
           assert config.services.rutorrent.enable;
           assert config.services.sonarr.enable;
-          assert config.services.rtorrent.group == "nginx";
-          assert config.users.users.avahi.uid == 992;
-          assert config.users.users.media.uid == 999;
+          assert config.services.rtorrent.user == "rtorrent";
+          assert config.services.rtorrent.group == "rtorrent";
+          assert lib.elem "rtorrent" config.users.users.nginx.extraGroups;
+          assert !(config.users.users ? media);
+          assert !(config.users.groups ? media);
+          assert config.services.avahi.allowInterfaces == [ "internal" ];
           assert config.services.postfix.rootAlias == "wonko";
+          assert config.services.postfix.settings.main.inet_interfaces == [ "loopback-only" ];
+          assert config.services.unifi.enable;
+          assert config.services.unifi.initialJavaHeapSize == 1024;
+          assert config.services.unifi.maximumJavaHeapSize == 1024;
+          assert config.systemd.services ? protonmail-bridge;
+          assert config.systemd.services.protonmail-bridge.serviceConfig.User == "protonmail-bridge";
+          assert !(config.virtualisation.docker.enable);
+          assert config.virtualisation.oci-containers.containers == { };
           assert firewall.allowedTCPPorts == [ ];
           assert firewall.allowedUDPPorts == [ ];
           assert
@@ -306,6 +294,31 @@
               "tailscale0"
               "ztnfaeb6wl"
             ];
+          assert
+            internal.allowedTCPPorts == [
+              22
+              80
+              443
+              2049
+              6789
+              8443
+              32400
+              32469
+              64738
+            ];
+          assert
+            internal.allowedUDPPorts == [
+              1900
+              5353
+              9993
+              32410
+              32411
+              32412
+              32413
+              32414
+              41641
+              64738
+            ];
           assert management.allowedTCPPorts == [ 8080 ];
           assert
             management.allowedUDPPorts == [
@@ -314,12 +327,6 @@
               5514
               10001
             ];
-          assert
-            builtins.attrNames ociContainers == [
-              "protonmail-bridge"
-              "unifi-controller"
-            ];
-          assert lib.all (container: container.pull == "never") (builtins.attrValues ociContainers);
           assert lib.elem "network-online.target" dnsUpdate.after;
           assert lib.elem "sops-install-secrets.service" dnsUpdate.requires;
           assert lib.all
@@ -333,7 +340,6 @@
             )
             [
               "bob"
-              "cache"
               "jackett"
               "paperless"
               "rutorrent"
@@ -343,40 +349,23 @@
           assert config.systemd.services ? sops-install-secrets;
           assert config.sops.age.sshKeyPaths == [ "/etc/ssh/ssh_host_ed25519_key" ];
           assert config.sops.secrets.opnsense-api-netrc.mode == "0400";
-          assert !(vm.systemd.services ? opnsense-dns-cache);
-          assert !(vm.sops.secrets ? opnsense-api-netrc);
-          assert config.virtualisation.docker.storageDriver == "zfs";
-          assert lib.any (mount: mount.what == "10.42.0.30:/Brian") config.systemd.mounts;
+          assert config.sops.secrets.cloudflared-environment.mode == "0400";
+          assert config.sops.secrets.murmur-environment.mode == "0400";
+          assert config.sops.secrets.paperless-environment.mode == "0400";
+          assert config.sops.secrets.rutorrent-htpasswd.mode == "0440";
+          assert !(config.systemd.services ? opnsense-dns-cache);
+          assert lib.all (mount: mount.what != "10.42.0.30:/Brian") config.systemd.mounts;
           assert lib.any (mount: mount.what == "10.42.0.30:/Plex") config.systemd.mounts;
           assert lib.any (mount: mount.what == "10.42.0.30:/Torrents") config.systemd.mounts;
-          assert vm.virtualisation.docker.storageDriver == "overlay2";
-          assert vm.virtualisation.restrictNetwork;
-          assert vm.virtualisation.forwardPorts == [ ];
-          assert !vm.networking.firewall.enable;
-          assert vm.networking.useDHCP;
-          assert !vm.networking.useNetworkd;
-          assert lib.all (mount: !lib.hasPrefix "10.42.0.30:" mount.what) vm.systemd.mounts;
-          assert vm.systemd.automounts == [ ];
-          assert vm.boot.zfs.extraPools == [ ];
-          assert !vm.services.zfs.autoScrub.enable;
-          assert !vm.services.zfs.trim.enable;
-          assert vm.virtualisation.memorySize == 12288;
-          assert vm.virtualisation.cores == 4;
-          assert vm.virtualisation.diskSize == 65536;
-          assert lib.elem "ro" vm.fileSystems."/tmp/shared".options;
+          assert !(config.disko.devices.zpool.zpool.datasets ? docker);
+          assert builtins.length config.swapDevices == 1;
+          assert
+            (builtins.head config.swapDevices).device
+            == "/dev/disk/by-partuuid/1ad95369-76dd-45cb-bf83-e84637ff25de";
+          assert (builtins.head config.swapDevices).randomEncryption.enable;
           pkgs.runCommand "bob-policy-test" { } ''
             touch "$out"
           '';
-
-        bob-shell = pkgs.runCommand "bob-shell-check" { nativeBuildInputs = [ pkgs.shellcheck ]; } ''
-          bash -n ${./systems/bob/backup.sh} ${./systems/bob/restore.sh} \
-            ${./systems/bob/vm-test.sh} ${./systems/bob/vm-guest-test.sh} ${./repl.sh}
-          shellcheck -s bash ${./systems/bob/backup.sh} ${./systems/bob/restore.sh} \
-            ${./systems/bob/vm-test.sh} ${./systems/bob/vm-guest-test.sh} ${./repl.sh}
-          ! grep -Eq '(/etc|/var/lib)/libvirt|/var/lib/machines|libvirt(d|-guests)\.service|/etc/postfix|/var/(spool/postfix|mail|snap)|canonical-livepatch' \
-            ${./systems/bob/backup.sh} ${./systems/bob/restore.sh}
-          touch "$out"
-        '';
 
         formatting = pkgs.runCommand "formatting-check" { nativeBuildInputs = [ pkgs.nixfmt-tree ]; } ''
           cp -r ${self} source

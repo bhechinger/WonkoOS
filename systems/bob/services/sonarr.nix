@@ -1,5 +1,4 @@
 {
-  bobRestoreMarker,
   config,
   lib,
   ...
@@ -8,9 +7,7 @@
 {
   services.sonarr = {
     enable = true;
-    group = "media";
     openFirewall = false;
-    user = "media";
   };
 
   systemd = {
@@ -23,13 +20,6 @@
         "nfs-Plex.mount"
         "nfs-Torrents.mount"
       ];
-      unitConfig.ConditionPathExists = bobRestoreMarker;
-    };
-
-    tmpfiles.settings."10-bob-native-services"."/var/lib/sonarr/.config/NzbDrone".d = {
-      group = "media";
-      mode = "0750";
-      user = "media";
     };
   };
 }

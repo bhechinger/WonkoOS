@@ -1,5 +1,3 @@
-{ bobRestoreMarker, ... }:
-
 {
   services.plex = {
     enable = true;
@@ -11,6 +9,4 @@
     "render"
     "video"
   ];
-
-  systemd.services.plex.unitConfig.ConditionPathExists = bobRestoreMarker;
 }

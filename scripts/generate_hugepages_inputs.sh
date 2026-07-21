@@ -7,10 +7,6 @@ output="${1:-systems/${host_name}/hugepages-inputs.nix}"
 kernel_release="$(uname -r)"
 huge_page_size_kib="$(awk '/Hugepagesize/ { print $2; exit }' /proc/meminfo)"
 segment_sizes="$(awk 'NR > 1 && $4 ~ /^[0-9]+$/ { print $4 }' /proc/sysvipc/shm | sort -n | paste -sd ' ' -)"
-segment_list=" "
-if [[ -n $segment_sizes ]]; then
-  segment_list=" $segment_sizes "
-fi
 
 huge_page_size_bytes=$((huge_page_size_kib * 1024))
 
@@ -47,13 +43,21 @@ mkdir -p "$(dirname "$output")"
 tmp="$(mktemp "${output}.tmp.XXXXXX")"
 trap 'rm -f "$tmp"' EXIT
 
-cat > "$tmp" <<NIX
 {
-  kernelRelease = "$kernel_release";
-  hugePageSizeKiB = $huge_page_size_kib;
-  sharedMemorySegmentsBytes = [$segment_list];
-}
-NIX
+  printf '{\n'
+  printf '  kernelRelease = "%s";\n' "$kernel_release"
+  printf '  hugePageSizeKiB = %s;\n' "$huge_page_size_kib"
+  if [[ -n $segment_sizes ]]; then
+    printf '  sharedMemorySegmentsBytes = [\n'
+    for segment_bytes in $segment_sizes; do
+      printf '    %s\n' "$segment_bytes"
+    done
+    printf '  ];\n'
+  else
+    printf '  sharedMemorySegmentsBytes = [ ];\n'
+  fi
+  printf '}\n'
+} > "$tmp"
 
 mv "$tmp" "$output"
 trap - EXIT

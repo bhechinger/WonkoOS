@@ -1,5 +1,4 @@
 {
-  bobRestoreMarker,
   config,
   lib,
   pkgs,
@@ -7,6 +6,9 @@
 }:
 
 let
+  hsts = ''
+    add_header Strict-Transport-Security "max-age=31536000" always;
+  '';
   paperlessLocations = {
     "/" = {
       proxyPass = "http://paperless";
@@ -27,6 +29,7 @@ let
     };
   };
   tls = {
+    extraConfig = hsts;
     onlySSL = true;
     useACMEHost = "4amlunch.net";
   };
@@ -38,6 +41,7 @@ in
     key = "cloudflare-api-token";
     mode = "0400";
   };
+  sops.secrets.rutorrent-htpasswd.restartUnits = [ "nginx.service" ];
 
   security.acme = {
     acceptTerms = true;
@@ -58,8 +62,10 @@ in
     recommendedTlsSettings = true;
     upstreams.paperless.servers."127.0.0.1:8000" = { };
     virtualHosts = {
-      "basket.4amlunch.net" = tls // {
-        locations."/".proxyPass = "https://10.42.0.30:8443";
+      _default = {
+        default = true;
+        rejectSSL = true;
+        locations."/".return = "444";
       };
       "bob.4amlunch.net" = tls // {
         root = "/home/docker/reverse/html";
@@ -69,23 +75,9 @@ in
         locations."/".proxyPass = "http://127.0.0.1:9117";
       };
       "paperless.4amlunch.net" = tls // {
-        extraConfig = ''
+        extraConfig = hsts + ''
           proxy_cookie_flags ~ secure;
         '';
-        locations = paperlessLocations;
-      };
-      paperless-direct = {
-        default = true;
-        listen = [
-          {
-            addr = "0.0.0.0";
-            port = 8001;
-          }
-          {
-            addr = "[::]";
-            port = 8001;
-          }
-        ];
         locations = paperlessLocations;
       };
       "rtorrent-rpc" = {
@@ -101,7 +93,7 @@ in
         '';
       };
       "rutorrent.4amlunch.net" = tls // {
-        basicAuthFile = "/var/lib/rutorrent/htpasswd";
+        basicAuthFile = config.sops.secrets.rutorrent-htpasswd.path;
       };
       "sonarr.4amlunch.net" = tls // {
         locations."/".proxyPass = "http://127.0.0.1:8989";
@@ -110,10 +102,8 @@ in
   };
 
   systemd.services.nginx = {
-    unitConfig.ConditionPathExists = [
-      bobRestoreMarker
-      "/var/lib/rutorrent/htpasswd"
-    ];
+    after = [ "sops-install-secrets.service" ];
+    requires = [ "sops-install-secrets.service" ];
     serviceConfig.ProtectHome = lib.mkForce "read-only";
   };
 

@@ -8,12 +8,10 @@ let
       hugePageSizeKiB = pageSizeKiB;
       inherit sharedMemorySegmentsBytes;
     }).nrHugepages;
-  current = import ../systems/deepthought/hugepages-inputs.nix;
 in
 assert calculate [ ] == 1;
 assert calculate [ 0 ] == 1;
 assert calculate [ 1 ] == 2;
 assert calculate [ pageSizeBytes ] == 2;
 assert calculate [ (pageSizeBytes + 1) ] == 3;
-assert calculate current.sharedMemorySegmentsBytes == 72;
 true

@@ -2,7 +2,6 @@
   imports = [
     ./avahi.nix
     ./cloudflared.nix
-    ./docker.nix
     ./jackett.nix
     ./media.nix
     ./murmur.nix
@@ -14,7 +13,6 @@
     ./postfix.nix
     ./postgresql.nix
     ./protonmail-bridge.nix
-    ./restore.nix
     ./rtorrent.nix
     ./rutorrent.nix
     ./sonarr.nix
@@ -23,6 +21,4 @@
     ./unifi-controller.nix
     ./zerotier.nix
   ];
-
-  _module.args.bobRestoreMarker = "/var/lib/bob-restored";
 }

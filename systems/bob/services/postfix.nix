@@ -1,12 +1,10 @@
-{ bobRestoreMarker, ... }:
-
 {
   services.postfix = {
     enable = true;
     rootAlias = "wonko";
     settings.main = {
       append_dot_mydomain = "no";
-      inet_interfaces = [ "all" ];
+      inet_interfaces = [ "loopback-only" ];
       inet_protocols = [ "all" ];
       mailbox_size_limit = "0";
       mydestination = [
@@ -33,6 +31,4 @@
       smtpd_tls_security_level = "may";
     };
   };
-
-  systemd.services.postfix.unitConfig.ConditionPathExists = bobRestoreMarker;
 }

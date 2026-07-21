@@ -1,56 +1,22 @@
 { lib, ... }:
 
 let
-  servicePorts = {
+  applicationPorts = {
     allowedTCPPorts = [
       22
-      25
-      53
       80
-      88
-      135
-      139
-      389
       443
-      445
-      464
-      636
-      1025
-      1143
       2049
-      3005
-      3268
-      3269
       6789
-      8001
-      8080
-      8324
       8443
-      8843
-      8880
-      8989
-      9117
       32400
       32469
-      49152
-      49153
-      49154
       64738
     ];
     allowedUDPPorts = [
-      53
-      88
-      123
-      137
-      138
-      389
-      464
       1900
-      3478
       5353
-      5514
       9993
-      10001
       32410
       32411
       32412
@@ -83,10 +49,6 @@ in
     useNetworkd = true;
 
     vlans = {
-      "vlan.410" = {
-        id = 410;
-        interface = "primary";
-      };
       "vlan.420" = {
         id = 420;
         interface = "primary";
@@ -94,7 +56,6 @@ in
     };
 
     bridges = {
-      guest.interfaces = [ "vlan.410" ];
       internal.interfaces = [ "vlan.420" ];
       management.interfaces = [ "primary" ];
     };
@@ -129,9 +90,29 @@ in
       allowedTCPPorts = lib.mkForce [ ];
       allowedUDPPorts = lib.mkForce [ ];
       interfaces = {
-        internal = servicePorts;
-        tailscale0 = servicePorts;
-        ztnfaeb6wl = servicePorts;
+        internal = applicationPorts;
+        tailscale0 = {
+          allowedTCPPorts = [
+            22
+            80
+            443
+            8443
+            32400
+            64738
+          ];
+          allowedUDPPorts = [ 64738 ];
+        };
+        ztnfaeb6wl = {
+          allowedTCPPorts = [
+            22
+            80
+            443
+            8443
+            32400
+            64738
+          ];
+          allowedUDPPorts = [ 64738 ];
+        };
         management = {
           allowedTCPPorts = [ 8080 ];
           allowedUDPPorts = [

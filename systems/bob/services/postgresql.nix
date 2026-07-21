@@ -1,5 +1,4 @@
 {
-  bobRestoreMarker,
   lib,
   pkgs,
   ...
@@ -12,7 +11,6 @@
   };
 
   systemd.services.postgresql = {
-    unitConfig.ConditionPathExists = bobRestoreMarker;
     serviceConfig.ProtectHome = lib.mkForce "read-only";
   };
 }

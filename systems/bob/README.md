@@ -1,125 +1,89 @@
 # Bob
 
-Bob is a single-node NixOS server on ZFS. Its service definitions live in
-[`services/`](./services/); Docker Compose is not part of the runtime model.
+Bob is a NixOS server on ZFS. Each workload has a module in
+[`services/`](./services/); Docker and Docker Compose are not part of the
+runtime model.
 
-## Service model
+## Services
 
-| Workload | Runtime | Persistent data |
-|---|---|---|
-| Paperless-ngx | Native NixOS module with native PostgreSQL 16 and Redis | `/home/docker/paperless`, `/home/docker/pgsql/paperless`, `/home/wonko/docker/paperless.env` |
-| Nginx | Native NixOS module | `/home/docker/reverse/{certs,html}` |
-| Jackett | Native NixOS module | `/home/docker/jackett` |
-| Sonarr | Native NixOS module | `/var/lib/sonarr`; shows at `/nfs/Plex/Shows` |
-| rTorrent and ruTorrent | Native NixOS modules | `/var/lib/{rtorrent,rutorrent}`; downloads at `/nfs/Torrents` |
-| Cloudflare Tunnel | Native `cloudflared` systemd service | `/var/lib/cloudflared/tunnel.env` |
-| Plex, Murmur, Postfix, NFS, Tailscale, ZeroTier | Native NixOS modules | Their standard state paths |
-| Proton Mail Bridge | Declarative OCI container | Docker volume `protonmail` |
-| UniFi Network Application | Declarative OCI container | `/home/unifi/config` |
+| Workload | Persistent state |
+|---|---|
+| Paperless-ngx | `/home/docker/paperless` and `/home/docker/pgsql/paperless` |
+| Proton Mail Bridge | `/var/lib/protonmail-bridge` |
+| UniFi Network Application | `/var/lib/unifi` |
+| Nginx | `/home/docker/reverse/html` and ACME state under `/var/lib/acme` |
+| Jackett | `/home/docker/jackett` |
+| Sonarr | `/var/lib/sonarr` |
+| rTorrent and ruTorrent | `/var/lib/{rtorrent,rutorrent}` and `/nfs/Torrents` |
+| Plex | `/var/lib/plexmediaserver` and `/nfs/Plex` |
+| Murmur, Postfix, NFS, Tailscale, ZeroTier | Their standard NixOS state paths |
 
-UniFi remains containerized because the restored controller is version 7.5
-with MongoDB 3.6. NixOS supplies UniFi 10 with MongoDB 7, and MongoDB does not
-support skipping the intervening major-version upgrades. Proton Mail Bridge
-remains containerized because its headless image and existing authenticated
-state are the reliable server deployment.
+Runtime credentials for Paperless, Cloudflare Tunnel, Murmur, and ruTorrent
+are encrypted with SOPS in [`secrets/`](./secrets/) and materialized under
+`/run/secrets`. Do not recreate plaintext copies under `/home` or `/var/lib`.
 
-The GeoIP updater was removed because no service consumes its databases.
-Sonarr and ruTorrent were absent from the curated Ubuntu-to-NixOS backup, so
-their former local settings, history, and torrent session could not be
-recovered. Their media and download trees remain on Basket and the native
-services use those NFS shares.
-Sonarr is configured with `/nfs/Plex/Shows`, the local rTorrent client, and
-TorrentLeech through Jackett. Existing shows still require a library import
-because the lost Sonarr state included their exact matches, monitoring
-choices, and quality profiles.
+Paperless connects to the native Proton Mail Bridge on loopback port `1143`
+using STARTTLS. The Bridge certificate is trusted through
+`/var/lib/paperless/proton-bridge-ca.pem`. Its scheduler and task queue order
+themselves after the Bridge, so mail fetching does not depend on a container
+hostname.
+
+UniFi is the native NixOS service. Import controller state from a UniFi `.unf`
+backup through the setup UI at `https://bob.4amlunch.net:8443`; do not copy an
+old MongoDB data directory into `/var/lib/unifi`.
 
 ## Network policy
 
-Bob has an internal network at `10.42.0.2`, a management network at
-`10.42.11.2`, and an unnumbered guest bridge. Internal, Tailscale, and ZeroTier
-clients can reach application ports. Management is restricted to the UniFi
-device plane: TCP `8080` and UDP `3478`, `10001`, `1900`, and `5514`.
+Bob has an internal network at `10.42.0.2` and a management network at
+`10.42.11.2`. The management interface exposes only the UniFi device plane:
+TCP `8080` and UDP `1900`, `3478`, `5514`, and `10001`. Administration and all
+other application traffic use internal, Tailscale, or ZeroTier.
 
-Nginx serves the existing HTTPS names for Bob, Basket, Paperless, Jackett,
-Sonarr, and ruTorrent. Paperless also retains its direct port `8001`. The
-rTorrent XML-RPC listener is bound only to `127.0.0.1:9000`.
+Nginx serves Bob, Paperless, Jackett, Sonarr, and ruTorrent with the wildcard
+ACME certificate. Unknown HTTP hosts receive `444` and unknown TLS handshakes
+are rejected. The rTorrent XML-RPC listener is only reachable through its Unix
+socket and the loopback nginx endpoint.
 
-Only `paperless.4amlunch.net` is published to the Internet through Bob's
-remotely managed Cloudflare Tunnel. Its published application route uses
-`https://localhost:443`, with both Origin Server Name and HTTP Host Header set
-to `paperless.4amlunch.net` and TLS verification enabled. Paperless uses its
-native login; no Cloudflare Access policy is configured. The other Bob service
-names remain private. Paperless's remaining runtime secrets stay in the
-root-owned, mode `0600` `/home/wonko/docker/paperless.env` file.
-
-ruTorrent requires basic authentication; retrieve the generated initial
-password once with:
-
-```sh
-sudo cat /var/lib/rutorrent/initial-password
-```
-
-Delete that plaintext file after recording the password. The active password
-hash is `/var/lib/rutorrent/htpasswd`.
+Only `paperless.4amlunch.net` is published through the remotely managed
+Cloudflare Tunnel. Its origin is `https://localhost:443`, with the origin and
+HTTP host names both set to `paperless.4amlunch.net` and TLS verification
+enabled.
 
 ## Storage
 
-ZFS datasets back `/`, `/nix`, `/var`, `/var/lib/docker`,
-`/var/lib/plexmediaserver`, `/home`, and `/home/docker/pgsql`. Basket is
-automounted over NFS at:
+ZFS datasets back `/`, `/nix`, `/var`, `/var/lib/plexmediaserver`, `/home`, and
+`/home/docker/pgsql`. Basket is automounted over NFSv4 at `/nfs/Plex` and
+`/nfs/Torrents`; Bob does not mount the `Brian` share.
 
-- `/nfs/Brian`
-- `/nfs/Plex`
-- `/nfs/Torrents`
+Jackett, Sonarr, rTorrent, and Plex keep separate service accounts. Basket's
+NFS host entries for Bob on both `Plex` and `Torrents` use **Squash all users**
+and map to the dedicated QNAP user `bob-nfs` and group `bob-media`. Those
+identities have access only to the two media shares. This lets the services
+share NFS data without sharing their local Unix identities or using QNAP's
+generic anonymous account. NFS exports of the Paperless consume/export
+directories separately map the single authorized client (`10.42.0.10`) to the
+Paperless account with `all_squash`.
 
-Basket authorizes `bob.4amlunch.net` for `/Torrents`; that name must resolve on
-Basket to Bob's stable address, `10.42.0.2`. Reload Basket's exports with
-`sudo exportfs -ra` after changing that DNS record. Jackett, Sonarr, and
-rTorrent run as Bob's restricted `media` account (`uid 999`, `gid 2000`).
-Avahi is pinned to UID 992 so it cannot share that NAS identity. UID 999
-matches the existing Shows and Torrents trees created by LinuxServer images.
+The 1 GiB disk swap partition is retained and encrypted with a fresh random
+key on every boot. Zram remains the higher-capacity primary swap. Hibernation
+must not be enabled against randomly encrypted swap.
 
-## Build and activate
+## Build, deploy, and verify
 
-The Makefile chooses the flake configuration from the local hostname:
+The local Makefile chooses the flake configuration from the hostname:
 
 ```sh
 make build
 make switch
+make deploy-bob
 ```
 
-Before a service-data migration, create a recursive ZFS snapshot and a
-PostgreSQL logical dump. Do not activate a change that repoints PostgreSQL at
-an existing data directory until the old database writer is stopped and the
-directory is owned by the native `postgres` user.
-
-## Backup and restore
-
-Run a normal backup with:
-
-```sh
-sudo systems/bob/backup.sh /nfs/Brian
-```
-
-Use `--leave-stopped` only for a planned recovery or reinstall. The script
-records and stops the active native/OCI service units, saves the two retained
-container images, copies the curated state with ACLs/xattrs/numeric IDs,
-verifies the copy, and restores the original service state unless explicitly
-asked to leave it stopped.
-
-Restore a verified backup with:
-
-```sh
-sudo bob-restore /nfs/Brian/bob-backups/<UTC_TIMESTAMP>
-```
-
-Application services are gated by `/var/lib/bob-restored`, so a fresh system
-does not expose empty services before restoration. Validate with:
+After deploying Bob, verify the native services and their listeners:
 
 ```sh
 systemctl --failed
-systemctl status nginx postgresql paperless-web jackett sonarr rtorrent
-systemctl status docker-protonmail-bridge docker-unifi-controller
-docker ps
-findmnt /nfs/Brian /nfs/Plex /nfs/Torrents
+systemctl status nginx postgresql paperless-web paperless-task-queue \
+  protonmail-bridge unifi jackett sonarr rtorrent
+findmnt /nfs/Plex /nfs/Torrents
+ss -ltnup
 ```

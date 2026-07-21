@@ -1,12 +1,4 @@
 {
-  # Disko appends its rebooted VM to driver.machines, which is a computed copy
-  # in this NixOS test driver. Register it in the backing list so cleanup stops
-  # QEMU and its serial thread after the test.
-  disko.tests.bootCommands = ''
-    if machine not in driver.machines_qemu:
-        driver.machines_qemu.append(machine)
-  '';
-
   disko.devices = {
     disk.os = {
       device = "/dev/disk/by-id/nvme-eui.6479a741b05004c5";
@@ -67,10 +59,6 @@
           type = "zfs_fs";
           mountpoint = "/var";
         };
-        docker = {
-          type = "zfs_fs";
-          mountpoint = "/var/lib/docker";
-        };
         plex = {
           type = "zfs_fs";
           mountpoint = "/var/lib/plexmediaserver";
@@ -92,7 +80,6 @@
   # OpenZFS owns the native mountpoints; disko still creates them.
   fileSystems = {
     "/var".enable = false;
-    "/var/lib/docker".enable = false;
     "/var/lib/plexmediaserver".enable = false;
     "/home".enable = false;
     "/home/docker/pgsql".enable = false;

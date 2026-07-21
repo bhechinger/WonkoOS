@@ -20,7 +20,6 @@ in
     ./disko.nix
     ./networking.nix
     ./services
-    ./vm-test.nix
   ];
 
   boot = {
@@ -66,7 +65,13 @@ in
   };
 
   nixpkgs = {
-    config.allowUnfree = true;
+    config.allowUnfreePredicate =
+      pkg:
+      builtins.elem (lib.getName pkg) [
+        "mongodb"
+        "plexmediaserver"
+        "unifi-controller"
+      ];
     hostPlatform = lib.mkDefault "x86_64-linux";
   };
 
@@ -94,16 +99,17 @@ in
     };
   };
 
+  sops = {
+    age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
+    useSystemdActivation = true;
+  };
+
   users = {
     mutableUsers = false;
     users.wonko = {
       description = "Brian Hechinger";
-      extraGroups = [
-        "docker"
-        "wheel"
-      ];
+      extraGroups = [ "wheel" ];
       isNormalUser = true;
-      linger = true;
       openssh.authorizedKeys.keys = wonkoKeys;
       shell = pkgs.zsh;
       uid = 1000;
@@ -121,6 +127,12 @@ in
 
   i18n.defaultLocale = "en_US.UTF-8";
   time.timeZone = "Europe/Lisbon";
+  swapDevices = lib.mkForce [
+    {
+      device = "/dev/disk/by-partuuid/1ad95369-76dd-45cb-bf83-e84637ff25de";
+      randomEncryption.enable = true;
+    }
+  ];
   zramSwap.enable = true;
 
   system.stateVersion = "26.05";
