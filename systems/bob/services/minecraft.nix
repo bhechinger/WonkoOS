@@ -10,7 +10,15 @@ let
   voicePort = 34934;
   routerApiPort = 18080;
   packSource = ../minecraft/pwppp;
+  pack = builtins.fromTOML (builtins.readFile (packSource + "/pack.toml"));
+  packVersion = pack.version;
+  clientPackFileName = "${pack.name}-${packVersion}.zip";
   configRoot = packSource + "/config";
+
+  serverPackage =
+    pkgs.minecraftServers."neoforge-${lib.replaceStrings [ "." ] [ "_" ] pack.versions.minecraft}-${
+      lib.replaceStrings [ "." ] [ "_" ] pack.versions.neoforge
+    }";
 
   mcRouter = pkgs.buildGoModule rec {
     pname = "mc-router";
@@ -56,13 +64,13 @@ let
 
   serverPack = pkgs.fetchPackwizModpack {
     pname = "pwppp-server";
-    version = "1.1.5-wonko.1";
+    version = packVersion;
     src = packSource;
     side = "server";
     packHash = "sha256-Ou628MU5zC2o84My8PkvFwUmaAqvmK11rdpybRlMWig=";
   };
 
-  # CurseForge exports omit Modrinth entries. Use the matching CurseForge file
+  # Packwiz bundles non-CurseForge entries as JARs. Use matching CurseForge file
   # IDs in the client artifact while retaining reliable Modrinth downloads for
   # the native server build and Packwiz clients.
   clientOxidizedMetadata = pkgs.writeText "create-oxidized.pw.toml" ''
@@ -96,7 +104,7 @@ let
     project-id = 923238
   '';
 
-  clientPack = pkgs.runCommand "pwppp-1.1.5-wonko.1.zip" { nativeBuildInputs = [ pkgs.packwiz ]; } ''
+  clientPack = pkgs.runCommand clientPackFileName { nativeBuildInputs = [ pkgs.packwiz ]; } ''
     export HOME="$TMPDIR"
     cp -r ${packSource} pack
     chmod -R u+w pack
@@ -129,9 +137,9 @@ let
             <tr>
               <td>pwppp</td>
               <td><code>pwppp.4amlunch.net</code></td>
-              <td>Minecraft 1.21.1 / NeoForge 21.1.240</td>
+              <td>Minecraft ${pack.versions.minecraft} / NeoForge ${pack.versions.neoforge}</td>
               <td>Whitelist</td>
-              <td><a href="/packs/pwppp/pwppp-1.1.5-wonko.1.zip">Download</a></td>
+              <td><a href="/packs/pwppp/${clientPackFileName}">Download</a></td>
             </tr>
           </tbody>
         </table>
@@ -142,7 +150,7 @@ let
   minecraftSite = pkgs.runCommand "minecraft-site" { } ''
     mkdir -p "$out/packs/pwppp/packwiz"
     cp ${siteIndex} "$out/index.html"
-    cp ${clientPack} "$out/packs/pwppp/pwppp-1.1.5-wonko.1.zip"
+    cp ${clientPack} "$out/packs/pwppp/${clientPackFileName}"
     cp -r ${packSource}/. "$out/packs/pwppp/packwiz/"
   '';
 
@@ -176,6 +184,168 @@ let
     // {
       "config/voicechat/voicechat-server.properties" = voiceConfig;
     };
+
+  packCheck = pkgs.runCommand "pwppp-pack-check" { nativeBuildInputs = [ pkgs.packwiz ]; } ''
+    export HOME="$TMPDIR"
+    cp -r ${packSource} refreshed
+    chmod -R u+w refreshed
+    cp refreshed/index.toml index.toml
+    cp refreshed/pack.toml pack.toml
+    (cd refreshed && packwiz refresh)
+    diff -u index.toml refreshed/index.toml
+    diff -u pack.toml refreshed/pack.toml
+    diff -qr ${packSource}/config ${packFiles}/config
+    diff -qr ${packSource}/datapacks ${packFiles}/datapacks
+
+    ${lib.getExe pkgs.python3} - \
+      ${packSource} \
+      ${serverPack} \
+      ${clientPack} \
+      ${clientOxidizedMetadata} \
+      ${clientDesignDecorMetadata} <<'PY'
+    from collections import Counter
+    import hashlib
+    import json
+    from pathlib import Path
+    import sys
+    import tomllib
+    import zipfile
+
+    source, server, client, *override_paths = map(Path, sys.argv[1:])
+
+
+    def load_toml(path):
+        with path.open("rb") as handle:
+            return tomllib.load(handle)
+
+
+    def fail_set(label, expected, actual):
+        if expected == actual:
+            return
+        missing = sorted(expected - actual)
+        unexpected = sorted(actual - expected)
+        raise SystemExit(
+            f"{label} mismatch\nmissing: {missing}\nunexpected: {unexpected}"
+        )
+
+
+    def digest(path, algorithm):
+        algorithm = algorithm.replace("-", "")
+        try:
+            with path.open("rb") as handle:
+                return hashlib.file_digest(handle, algorithm).hexdigest()
+        except ValueError as error:
+            raise SystemExit(f"unsupported hash format {algorithm!r} for {path}") from error
+
+
+    pack = load_toml(source / "pack.toml")
+    index = load_toml(source / pack["index"]["file"])
+    overrides = {load_toml(path)["name"]: load_toml(path) for path in override_paths}
+    unused_overrides = set(overrides)
+    server_expected = {}
+    client_expected = Counter()
+    mapped_server_hashes = {}
+
+    for metadata_path in source.rglob("*.pw.toml"):
+        metadata = load_toml(metadata_path)
+        side = metadata.get("side") or "both"
+        destination = metadata_path.relative_to(source).parent / metadata["filename"]
+        destination_string = destination.as_posix()
+
+        if side in {"both", "server"}:
+            if destination.parts[0] != "mods":
+                raise SystemExit(f"server file is not deployed: {destination_string}")
+            server_expected[destination_string] = (
+                metadata["download"]["hash-format"],
+                metadata["download"]["hash"],
+            )
+
+        if side not in {"both", "client"}:
+            continue
+
+        curseforge = metadata.get("update", {}).get("curseforge")
+        if curseforge is None:
+            override = overrides.get(metadata["name"])
+            if override is None:
+                raise SystemExit(
+                    f"client file lacks CurseForge metadata: {destination_string}"
+                )
+            unused_overrides.remove(metadata["name"])
+            if override["filename"] != metadata["filename"]:
+                raise SystemExit(
+                    f"stale CurseForge mapping for {metadata['name']}: "
+                    f"{override['filename']} != {metadata['filename']}"
+                )
+            curseforge = override["update"]["curseforge"]
+            if side in {"both", "server"}:
+                mapped_server_hashes[destination_string] = (
+                    override["download"]["hash-format"],
+                    override["download"]["hash"],
+                )
+
+        client_expected[(curseforge["project-id"], curseforge["file-id"])] += 1
+
+    if unused_overrides:
+        raise SystemExit(f"unused CurseForge mappings: {sorted(unused_overrides)}")
+
+    server_actual = {
+        path.relative_to(server).as_posix()
+        for path in (server / "mods").rglob("*")
+        if path.is_file()
+    }
+    fail_set("server mods", set(server_expected), server_actual)
+    for relative, (algorithm, expected_hash) in server_expected.items():
+        actual_hash = digest(server / relative, algorithm)
+        if actual_hash != expected_hash:
+            raise SystemExit(f"server mod hash mismatch: {relative}")
+    for relative, (algorithm, expected_hash) in mapped_server_hashes.items():
+        actual_hash = digest(server / relative, algorithm)
+        if actual_hash != expected_hash:
+            raise SystemExit(f"stale CurseForge mapping: {relative}")
+
+    with zipfile.ZipFile(client) as archive:
+        names = set(archive.namelist())
+        manifest = json.loads(archive.read("manifest.json"))
+        if manifest["name"] != pack["name"] or manifest["version"] != pack["version"]:
+            raise SystemExit("client manifest name or version does not match pack.toml")
+
+        client_actual = Counter(
+            (entry["projectID"], entry["fileID"]) for entry in manifest["files"]
+        )
+        if client_expected != client_actual:
+            missing = list((client_expected - client_actual).elements())
+            unexpected = list((client_actual - client_expected).elements())
+            raise SystemExit(
+                f"client manifest mismatch\nmissing: {missing}\nunexpected: {unexpected}"
+            )
+
+        bundled_mods = sorted(
+            name
+            for name in names
+            if name.startswith("overrides/mods/") and name.endswith(".jar")
+        )
+        if bundled_mods:
+            raise SystemExit(f"client ZIP bundles non-CurseForge mods: {bundled_mods}")
+
+        override_expected = {
+            f"overrides/{entry['file']}"
+            for entry in index["files"]
+            if not entry.get("metafile", False)
+        }
+        override_actual = {
+            name
+            for name in names
+            if name.startswith("overrides/") and not name.endswith("/")
+        }
+        fail_set("client overrides", override_expected, override_actual)
+        for archive_path in override_expected:
+            source_path = source / archive_path.removeprefix("overrides/")
+            if source_path.read_bytes() != archive.read(archive_path):
+                raise SystemExit(f"client override mismatch: {archive_path}")
+    PY
+
+    touch "$out"
+  '';
 
   routerHardening = {
     CapabilityBoundingSet = "";
@@ -299,7 +469,7 @@ in
         enable = true;
         autoStart = true;
         restart = "on-failure";
-        package = pkgs.minecraftServers."neoforge-1_21_1-21_1_240";
+        package = serverPackage;
         jvmOpts = "-Xms1G -Xmx4G";
         symlinks.mods = "${serverPack}/mods";
         files = serverFiles;
@@ -392,6 +562,8 @@ in
     allowedTCPPorts = [ 25565 ];
     allowedUDPPorts = [ voicePort ];
   };
+
+  system.checks = [ packCheck ];
 
   systemd = {
     mounts = [
