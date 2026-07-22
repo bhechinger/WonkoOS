@@ -240,7 +240,7 @@
             attic = config.services.atticd;
             vyprvpn = deepthought.services.openvpn.servers.vyprvpn-miami;
             vyprvpnProfile = builtins.readFile ./systems/deepthought/openvpn/vyprvpn-miami.ovpn;
-            dnsUpdate = config.systemd.services.opnsense-dns-bob;
+            dnsUpdate = config.systemd.services.opnsense-dns-sync;
           in
           assert config.services.tailscale.enable;
           assert config.services.zerotierone.enable;
@@ -355,30 +355,11 @@
             ];
           assert lib.elem "network-online.target" dnsUpdate.after;
           assert lib.elem "sops-install-secrets.service" dnsUpdate.requires;
-          assert lib.all
-            (
-              hostname:
-              let
-                update = config.systemd.services."opnsense-dns-${hostname}";
-              in
-              update.description == "Update OPNsense A DNS for ${hostname}.4amlunch.net"
-              && lib.hasInfix "${hostname} 10.42.0.2" update.serviceConfig.ExecStart
-            )
-            [
-              "bob"
-              "jackett"
-              "minecraft"
-              "paperless"
-              "pwppp"
-              "rutorrent"
-              "sonarr"
-              "voice"
-            ];
+          assert dnsUpdate.description == "Reconcile the internal 4amlunch.net BIND zone";
+          assert lib.hasInfix "opnsense-bind-records.json" dnsUpdate.serviceConfig.ExecStart;
           assert
-            config.systemd.services.opnsense-dns-pwppp-txt.description
-            == "Update OPNsense TXT DNS for pwppp.4amlunch.net";
-          assert lib.hasInfix "pwppp local-direct"
-            config.systemd.services.opnsense-dns-pwppp-txt.serviceConfig.ExecStart;
+            lib.filter (name: lib.hasPrefix "opnsense-dns-" name) (builtins.attrNames config.systemd.services)
+            == [ "opnsense-dns-sync" ];
           assert dnsUpdate.serviceConfig.RemainAfterExit;
           assert config.systemd.services ? sops-install-secrets;
           assert config.sops.age.sshKeyPaths == [ "/etc/ssh/ssh_host_ed25519_key" ];
@@ -414,7 +395,7 @@
           assert lib.elem "internal:71s87pJDYLG9Ruu6BxjTC4wZzxneZXqc2U3da6/C2PI="
             deepthought.nix.settings.trusted-public-keys;
           assert lib.elem "nfs-NixCache.automount" config.systemd.services.atticd.requires;
-          assert config.systemd.services ? opnsense-dns-cache;
+          assert config.systemd.services ? opnsense-dns-sync;
           assert lib.all (mount: mount.what != "10.42.0.30:/Brian") config.systemd.mounts;
           assert lib.any (mount: mount.what == "10.42.0.30:/NixCache") config.systemd.mounts;
           assert lib.any (mount: mount.what == "10.42.0.30:/Plex") config.systemd.mounts;

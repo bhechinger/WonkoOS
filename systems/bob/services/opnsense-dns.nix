@@ -5,13 +5,50 @@
 }:
 
 let
-  mkOpnsenseDnsUpdate = import ../../../common/opnsense-dns-update.nix { inherit lib pkgs; };
-  mkBobDnsUpdate =
-    hostname:
-    mkOpnsenseDnsUpdate {
-      inherit hostname;
-      value = "10.42.0.2";
-    };
+  mkOpnsenseDnsSync = import ../../../common/opnsense-dns-update.nix { inherit lib pkgs; };
+  bobServices = [
+    "bob"
+    "cache"
+    "jackett"
+    "minecraft"
+    "paperless"
+    "pwppp"
+    "rutorrent"
+    "sonarr"
+    "voice"
+  ];
+  records = [
+    {
+      name = "@";
+      type = "NS";
+      value = "sierra.4amlunch.net.";
+    }
+    {
+      name = "lan";
+      type = "NS";
+      value = "sierra.4amlunch.net.";
+    }
+    {
+      name = "basket";
+      type = "A";
+      value = "10.42.11.50";
+    }
+    {
+      name = "sierra";
+      type = "A";
+      value = "10.42.0.251";
+    }
+    {
+      name = "pwppp";
+      type = "TXT";
+      value = "local-direct";
+    }
+  ]
+  ++ map (name: {
+    inherit name;
+    type = "A";
+    value = "10.42.0.2";
+  }) bobServices;
 in
 {
   sops.secrets.opnsense-api-netrc = {
@@ -21,20 +58,5 @@ in
     mode = "0400";
   };
 
-  systemd.services = {
-    opnsense-dns-bob = mkBobDnsUpdate "bob";
-    opnsense-dns-cache = mkBobDnsUpdate "cache";
-    opnsense-dns-jackett = mkBobDnsUpdate "jackett";
-    opnsense-dns-minecraft = mkBobDnsUpdate "minecraft";
-    opnsense-dns-paperless = mkBobDnsUpdate "paperless";
-    opnsense-dns-pwppp = mkBobDnsUpdate "pwppp";
-    opnsense-dns-pwppp-txt = mkOpnsenseDnsUpdate {
-      hostname = "pwppp";
-      recordType = "TXT";
-      value = "local-direct";
-    };
-    opnsense-dns-rutorrent = mkBobDnsUpdate "rutorrent";
-    opnsense-dns-sonarr = mkBobDnsUpdate "sonarr";
-    opnsense-dns-voice = mkBobDnsUpdate "voice";
-  };
+  systemd.services.opnsense-dns-sync = mkOpnsenseDnsSync { inherit records; };
 }

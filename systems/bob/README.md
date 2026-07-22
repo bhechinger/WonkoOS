@@ -75,11 +75,14 @@ whitelist-only; add a player from Bob with:
 printf 'whitelist add PLAYER_NAME\n' > /run/minecraft/pwppp.stdin
 ```
 
-OPNsense receives internal A records for `minecraft`, `pwppp`, and `voice`, all
-pointing to `10.42.0.2`. It also receives a `pwppp` TXT value of `local-direct`.
-That deliberately masks the public `cloudflared-use-tunnel` TXT value on the
-LAN, so Modflared clients connect directly instead of hairpinning through
-Cloudflare.
+Sierra's BIND server is authoritative for the internal `4amlunch.net` view.
+`opnsense-dns-sync.service` reconciles its complete static record set from
+[`opnsense-dns.nix`](./services/opnsense-dns.nix); Kea owns the delegated
+`lan.4amlunch.net` subzone. Public-only Cloudflare names deliberately do not
+resolve internally unless they are also added to that Nix record list. The
+internal `pwppp` TXT value is `local-direct`, masking the public
+`cloudflared-use-tunnel` value so Modflared clients connect directly instead
+of hairpinning through Cloudflare.
 
 Internet game traffic uses the same tunnel at `pwppp.4amlunch.net`, with a
 `tcp://localhost:25565` origin and the public TXT value
