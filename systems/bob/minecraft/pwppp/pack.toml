@@ -1,11 +1,11 @@
 name = "pwppp"
-version = "1.1.5-wonko.1"
+version = "1.1.6"
 pack-format = "packwiz:1.1.0"
 
 [index]
 file = "index.toml"
 hash-format = "sha256"
-hash = "330e0deb274905165293fe6eda8cad375e3699210cb73d6e5a8e1e3756669c11"
+hash = "b0c7efde28c3385d486ebad290903ea2910c72c000ea915f2a53a78a9b52afde"
 
 [versions]
 minecraft = "1.21.1"

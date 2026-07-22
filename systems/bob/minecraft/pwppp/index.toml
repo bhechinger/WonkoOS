@@ -840,6 +840,11 @@ hash = "e3c6ea2d44616e0382e76f53c7e00b60ad90f6bc4bde80d7631f16c0513aa101"
 metafile = true
 
 [[files]]
+file = "mods/create-pipesn-physics.pw.toml"
+hash = "db41bf4c76204ad4266bd89b4f85b9b8012d2c457bbee5b250a84467699a8398"
+metafile = true
+
+[[files]]
 file = "mods/create-power-loader.pw.toml"
 hash = "3872eeb409b1a2b5acdf5a270825a9e703e240ee8230a08b820a21c19f14c27e"
 metafile = true

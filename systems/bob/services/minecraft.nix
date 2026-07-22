@@ -14,11 +14,25 @@ let
   packVersion = pack.version;
   clientPackFileName = "${pack.name}-${packVersion}.zip";
   configRoot = packSource + "/config";
+  minecraftDataDir = "/var/lib/minecraft/pwppp";
+  minecraftStdin = config.services.minecraft-servers.managementSystem.systemd-socket.stdinSocket.path "pwppp";
+
+  whitelistedPlayers = [
+    # "PlayerName"
+  ];
+  emptyWhitelistFile = (pkgs.formats.json { }).generate "pwppp-whitelist.json" [ ];
+  whitelistCommands =
+    "whitelist reload\n" + lib.concatMapStrings (name: "whitelist add ${name}\n") whitelistedPlayers;
+  whitelistIsValid = lib.all (
+    name: builtins.isString name && builtins.match "[A-Za-z0-9_]{3,16}" name != null
+  ) whitelistedPlayers;
 
   serverPackage =
-    pkgs.minecraftServers."neoforge-${lib.replaceStrings [ "." ] [ "_" ] pack.versions.minecraft}-${
+    (pkgs.minecraftServers."neoforge-${lib.replaceStrings [ "." ] [ "_" ] pack.versions.minecraft}-${
       lib.replaceStrings [ "." ] [ "_" ] pack.versions.neoforge
-    }";
+    }"
+    ).override
+      { jre_headless = pkgs.graalvmPackages.graalvm-oracle_25; };
 
   mcRouter = pkgs.buildGoModule rec {
     pname = "mc-router";
@@ -67,7 +81,7 @@ let
     version = packVersion;
     src = packSource;
     side = "server";
-    packHash = "sha256-Ou628MU5zC2o84My8PkvFwUmaAqvmK11rdpybRlMWig=";
+    packHash = "sha256-SpVDzoOoM1QgaHgkvsYH50MDB476kZD91uJT2sH7nXg=";
   };
 
   # Packwiz bundles non-CurseForge entries as JARs. Use matching CurseForge file
@@ -137,7 +151,7 @@ let
             <tr>
               <td>pwppp</td>
               <td><code>pwppp.4amlunch.net</code></td>
-              <td>Minecraft ${pack.versions.minecraft} / NeoForge ${pack.versions.neoforge}</td>
+              <td>Modpack ${packVersion} / Minecraft ${pack.versions.minecraft} / NeoForge ${pack.versions.neoforge}</td>
               <td>Whitelist</td>
               <td><a href="/packs/pwppp/${clientPackFileName}">Download</a></td>
             </tr>
@@ -420,6 +434,13 @@ in
     inputs.playit-nixos-module.nixosModules.default
   ];
 
+  assertions = [
+    {
+      assertion = whitelistIsValid;
+      message = "Each pwppp whitelist entry must be a valid Java player name.";
+    }
+  ];
+
   nixpkgs.overlays = [ inputs.nix-minecraft.overlay ];
 
   sops = {
@@ -470,7 +491,8 @@ in
         autoStart = true;
         restart = "on-failure";
         package = serverPackage;
-        jvmOpts = "-Xms1G -Xmx4G";
+        # https://github.com/MeowIce/meowice-flags#the-flags-set (G1GC, below 32 GiB)
+        jvmOpts = "-Xms1G -Xmx4G --add-modules=jdk.incubator.vector -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UnlockExperimentalVMOptions -XX:+UnlockDiagnosticVMOptions -XX:+DisableExplicitGC -XX:+AlwaysPreTouch -XX:G1NewSizePercent=28 -XX:G1MaxNewSizePercent=50 -XX:G1HeapRegionSize=16M -XX:G1ReservePercent=15 -XX:G1MixedGCCountTarget=3 -XX:InitiatingHeapOccupancyPercent=20 -XX:G1MixedGCLiveThresholdPercent=90 -XX:SurvivorRatio=32 -XX:G1HeapWastePercent=5 -XX:+PerfDisableSharedMem -XX:G1SATBBufferEnqueueingThresholdPercent=30 -XX:G1ConcMarkStepDurationMillis=5 -XX:G1RSetUpdatingPauseTimePercent=0 -XX:+UseNUMA -XX:-DontCompileHugeMethods -XX:MaxNodeLimit=240000 -XX:NodeLimitFudgeFactor=8000 -XX:ReservedCodeCacheSize=400M -XX:NonNMethodCodeHeapSize=12M -XX:ProfiledCodeHeapSize=194M -XX:NonProfiledCodeHeapSize=194M -XX:NmethodSweepActivity=1 -XX:+UseCriticalJavaThreadPriority -XX:AllocatePrefetchStyle=3 -XX:+AlwaysActAsServerClassMachine -XX:+UseTransparentHugePages -XX:LargePageSizeInBytes=2M -XX:+UseLargePages -XX:+EagerJVMCI -XX:+UseStringDeduplication -XX:+UseAES -XX:+UseAESIntrinsics -XX:+UseFMA -XX:+UseLoopPredicate -XX:+RangeCheckElimination -XX:+OptimizeStringConcat -XX:+UseCompressedOops -XX:+UseThreadPriorities -XX:+OmitStackTraceInFastThrow -XX:+RewriteBytecodes -XX:+RewriteFrequentPairs -XX:+UseFPUForSpilling -XX:+UseFastStosb -XX:+UseNewLongLShift -XX:+UseVectorCmov -XX:+UseXMMForArrayCopy -XX:+UseXmmI2D -XX:+UseXmmI2F -XX:+UseXmmLoadAndClearUpper -XX:+UseXmmRegToRegMoveAll -XX:+EliminateLocks -XX:+DoEscapeAnalysis -XX:+AlignVector -XX:+OptimizeFill -XX:+EnableVectorSupport -XX:+UseCharacterCompareIntrinsics -XX:+UseCopySignIntrinsic -XX:+UseVectorStubs -XX:+UseFastJNIAccessors -XX:+UseInlineCaches -XX:+SegmentedCodeCache -XX:+UseCompactObjectHeaders -Djdk.nio.maxCachedBufferSize=262144 -Djdk.graal.UsePriorityInlining=true -Djdk.graal.Vectorization=true -Djdk.graal.OptDuplication=true -Djdk.graal.DetectInvertedLoopsAsCounted=true -Djdk.graal.LoopInversion=true -Djdk.graal.VectorizeHashes=true -Djdk.graal.EnterprisePartialUnroll=true -Djdk.graal.VectorizeSIMD=true -Djdk.graal.StripMineNonCountedLoops=true -Djdk.graal.SpeculativeGuardMovement=true -Djdk.graal.TuneInlinerExploration=1 -Djdk.graal.LoopRotation=true -Djdk.graal.CompilerConfiguration=enterprise";
         symlinks.mods = "${serverPack}/mods";
         files = serverFiles;
         serverProperties = {
@@ -607,13 +629,38 @@ in
 
       playit.serviceConfig.ExecCondition = "${lib.getExe' pkgs.gnugrep "grep"} -qv REPLACE_WITH_PLAYIT_SECRET %d/secret";
 
-      minecraft-server-pwppp.serviceConfig = {
-        MemoryHigh = "5G";
-        MemoryMax = "6G";
-        NoNewPrivileges = true;
-        OOMPolicy = "stop";
-        ProtectSystem = "strict";
-        ReadWritePaths = [ "/var/lib/minecraft/pwppp" ];
+      minecraft-server-pwppp = {
+        wants = [ "minecraft-whitelist-pwppp.service" ];
+        environment.LD_LIBRARY_PATH = lib.makeLibraryPath [ pkgs.numactl ];
+        serviceConfig = {
+          MemoryHigh = "5G";
+          MemoryMax = "6G";
+          NoNewPrivileges = true;
+          OOMPolicy = "stop";
+          ProtectSystem = "strict";
+          ReadWritePaths = [ minecraftDataDir ];
+        };
+      };
+
+      minecraft-whitelist-pwppp = {
+        description = "Apply the declarative pwppp Minecraft whitelist";
+        after = [ "minecraft-server-pwppp.service" ];
+        partOf = [ "minecraft-server-pwppp.service" ];
+        path = [
+          pkgs.coreutils
+          pkgs.systemd
+        ];
+        script = ''
+          install -d -m 0770 -o minecraft -g minecraft ${minecraftDataDir}
+          install -m 0660 -o minecraft -g minecraft ${emptyWhitelistFile} ${minecraftDataDir}/whitelist.json
+          if systemctl is-active --quiet minecraft-server-pwppp.service; then
+            printf %s ${lib.escapeShellArg whitelistCommands} > ${minecraftStdin}
+          fi
+        '';
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+        };
       };
 
       minecraft-zfs-delegation = {

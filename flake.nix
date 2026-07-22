@@ -233,6 +233,7 @@
             minecraftPackFiles = lib.filesystem.listFilesRecursive ./systems/bob/minecraft/pwppp;
             minecraftRestic = config.services.restic.backups.minecraft;
             minecraftService = config.systemd.services.minecraft-server-pwppp;
+            minecraftWhitelist = config.systemd.services.minecraft-whitelist-pwppp;
             mcRouter = config.systemd.services.mc-router;
             svcRouter = config.systemd.services.svc-router;
             cloudflareSync = config.systemd.services.cloudflare-tunnel-sync;
@@ -435,8 +436,16 @@
           assert minecraft.serverProperties.enforce-whitelist;
           assert minecraft.serverProperties.enable-rcon;
           assert minecraft.serverProperties."rcon.password" == "@RCON_PASSWORD@";
+          assert lib.hasInfix "-XX:+UseG1GC" minecraft.jvmOpts;
           assert minecraftService.serviceConfig.MemoryMax == "6G";
+          assert lib.hasInfix "numactl" minecraftService.environment.LD_LIBRARY_PATH;
           assert minecraftService.serviceConfig.ProtectSystem == "strict";
+          assert minecraftService.restartIfChanged;
+          assert !minecraftService.reloadIfChanged;
+          assert lib.elem "minecraft-whitelist-pwppp.service" minecraftService.wants;
+          assert minecraftWhitelist.after == [ "minecraft-server-pwppp.service" ];
+          assert minecraftWhitelist.partOf == [ "minecraft-server-pwppp.service" ];
+          assert minecraftWhitelist.serviceConfig.Type == "oneshot";
           assert lib.hasInfix "pwppp.4amlunch.net=127.0.0.11:25566" mcRouter.serviceConfig.ExecStart;
           assert lib.hasInfix "127.0.0.1:18080/event" mcRouter.serviceConfig.ExecStart;
           assert mcRouter.serviceConfig.DynamicUser;

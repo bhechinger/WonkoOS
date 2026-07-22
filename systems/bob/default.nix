@@ -69,6 +69,7 @@ in
     config.allowUnfreePredicate =
       pkg:
       builtins.elem (lib.getName pkg) [
+        "graalvm-oracle"
         "mongodb"
         "neoforge"
         "plexmediaserver"
