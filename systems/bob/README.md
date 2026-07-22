@@ -78,7 +78,10 @@ printf 'whitelist add PLAYER_NAME\n' > /run/minecraft/pwppp.stdin
 Sierra's BIND server is authoritative for the internal `4amlunch.net` view.
 `opnsense-dns-sync.service` reconciles its complete static record set from
 [`opnsense-dns.nix`](./services/opnsense-dns.nix); Kea owns the delegated
-`lan.4amlunch.net` subzone. Public-only Cloudflare names deliberately do not
+`lan.4amlunch.net` subzone. Bob serves secondary copies of both forward zones
+and their two IPv4 reverse zones, and performs recursion independently so DNS
+continues working if Sierra is unavailable. DHCP advertises Sierra first and
+Bob second on both LANs. Public-only Cloudflare names deliberately do not
 resolve internally unless they are also added to that Nix record list. The
 internal `pwppp` TXT value is `local-direct`, masking the public
 `cloudflared-use-tunnel` value so Modflared clients connect directly instead

@@ -4,6 +4,7 @@ let
   applicationPorts = {
     allowedTCPPorts = [
       22
+      53
       80
       443
       2049
@@ -14,6 +15,7 @@ let
       64738
     ];
     allowedUDPPorts = [
+      53
       1900
       5353
       9993
@@ -114,8 +116,12 @@ in
           allowedUDPPorts = [ 64738 ];
         };
         management = {
-          allowedTCPPorts = [ 8080 ];
+          allowedTCPPorts = [
+            53
+            8080
+          ];
           allowedUDPPorts = [
+            53
             1900
             3478
             5514

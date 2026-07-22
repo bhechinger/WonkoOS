@@ -238,6 +238,7 @@
             svcRouter = config.systemd.services.svc-router;
             cloudflareSync = config.systemd.services.cloudflare-tunnel-sync;
             attic = config.services.atticd;
+            bind = config.services.bind;
             vyprvpn = deepthought.services.openvpn.servers.vyprvpn-miami;
             vyprvpnProfile = builtins.readFile ./systems/deepthought/openvpn/vyprvpn-miami.ovpn;
             dnsUpdate = config.systemd.services.opnsense-dns-sync;
@@ -267,6 +268,26 @@
           assert !(config.networking.interfaces ? storage);
           assert !(config.networking.interfaces ? guest);
           assert config.networking.nameservers == [ "10.42.0.1" ];
+          assert bind.enable;
+          assert bind.ipv4Only;
+          assert bind.directory == "/var/lib/named";
+          assert bind.forwarders == [ ];
+          assert
+            bind.listenOn == [
+              "127.0.0.1"
+              "10.42.0.2"
+              "10.42.11.2"
+            ];
+          assert
+            builtins.attrNames bind.zones == [
+              "0.42.10.in-addr.arpa"
+              "11.42.10.in-addr.arpa"
+              "4amlunch.net"
+              "lan.4amlunch.net"
+            ];
+          assert lib.all (zone: !zone.master && zone.masters == [ "10.42.0.251" ]) (
+            builtins.attrValues bind.zones
+          );
           assert !config.systemd.network.wait-online.anyInterface;
           assert lib.elem "--interface=internal:routable" config.systemd.network.wait-online.extraArgs;
           assert !(config.systemd.services ? compose-ad);
@@ -321,6 +342,7 @@
           assert
             internal.allowedTCPPorts == [
               22
+              53
               80
               443
               2049
@@ -333,6 +355,7 @@
             ];
           assert
             internal.allowedUDPPorts == [
+              53
               1900
               5353
               9993
@@ -345,15 +368,21 @@
               41641
               64738
             ];
-          assert management.allowedTCPPorts == [ 8080 ];
+          assert
+            management.allowedTCPPorts == [
+              53
+              8080
+            ];
           assert
             management.allowedUDPPorts == [
+              53
               1900
               3478
               5514
               10001
             ];
           assert lib.elem "network-online.target" dnsUpdate.after;
+          assert lib.elem "bind.service" dnsUpdate.after;
           assert lib.elem "sops-install-secrets.service" dnsUpdate.requires;
           assert dnsUpdate.description == "Reconcile the internal 4amlunch.net BIND zone";
           assert lib.hasInfix "opnsense-bind-records.json" dnsUpdate.serviceConfig.ExecStart;
