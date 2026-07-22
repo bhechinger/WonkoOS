@@ -16,11 +16,15 @@ runtime model.
 | Sonarr | `/var/lib/sonarr` |
 | rTorrent and ruTorrent | `/var/lib/{rtorrent,rutorrent}` and `/nfs/Torrents` |
 | Plex | `/var/lib/plexmediaserver` and `/nfs/Plex` |
+| Attic Nix cache | `/var/lib/atticd` and Basket at `/nfs/NixCache` |
+| pwppp Minecraft server | `/var/lib/minecraft/pwppp` |
+| Minecraft routers and Playit | Stateless; configuration is in this repository |
 | Murmur, Postfix, NFS, Tailscale, ZeroTier | Their standard NixOS state paths |
 
-Runtime credentials for Paperless, Cloudflare Tunnel, Murmur, and ruTorrent
-are encrypted with SOPS in [`secrets/`](./secrets/) and materialized under
-`/run/secrets`. Do not recreate plaintext copies under `/home` or `/var/lib`.
+Runtime credentials for Attic, Paperless, Cloudflare Tunnel, Minecraft RCON
+and backups, Playit, Murmur, and ruTorrent are encrypted with SOPS in
+[`secrets/`](./secrets/) and materialized under `/run/secrets`. Do not recreate
+plaintext copies under `/home` or `/var/lib`.
 
 Paperless connects to the native Proton Mail Bridge on loopback port `1143`
 using STARTTLS. The Bridge certificate is trusted through
@@ -40,19 +44,60 @@ TCP `8080` and UDP `1900`, `3478`, `5514`, and `10001`. Administration and all
 other application traffic use internal, Tailscale, or ZeroTier.
 
 Nginx serves Bob, Paperless, Jackett, Sonarr, and ruTorrent with the wildcard
-ACME certificate. Unknown HTTP hosts receive `444` and unknown TLS handshakes
-are rejected. The rTorrent XML-RPC listener is only reachable through its Unix
-socket and the loopback nginx endpoint.
+ACME certificate. It also serves the Minecraft server list and current pwppp
+client pack at `https://minecraft.4amlunch.net`. Unknown HTTP hosts receive
+`444` and unknown TLS handshakes are rejected. The rTorrent XML-RPC listener is
+only reachable through its Unix socket and the loopback nginx endpoint.
 
-Only `paperless.4amlunch.net` is published through the remotely managed
-Cloudflare Tunnel. Its origin is `https://localhost:443`, with the origin and
-HTTP host names both set to `paperless.4amlunch.net` and TLS verification
-enabled.
+Attic listens only on loopback and Nginx exposes it internally at
+`https://cache.4amlunch.net`. Pulls are public on the trusted networks; pushes
+use a shared cache-scoped Attic token. The hostname is managed only in
+OPNsense and is deliberately absent from public DNS and Cloudflare Tunnel.
+
+The Packwiz source uses Modrinth for Create: Oxidized and Create: Design n'
+Decor so Bob can fetch them reproducibly. The generated CurseForge client ZIP
+substitutes the matching CurseForge file IDs because CurseForge exports omit
+Modrinth entries. Update both sets of pinned metadata when changing either mod.
+
+`cloudflare-tunnel-sync.service` declaratively manages the remotely managed
+Cloudflare Tunnel and its public DNS records. It publishes Paperless and the
+Minecraft download page through `https://localhost:443`, using each public
+hostname for the TLS and HTTP host names. TLS verification remains enabled.
+
+`mc-router` accepts Minecraft TCP traffic on internal port `25565` and routes
+`pwppp.4amlunch.net` to the isolated NeoForge listener at
+`127.0.0.11:25566`. `svc-router` accepts Simple Voice Chat UDP traffic on
+internal port `34934`, while its webhook API is loopback-only. Both routers
+run as dynamic, heavily sandboxed users. The game server is online-mode and
+whitelist-only; add a player from Bob with:
+
+```sh
+printf 'whitelist add PLAYER_NAME\n' > /run/minecraft/pwppp.stdin
+```
+
+OPNsense receives internal A records for `minecraft`, `pwppp`, and `voice`, all
+pointing to `10.42.0.2`. It also receives a `pwppp` TXT value of `local-direct`.
+That deliberately masks the public `cloudflared-use-tunnel` TXT value on the
+LAN, so Modflared clients connect directly instead of hairpinning through
+Cloudflare.
+
+Internet game traffic uses the same tunnel at `pwppp.4amlunch.net`, with a
+`tcp://localhost:25565` origin and the public TXT value
+`cloudflared-use-tunnel`. Internet voice traffic cannot use that TCP tunnel and
+instead uses Playit UDP at `147.185.221.19:34934`, forwarded to
+`127.0.0.1:34934`. Public `voice.4amlunch.net` DNS points to that Playit IP and
+is DNS-only. Apply or inspect the declarative Cloudflare state with:
+
+```sh
+sudo systemctl restart cloudflare-tunnel-sync
+systemctl status cloudflare-tunnel-sync cloudflared-tunnel
+```
 
 ## Storage
 
-ZFS datasets back `/`, `/nix`, `/var`, `/var/lib/plexmediaserver`, `/home`, and
-`/home/docker/pgsql`. Basket is automounted over NFSv4 at `/nfs/Plex` and
+ZFS datasets back `/`, `/nix`, `/var`, `/var/lib/minecraft`,
+`/var/lib/plexmediaserver`, `/home`, and `/home/docker/pgsql`. Basket is
+automounted over NFSv4 at `/nfs/Minecraft`, `/nfs/NixCache`, `/nfs/Plex`, and
 `/nfs/Torrents`; Bob does not mount the `Brian` share.
 
 Jackett, Sonarr, rTorrent, and Plex keep separate service accounts. Basket's
@@ -63,6 +108,28 @@ share NFS data without sharing their local Unix identities or using QNAP's
 generic anonymous account. NFS exports of the Paperless consume/export
 directories separately map the single authorized client (`10.42.0.10`) to the
 Paperless account with `all_squash`.
+
+Create the `Minecraft` share on Basket with Bob (`10.42.0.2`) as its only NFS
+client. Map it to a dedicated QNAP `minecraft-backup` user/group with access
+only to that share, then create the `restic-bob` directory. The local
+`minecraft-backup` service account writes only to that repository.
+
+Create the `NixCache` share on Basket with a 1 TiB quota and Bob
+as its only NFS client. Squash all users to a dedicated `nix-cache` QNAP
+account. Attic is the sole NFS writer; other hosts publish through its HTTPS
+API. See the [cache runbook](../../docs/superpowers/plans/2026-07-10-harmonia-cache.md)
+for bootstrap and client setup.
+
+Minecraft state has two backup layers. Sanoid keeps 24 hourly, 14 daily, and 3
+monthly snapshots on Bob. Restic takes a consistent ZFS snapshot after an RCON
+`save-all flush`, backs it up to `/nfs/Minecraft/restic-bob` at 04:30 daily,
+and retains 7 daily, 4 weekly, and 6 monthly backups. Check or trigger it with:
+
+```sh
+systemctl status sanoid.timer restic-backups-minecraft.timer
+sudo systemctl start restic-backups-minecraft.service
+journalctl -u restic-backups-minecraft.service
+```
 
 The 1 GiB disk swap partition is retained and encrypted with a fresh random
 key on every boot. Zram remains the higher-capacity primary swap. Hibernation
@@ -83,7 +150,15 @@ After deploying Bob, verify the native services and their listeners:
 ```sh
 systemctl --failed
 systemctl status nginx postgresql paperless-web paperless-task-queue \
-  protonmail-bridge unifi jackett sonarr rtorrent
-findmnt /nfs/Plex /nfs/Torrents
+  protonmail-bridge unifi jackett sonarr rtorrent minecraft-server-pwppp \
+  mc-router svc-router playit atticd
+findmnt /nfs/Minecraft /nfs/NixCache /nfs/Plex /nfs/Torrents
 ss -ltnup
 ```
+
+Before the first Minecraft deployment, replace the placeholder in
+[`secrets/playit.toml.sops`](./secrets/playit.toml.sops) with the claimed
+Playit agent secret. The service intentionally skips startup while the
+placeholder remains. Also create `zpool/var/minecraft` and mount it at
+`/var/lib/minecraft` on an already-installed Bob; the disko declaration creates
+it automatically only during a fresh installation.

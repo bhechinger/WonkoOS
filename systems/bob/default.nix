@@ -17,6 +17,7 @@ in
     inputs.disko.nixosModules.disko
     inputs.sops-nix.nixosModules.sops
     (modulesPath + "/installer/scan/not-detected.nix")
+    ../../common/nix-cache-client.nix
     ./disko.nix
     ./networking.nix
     ./services
@@ -69,6 +70,7 @@ in
       pkg:
       builtins.elem (lib.getName pkg) [
         "mongodb"
+        "neoforge"
         "plexmediaserver"
         "unifi-controller"
       ];

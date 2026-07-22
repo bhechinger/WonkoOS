@@ -1,0 +1,125 @@
+["Natural Generating Features"]
+	#Enable or Disable Kopje Trees from naturally spawning (True by default)
+	"Spawn Kopje Trees" = true
+	#Enable or Disable Termite Mounds from naturally spawning (True by default)
+	"Spawn Termite Mounds" = true
+
+["Animal Behavior Tweaks"]
+	#(True by default) Enable or Disable Predator animals hunting others or from attacking the player (Keep in mind some features are reliant on this being enabeled.)
+	"Predators Hunt & Fight Players" = true
+	#(True by default) Enable or Disable Jellies from stinging the player
+	"Jellies Sting" = true
+	#(True by default) Enable or Disable Fire Salamander Poison
+	"Fire Salamander Poison" = true
+
+["Spawn Land Animals"]
+	#(True by default) Enable or disable Pallas's Cat
+	"Spawn Pallas's Cat" = true
+	#(True by default) Enable or disable Asian Leopard Cat
+	"Spawn Asian Leopard Cat" = true
+	#(True by default) Enable or disable Southern Patas Monkey
+	"Spawn Southern Patas Monkey" = true
+	#(True by default) Enable or disable Spoonbills
+	"Spawn Spoonbill" = true
+	#(True by default) Enable or disable Cape Buffalo
+	"Spawn Cape Buffalo" = true
+	#(True by default) Enable or disable Headlight Beetle
+	"Spawn Headlight Beetle" = true
+	#(True by default) Enable or disable Attenborough's Echidna
+	"Spawn Attenborough's Echidna" = true
+	#(True by default) Enable or disable Yellow-eye Penguin
+	"Spawn Yellow-eye Penguin" = true
+	#(True by default) Enable or disable Northern Rockhopper Penguin
+	"Spawn Northern Rockhopper" = true
+	#(True by default) Enable or disable Chinstrap Penguin
+	"Spawn Chinstrap Penguin" = true
+	#(True by default) Enable or disable Gentoo Penguin
+	"Spawn Gentoo Penguin" = true
+	#(True by default) Enable or disable Chacoan Peccary
+	"Spawn Chacoan Peccary" = true
+	#(True by default) Enable or disable Pink Land Iguana
+	"Spawn Pink Land Iguana" = true
+	#(True by default) Enable or disable South Island Takahe
+	"Spawn South Island Takahe" = true
+	#(True by default) Enable or disable California Quail
+	"Spawn California Quail" = true
+	#(True by default) Enable or disable Helmeted Guineafowl
+	"Spawn Helmeted Guineafowl" = true
+	#(True by default) Enable or disable Marabou Stork
+	"Spawn Marabou Stork" = true
+	#(True by default) Enable or disable Pink Velvet Worm
+	"Spawn Pink Velvet Worm" = true
+	#(True by default) Enable or disable Giant Muntjac
+	"Spawn Giant Muntjac" = true
+	#(True by default) Enable or disable Giant Rosy Boa
+	"Spawn Mexican Rosy Boa" = true
+	#(True by default) Enable or disable Bush Dog
+	"Spawn Bush Dog" = true
+	#(True by default) Enable or disable Binturong
+	"Spawn Binturong" = true
+	#(True by default) Enable or disable Fire Salamander
+	"Spawn Fire Salamander" = true
+	#(True by default) Enable or disable Burrowing Owl
+	"Spawn Burrowing Owl" = true
+	#(True by default) Enable or disable Yangtze Softshell Turtle
+	"Spawn Yangtze Softshell" = true
+	#(True by default) Enable or disable Marsupial Mole
+	"Spawn Marsupial Mole" = true
+	#(True by default) Enable or disable Uakari Monkey
+	"Spawn Uakari Monkey" = true
+	#(True by default) Enable or disable Tricolor Hognose
+	"Spawn Tricolor Hognose" = true
+	#(True by default) Enable or disable Rock Ptarmigan
+	"Spawn Rock Ptarmigan" = true
+	#(True by default) Enable or disable Rock Hyrax
+	"Spawn Rock Hyrax" = true
+	#(True by default) Enable or disable Impalla
+	"Spawn Impalla" = true
+	#(True by default) Enable or disable Klipspringer
+	"Spawn Klipspringer" = true
+	#(True by default) Enable or disable Tibetan Fox
+	"Spawn Tibetan Fox" = true
+	#(True by default) Enable or disable Matschie's Tree Kangaroo
+	"Spawn Matschie's Tree Kangaroo" = true
+	#(True by default) Enable or disable Candy Cane Snail
+	"Spawn Candy Cane Snail" = true
+	#(True by default) Enable or disable Pancake Tortoise
+	"Spawn Pancake Tortoise" = true
+	#(True by default) Enable or disable Viscacha
+	"Spawn Viscacha" = true
+	#(True by default) Enable or disable Emerald Toucanet
+	"Spawn Emerald Toucanet" = true
+	#(True by default) Enable or disable Chuckwalla
+	"Spawn Chuckwalla" = true
+	#(True by default) Enable or disable Indian Bullfrog
+	"Spawn Indian Bullfrog" = true
+	#(True by default) Enable or disable Serval
+	"Spawn Serval" = true
+	#(True by default) Enable or disable Sumatran Rhino
+	"Spawn Sumatran Rhino" = true
+
+["Spawn Aquatic Animals"]
+	#(True by default) Enable or disable Oceanic Mantas
+	"Spawn Oceanic Manta Ray" = true
+	#(True by default) Enable or disable Bowmouth Guitarfish
+	"Spawn Bowmouth Guitarfish" = true
+	#(True by default) Enable or disable Ocellate River Rays
+	"Spawn Ocellate River Rays" = true
+	#(True by default) Enable or disable Goblin Sharks
+	"Spawn Goblin Shark" = true
+	#(True by default) Enable or disable Bonnethead Sharks
+	"Spawn Bonnethead Shark" = true
+	#(True by default) Enable or disable Psychedelic Jelly
+	"Spawn Psychedelic Jelly" = true
+	#(True by default) Enable or disable Upside-down Jelly
+	"Spawn Upside-down Jelly" = true
+	#(True by default) Enable or disable  Agazzi's Cichlid
+	"Spawn Agazzi's Cichlids" = true
+	#(True by default) Enable or disable Fly River Turtle
+	"Spawn Fly River Turtle" = true
+	#(True by default) Enable or disable Dwarf Sperm Whale
+	"Spawn Dwarf Sperm Whale" = true
+	#(True by default) Enable or disable Peacock Bass
+	"Spawn Peacock Bass" = true
+	#(True by default) Enable or disable Clown Loach
+	"Spawn Clown Loach" = true

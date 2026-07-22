@@ -52,8 +52,8 @@ EOF
 chmod +x "$CURL"
 
 run_sync() {
-  local hostname=$1 address=$2 response=$3
-  SEARCH_RESPONSE=$response bash "$script" "$hostname" "$address"
+  local hostname=$1 value=$2 response=$3
+  SEARCH_RESPONSE=$response bash "$script" "$hostname" "$value"
 }
 
 assert_calls() {
@@ -62,22 +62,30 @@ assert_calls() {
 
 : >"$CALLS"
 output=$(run_sync cache 10.42.0.2 '{"rows":[{"uuid":"same","enabled":"1","hostname":"cache","domain":"4amlunch.net","rr":"A","server":"10.42.0.2","description":"Managed by WonkoOS"}]}')
-grep -qx 'cache.4amlunch.net unchanged (10.42.0.2)' <<<"$output"
+grep -qx 'cache.4amlunch.net A unchanged (10.42.0.2)' <<<"$output"
 assert_calls 1
 
 : >"$CALLS"
 output=$(run_sync sonarr 10.42.0.3 '{"rows":[]}')
-grep -qx 'sonarr.4amlunch.net added (10.42.0.3)' <<<"$output"
+grep -qx 'sonarr.4amlunch.net A added (10.42.0.3)' <<<"$output"
 grep -q '/add_host_override$' "$CALLS"
 grep -q '/service/reconfigure$' "$CALLS"
 assert_calls 3
 
 : >"$CALLS"
 output=$(run_sync rutorrent 10.42.0.4 '{"rows":[{"uuid":"change-me","enabled":"1","hostname":"rutorrent","domain":"4amlunch.net","rr":"A","server":"10.42.0.99","description":"Managed by WonkoOS"}]}')
-grep -qx 'rutorrent.4amlunch.net updated (10.42.0.4)' <<<"$output"
+grep -qx 'rutorrent.4amlunch.net A updated (10.42.0.4)' <<<"$output"
 grep -q '/set_host_override/change-me$' "$CALLS"
 grep -q '/service/reconfigure$' "$CALLS"
 assert_calls 3
+
+: >"$CALLS"
+DNS_TYPE=TXT
+output=$(run_sync pwppp local-direct '{"rows":[{"uuid":"txt","enabled":"1","hostname":"pwppp","domain":"4amlunch.net","rr":"TXT","txtdata":"old","description":"Managed by WonkoOS"}]}')
+grep -qx 'pwppp.4amlunch.net TXT updated (local-direct)' <<<"$output"
+grep -q '/set_host_override/txt$' "$CALLS"
+assert_calls 3
+DNS_TYPE=A
 
 : >"$CALLS"
 duplicates='{"rows":[

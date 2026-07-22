@@ -1,9 +1,11 @@
 {
   imports = [
+    ./attic.nix
     ./avahi.nix
     ./cloudflared.nix
     ./jackett.nix
     ./media.nix
+    ./minecraft.nix
     ./murmur.nix
     ./nfs.nix
     ./nginx.nix

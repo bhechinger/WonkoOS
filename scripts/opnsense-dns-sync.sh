@@ -4,7 +4,7 @@ CURL=${CURL:-curl}
 JQ=${JQ:-jq}
 
 if [[ $# -ne 2 ]]; then
-  echo "usage: opnsense-dns-sync HOSTNAME IPV4_ADDRESS" >&2
+  echo "usage: opnsense-dns-sync HOSTNAME VALUE" >&2
   exit 2
 fi
 
@@ -16,6 +16,14 @@ DNS_VALUE=$2
 : "${DNS_DOMAIN:?DNS_DOMAIN is required}"
 : "${DNS_TYPE:?DNS_TYPE is required}"
 : "${DNS_DESCRIPTION:?DNS_DESCRIPTION is required}"
+
+case "$DNS_TYPE" in
+  A | AAAA | TXT) ;;
+  *)
+    echo "unsupported DNS record type: $DNS_TYPE" >&2
+    exit 2
+    ;;
+esac
 
 if [[ ! -r "$OPNSENSE_NETRC" ]]; then
   echo "OPNsense credentials are not readable: $OPNSENSE_NETRC" >&2
@@ -49,16 +57,19 @@ payload=$(
     --arg hostname "$DNS_HOSTNAME" \
     --arg domain "$DNS_DOMAIN" \
     --arg rr "$DNS_TYPE" \
-    --arg server "$DNS_VALUE" \
+    --arg value "$DNS_VALUE" \
     --arg description "$DNS_DESCRIPTION" \
     '{host: {
       enabled: "1",
       hostname: $hostname,
       domain: $domain,
       rr: $rr,
-      server: $server,
       description: $description
-    }}'
+    } + (if $rr == "TXT" then
+      {txtdata: $value}
+    else
+      {server: $value}
+    end)}'
 )
 
 search_response=$(
@@ -93,13 +104,14 @@ fi
 if ((count == 1)); then
   # shellcheck disable=SC2016
   if "$JQ" -e \
-    --arg server "$DNS_VALUE" \
+    --arg rr "$DNS_TYPE" \
+    --arg value "$DNS_VALUE" \
     --arg description "$DNS_DESCRIPTION" \
     '.[0] |
       (.enabled | tostring) == "1" and
-      .server == $server and
+      (if $rr == "TXT" then .txtdata else .server end) == $value and
       .description == $description' <<<"$matches" >/dev/null; then
-    echo "$fqdn unchanged ($DNS_VALUE)"
+    echo "$fqdn $DNS_TYPE unchanged ($DNS_VALUE)"
     exit 0
   fi
 
@@ -122,4 +134,4 @@ if ! "$JQ" -e '.status == "ok"' <<<"$reconfigure" >/dev/null; then
   exit 1
 fi
 
-echo "$fqdn $result ($DNS_VALUE)"
+echo "$fqdn $DNS_TYPE $result ($DNS_VALUE)"

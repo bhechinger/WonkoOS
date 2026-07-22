@@ -1,0 +1,13 @@
+name = "Auth Me"
+filename = "authme-neoforge-9.0.1+1.21.1.jar"
+side = "client"
+
+[download]
+hash-format = "sha1"
+hash = "13d12989930705e645f82c625d25ac26bce589e5"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 6177873
+project-id = 356643

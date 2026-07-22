@@ -7,6 +7,7 @@
     inputs.disko.nixosModules.disko
     inputs.sops-nix.nixosModules.sops
 
+    ../../common/nix-cache-client.nix
     ../hardware/deepthought.nix
     ./zfs.nix
     ./networking.nix

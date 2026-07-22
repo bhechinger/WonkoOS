@@ -25,6 +25,16 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    nix-minecraft = {
+      url = "github:Infinidoge/nix-minecraft";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    playit-nixos-module = {
+      url = "github:pedorich-n/playit-nixos-module";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     home-manager = {
       url = "github:nix-community/home-manager/release-26.05";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -172,6 +182,11 @@
               touch "$out"
             '';
 
+        cloudflare-tunnel-sync = pkgs.runCommand "cloudflare-tunnel-sync-test" { } ''
+          ${lib.getExe pkgs.python3} ${./scripts/cloudflare-tunnel-sync.py} --self-test
+          touch "$out"
+        '';
+
         storage-layout =
           let
             config = self.nixosConfigurations.deepthought.config;
@@ -214,6 +229,14 @@
             firewall = config.networking.firewall;
             internal = firewall.interfaces.internal;
             management = firewall.interfaces.management;
+            minecraft = config.services.minecraft-servers.servers.pwppp;
+            minecraftPackFiles = lib.filesystem.listFilesRecursive ./systems/bob/minecraft/pwppp;
+            minecraftRestic = config.services.restic.backups.minecraft;
+            minecraftService = config.systemd.services.minecraft-server-pwppp;
+            mcRouter = config.systemd.services.mc-router;
+            svcRouter = config.systemd.services.svc-router;
+            cloudflareSync = config.systemd.services.cloudflare-tunnel-sync;
+            attic = config.services.atticd;
             vyprvpn = deepthought.services.openvpn.servers.vyprvpn-miami;
             vyprvpnProfile = builtins.readFile ./systems/deepthought/openvpn/vyprvpn-miami.ovpn;
             dnsUpdate = config.systemd.services.opnsense-dns-bob;
@@ -302,6 +325,7 @@
               2049
               6789
               8443
+              25565
               32400
               32469
               64738
@@ -316,6 +340,7 @@
               32412
               32413
               32414
+              34934
               41641
               64738
             ];
@@ -335,29 +360,103 @@
               let
                 update = config.systemd.services."opnsense-dns-${hostname}";
               in
-              update.description == "Update OPNsense DNS for ${hostname}.4amlunch.net"
+              update.description == "Update OPNsense A DNS for ${hostname}.4amlunch.net"
               && lib.hasInfix "${hostname} 10.42.0.2" update.serviceConfig.ExecStart
             )
             [
               "bob"
               "jackett"
+              "minecraft"
               "paperless"
+              "pwppp"
               "rutorrent"
               "sonarr"
+              "voice"
             ];
+          assert
+            config.systemd.services.opnsense-dns-pwppp-txt.description
+            == "Update OPNsense TXT DNS for pwppp.4amlunch.net";
+          assert lib.hasInfix "pwppp local-direct"
+            config.systemd.services.opnsense-dns-pwppp-txt.serviceConfig.ExecStart;
           assert dnsUpdate.serviceConfig.RemainAfterExit;
           assert config.systemd.services ? sops-install-secrets;
           assert config.sops.age.sshKeyPaths == [ "/etc/ssh/ssh_host_ed25519_key" ];
           assert config.sops.secrets.opnsense-api-netrc.mode == "0400";
           assert config.sops.secrets.cloudflared-environment.mode == "0400";
+          assert config.sops.secrets.cloudflare-acme-token.mode == "0400";
+          assert lib.elem "cloudflare-tunnel-sync.service" config.systemd.services.cloudflared-tunnel.after;
+          assert lib.hasPrefix "cloudflare-api-token:" cloudflareSync.serviceConfig.LoadCredential;
+          assert cloudflareSync.serviceConfig.DynamicUser;
+          assert cloudflareSync.serviceConfig.ProtectSystem == "strict";
           assert config.sops.secrets.murmur-environment.mode == "0400";
           assert config.sops.secrets.paperless-environment.mode == "0400";
           assert config.sops.secrets.rutorrent-htpasswd.mode == "0440";
-          assert !(config.systemd.services ? opnsense-dns-cache);
+          assert config.sops.secrets.minecraft-rcon-password.mode == "0400";
+          assert config.sops.secrets.minecraft-restic-password.mode == "0440";
+          assert config.sops.secrets.playit-secret.mode == "0400";
+          assert config.sops.secrets.atticd-environment.mode == "0400";
+          assert config.services.nginx.virtualHosts ? "cache.4amlunch.net";
+          assert
+            config.services.nginx.virtualHosts."cache.4amlunch.net".locations."/".proxyPass
+            == "http://127.0.0.1:18081";
+          assert attic.enable;
+          assert attic.settings.listen == "127.0.0.1:18081";
+          assert attic.settings.allowed-hosts == [ "cache.4amlunch.net" ];
+          assert attic.settings.storage.path == "/nfs/NixCache";
+          assert attic.settings.database.url == "sqlite:///var/lib/atticd/server.db?mode=rwc";
+          assert attic.settings.garbage-collection.interval == "12 hours";
+          assert attic.settings.garbage-collection.default-retention-period == "1 year";
+          assert lib.last config.nix.settings.substituters == "https://cache.4amlunch.net/internal";
+          assert lib.last deepthought.nix.settings.substituters == "https://cache.4amlunch.net/internal";
+          assert lib.elem "internal:71s87pJDYLG9Ruu6BxjTC4wZzxneZXqc2U3da6/C2PI="
+            config.nix.settings.trusted-public-keys;
+          assert lib.elem "internal:71s87pJDYLG9Ruu6BxjTC4wZzxneZXqc2U3da6/C2PI="
+            deepthought.nix.settings.trusted-public-keys;
+          assert lib.elem "nfs-NixCache.automount" config.systemd.services.atticd.requires;
+          assert config.systemd.services ? opnsense-dns-cache;
           assert lib.all (mount: mount.what != "10.42.0.30:/Brian") config.systemd.mounts;
+          assert lib.any (mount: mount.what == "10.42.0.30:/NixCache") config.systemd.mounts;
           assert lib.any (mount: mount.what == "10.42.0.30:/Plex") config.systemd.mounts;
           assert lib.any (mount: mount.what == "10.42.0.30:/Torrents") config.systemd.mounts;
+          assert lib.any (mount: mount.what == "10.42.0.30:/Minecraft") config.systemd.mounts;
           assert !(config.disko.devices.zpool.zpool.datasets ? docker);
+          assert config.disko.devices.zpool.zpool.datasets ? "var/minecraft";
+          assert config.services.minecraft-servers.enable;
+          assert config.services.minecraft-servers.eula;
+          assert lib.all (path: !lib.hasSuffix ".jar" (toString path)) minecraftPackFiles;
+          assert !builtins.pathExists ./systems/bob/minecraft/pwppp/options.txt;
+          assert !builtins.pathExists ./systems/bob/minecraft/pwppp/servers.dat;
+          assert minecraft.enable;
+          assert minecraft.autoStart;
+          assert minecraft.serverProperties.server-ip == "127.0.0.11";
+          assert minecraft.serverProperties.server-port == 25566;
+          assert minecraft.serverProperties.online-mode;
+          assert minecraft.serverProperties.white-list;
+          assert minecraft.serverProperties.enforce-whitelist;
+          assert minecraft.serverProperties.enable-rcon;
+          assert minecraft.serverProperties."rcon.password" == "@RCON_PASSWORD@";
+          assert minecraftService.serviceConfig.MemoryMax == "6G";
+          assert minecraftService.serviceConfig.ProtectSystem == "strict";
+          assert lib.hasInfix "pwppp.4amlunch.net=127.0.0.11:25566" mcRouter.serviceConfig.ExecStart;
+          assert lib.hasInfix "127.0.0.1:18080/event" mcRouter.serviceConfig.ExecStart;
+          assert mcRouter.serviceConfig.DynamicUser;
+          assert mcRouter.serviceConfig.IPAddressDeny == "any";
+          assert lib.hasInfix "0.0.0.0:34934" svcRouter.serviceConfig.ExecStart;
+          assert lib.hasInfix "127.0.0.1:18080" svcRouter.serviceConfig.ExecStart;
+          assert svcRouter.serviceConfig.DynamicUser;
+          assert svcRouter.serviceConfig.IPAddressDeny == "any";
+          assert config.services.playit.enable;
+          assert config.services.playit.secretPath == config.sops.secrets.playit-secret.path;
+          assert lib.hasInfix "REPLACE_WITH_PLAYIT_SECRET"
+            config.systemd.services.playit.serviceConfig.ExecCondition;
+          assert config.services.nginx.virtualHosts ? "minecraft.4amlunch.net";
+          assert config.services.nginx.virtualHosts."minecraft.4amlunch.net".useACMEHost == "4amlunch.net";
+          assert config.services.sanoid.datasets ? "zpool/var/minecraft";
+          assert config.services.sanoid.datasets."zpool/var/minecraft".autosnap;
+          assert minecraftRestic.user == "minecraft-backup";
+          assert minecraftRestic.repository == "/nfs/Minecraft/restic-bob";
+          assert minecraftRestic.paths == [ "/var/lib/minecraft/.zfs/snapshot/restic" ];
+          assert lib.elem "nfs-Minecraft.mount" config.systemd.services.restic-backups-minecraft.requires;
           assert builtins.length config.swapDevices == 1;
           assert
             (builtins.head config.swapDevices).device

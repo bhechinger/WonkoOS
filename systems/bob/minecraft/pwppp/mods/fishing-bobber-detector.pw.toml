@@ -1,0 +1,13 @@
+name = "Create: Fishing Bobber Detector | Automatic Fishing with Create"
+filename = "bobberdetector-neoforge1.21.1-1.0.3.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "71b642ba5551839eb0fe33a88f0edaa77649f3a4"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 6616313
+project-id = 897858

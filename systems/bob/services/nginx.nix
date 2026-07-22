@@ -70,6 +70,15 @@ in
       "bob.4amlunch.net" = tls // {
         root = "/home/docker/reverse/html";
       };
+      "cache.4amlunch.net" = tls // {
+        locations."/" = {
+          proxyPass = "http://127.0.0.1:18081";
+          extraConfig = ''
+            client_max_body_size 0;
+            proxy_request_buffering off;
+          '';
+        };
+      };
       "hamburgerking.pt".root = "/home/docker/reverse/html/hbk";
       "jackett.4amlunch.net" = tls // {
         locations."/".proxyPass = "http://127.0.0.1:9117";

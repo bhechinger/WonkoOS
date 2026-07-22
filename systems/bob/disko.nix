@@ -59,6 +59,11 @@
           type = "zfs_fs";
           mountpoint = "/var";
         };
+        "var/minecraft" = {
+          type = "zfs_fs";
+          mountpoint = "/var/lib/minecraft";
+          options.snapdir = "visible";
+        };
         plex = {
           type = "zfs_fs";
           mountpoint = "/var/lib/plexmediaserver";
@@ -80,6 +85,7 @@
   # OpenZFS owns the native mountpoints; disko still creates them.
   fileSystems = {
     "/var".enable = false;
+    "/var/lib/minecraft".enable = false;
     "/var/lib/plexmediaserver".enable = false;
     "/home".enable = false;
     "/home/docker/pgsql".enable = false;

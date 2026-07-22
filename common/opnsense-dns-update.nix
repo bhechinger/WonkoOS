@@ -11,15 +11,19 @@ let
       export OPNSENSE_URL=https://sierra.4amlunch.net
       export OPNSENSE_NETRC=/run/secrets/opnsense-api-netrc
       export DNS_DOMAIN=4amlunch.net
-      export DNS_TYPE=A
+      export DNS_TYPE="''${DNS_TYPE:-A}"
       export DNS_DESCRIPTION="Managed by WonkoOS"
       ${builtins.readFile ../scripts/opnsense-dns-sync.sh}
     '';
   };
 in
-{ hostname, address }:
 {
-  description = "Update OPNsense DNS for ${hostname}.4amlunch.net";
+  hostname,
+  value,
+  recordType ? "A",
+}:
+{
+  description = "Update OPNsense ${recordType} DNS for ${hostname}.4amlunch.net";
   after = [
     "network-online.target"
     "sops-install-secrets.service"
@@ -34,8 +38,9 @@ in
     ExecStart = "${lib.getExe' pkgs.util-linux "flock"} --wait 30 /run/opnsense-dns-sync.lock ${lib.getExe sync} ${
       lib.escapeShellArgs [
         hostname
-        address
+        value
       ]
     }";
+    Environment = "DNS_TYPE=${recordType}";
   };
 }

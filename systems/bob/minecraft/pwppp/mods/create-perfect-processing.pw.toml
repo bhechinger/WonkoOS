@@ -1,0 +1,13 @@
+name = "Create: Perfect Processing"
+filename = "perfectprocessing-1.7.0.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "69d86648dc66cfc0d5e4099569952c631137eeea"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 8122766
+project-id = 1296864

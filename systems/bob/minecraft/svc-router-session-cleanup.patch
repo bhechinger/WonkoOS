@@ -1,0 +1,107 @@
+diff --git a/cmd/router/main.go b/cmd/router/main.go
+index b18de36..2bf9227 100644
+--- a/cmd/router/main.go
++++ b/cmd/router/main.go
+@@ -43,6 +43,7 @@ type Session struct {
+ 	BackendConn *net.UDPConn
+ 	BackendStr  string
+ 	LastActive  time.Time
++	PlayerID    uuid.UUID
+ }
+ 
+ // global state
+@@ -75,6 +76,18 @@ func transformBackendAddress(tcpAddress string) string {
+ 	return fmt.Sprintf("%s:%s", host, DefaultVoicePort)
+ }
+ 
++func closeSessionsForPlayer(playerID uuid.UUID) {
++	sessMu.Lock()
++	defer sessMu.Unlock()
++
++	for clientKey, session := range sessions {
++		if session.PlayerID == playerID {
++			session.BackendConn.Close()
++			delete(sessions, clientKey)
++		}
++	}
++}
++
+ // handle incoming webhook requests from mc-router
+ func handleWebhook(w http.ResponseWriter, r *http.Request) {
+ 	if r.Method != http.MethodPost {
+@@ -94,6 +107,7 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
+		log.Printf("[Webhook] Registered %s -> %s (Source: %s)", playerUUID, udpTarget, payload.Backend)
+	} else if payload.Event == "disconnect" {
+		delete(routes, playerUUID)
++		closeSessionsForPlayer(playerUUID)
+		log.Printf("[Webhook] Removed %s", playerUUID)
+	}
+
+@@ -218,6 +232,7 @@ func handlePacket(mainConn *net.UDPConn, clientAddr *net.UDPAddr, packet []byte,
+ 	// Known session. Just forward to its backend.
+ 	if exists {
+ 		session.LastActive = time.Now()
++		session.BackendConn.SetReadDeadline(time.Now().Add(2 * time.Minute))
+ 		_, err := session.BackendConn.Write(packet)
+ 		if err != nil {
+ 			log.Printf("Error forwarding to backend: %v", err)
+@@ -274,11 +289,13 @@ func handlePacket(mainConn *net.UDPConn, clientAddr *net.UDPAddr, packet []byte,
+ 		return
+ 	}
+ 
++	proxyConn.SetReadDeadline(time.Now().Add(2 * time.Minute))
+ 	// Store Session
+ 	newSession := &Session{
+ 		ClientAddr:  clientAddr,
+ 		BackendConn: proxyConn,
+ 		LastActive:  time.Now(),
++		PlayerID:    playerID,
+ 	}
+ 
+ 	sessMu.Lock()
+@@ -312,6 +329,7 @@ func handlePacket(mainConn *net.UDPConn, clientAddr *net.UDPAddr, packet []byte,
+ 				return
+ 			}
+ 
++			s.BackendConn.SetReadDeadline(time.Now().Add(2 * time.Minute))
+ 			// Send back to Client using the MAIN connection
+ 			// This ensures the client sees the response coming from port 24454
+ 			_, err = mainConn.WriteToUDP(buf[:n], s.ClientAddr)
+diff --git a/cmd/router/main_test.go b/cmd/router/main_test.go
+new file mode 100644
+index 0000000..c3c719b
+--- /dev/null
++++ b/cmd/router/main_test.go
+@@ -0,0 +1,32 @@
++package main
++
++import (
++	"net"
++	"testing"
++
++	"github.com/google/uuid"
++)
++
++func TestCloseSessionsForPlayer(t *testing.T) {
++	playerID := uuid.New()
++	conn, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.ParseIP("127.0.0.1")})
++	if err != nil {
++		t.Fatal(err)
++	}
++
++	sessions = map[string]*Session{
++		"client": {
++			BackendConn: conn,
++			PlayerID:    playerID,
++		},
++	}
++
++	closeSessionsForPlayer(playerID)
++
++	if len(sessions) != 0 {
++		t.Fatalf("session was not removed: %#v", sessions)
++	}
++	if err := conn.Close(); err == nil {
++		t.Fatal("session connection was not closed")
++	}
++}
