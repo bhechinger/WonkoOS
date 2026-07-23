@@ -16,6 +16,7 @@
     ./postfix.nix
     ./postgresql.nix
     ./protonmail-bridge.nix
+    ./restic.nix
     ./rtorrent.nix
     ./rutorrent.nix
     ./sonarr.nix

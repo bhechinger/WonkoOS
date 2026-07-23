@@ -21,6 +21,7 @@ let
     "minecraft"
     "paperless"
     "pwppp"
+    "restic"
     "rutorrent"
     "sonarr"
     "voice"

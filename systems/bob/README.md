@@ -116,10 +116,8 @@ generic anonymous account. NFS exports of the Paperless consume/export
 directories separately map the single authorized client (`10.42.0.10`) to the
 Paperless account with `all_squash`.
 
-Create the `Minecraft` share on Basket with Bob (`10.42.0.2`) as its only NFS
-client. Map it to a dedicated QNAP `minecraft-backup` user/group with access
-only to that share, then create the `restic-bob` directory. The local
-`minecraft-backup` service account writes only to that repository.
+The old `/nfs/Minecraft/restic-bob` repository remains mounted temporarily as
+a rollback source during the Backblaze migration. Nothing writes to it.
 
 Create the `NixCache` share on Basket with a 1 TiB quota and Bob
 as its only NFS client. Squash all users to a dedicated `nix-cache` QNAP
@@ -127,15 +125,29 @@ account. Attic is the sole NFS writer; other hosts publish through its HTTPS
 API. See the [cache runbook](../../docs/superpowers/plans/2026-07-10-harmonia-cache.md)
 for bootstrap and client setup.
 
-Minecraft state has two backup layers. Sanoid keeps 24 hourly, 14 daily, and 3
-monthly snapshots on Bob. Restic takes a consistent ZFS snapshot after an RCON
-`save-all flush`, backs it up to `/nfs/Minecraft/restic-bob` at 04:30 daily,
-and retains 7 daily, 4 weekly, and 6 monthly backups. Check or trigger it with:
+Bob serves an append-only Restic REST endpoint at
+`https://restic.4amlunch.net`, backed by the private
+`4amlunch-restic` Backblaze B2 bucket. The endpoint is available only through
+the private networks. Bob and Deepthought have isolated repositories; only
+Bob's weekly maintenance job has delete-capable B2 credentials.
+
+Bob service state is backed up from temporary ZFS snapshots at 03:30 daily.
+Minecraft keeps its two backup layers: Sanoid retains 24 hourly, 14 daily,
+and 3 monthly snapshots on Bob, while Restic takes a consistent ZFS snapshot
+after an RCON `save-all flush` and backs it up at 04:30 daily. Deepthought
+backs up its home dataset and a PostgreSQL logical dump at 02:30 daily. Weekly
+maintenance retains every snapshot from the last six months, prunes older
+data, and checks both repositories.
+
+Check or trigger the Bob jobs with:
 
 ```sh
-systemctl status sanoid.timer restic-backups-minecraft.timer
+systemctl status sanoid.timer restic-backups-bob-services.timer \
+  restic-backups-minecraft.timer restic-maintenance.timer
+sudo systemctl start restic-backups-bob-services.service
 sudo systemctl start restic-backups-minecraft.service
-journalctl -u restic-backups-minecraft.service
+journalctl -u restic-backups-bob-services.service \
+  -u restic-backups-minecraft.service
 ```
 
 The 1 GiB disk swap partition is retained and encrypted with a fresh random

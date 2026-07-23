@@ -786,8 +786,9 @@ in
     };
 
     restic.backups.minecraft = {
-      repository = "/nfs/Minecraft/restic-bob";
+      repository = "rest:https://restic.4amlunch.net/bob/";
       passwordFile = config.sops.secrets.minecraft-restic-password.path;
+      environmentFile = config.sops.templates.bob-restic-environment.path;
       initialize = true;
       paths = [
         "/var/lib/minecraft/pwppp/.zfs/snapshot/restic"
@@ -795,11 +796,7 @@ in
       ];
       backupPrepareCommand = lib.getExe prepareBackup;
       backupCleanupCommand = lib.getExe cleanupBackup;
-      pruneOpts = [
-        "--keep-daily 7"
-        "--keep-weekly 4"
-        "--keep-monthly 6"
-      ];
+      extraBackupArgs = [ "--one-file-system" ];
       timerConfig = {
         OnCalendar = "*-*-* 04:30:00";
         Persistent = true;
@@ -933,9 +930,7 @@ in
         after = [
           "minecraft-server-gigglesomething.service"
           "minecraft-server-pwppp.service"
-          "nfs-Minecraft.mount"
         ];
-        requires = [ "nfs-Minecraft.mount" ];
       };
 
       sanoid = {

@@ -235,6 +235,10 @@
             gigglesomething = config.services.minecraft-servers.servers.gigglesomething;
             gigglesomethingPackFiles = lib.filesystem.listFilesRecursive ./systems/bob/minecraft/gigglesomething;
             minecraftRestic = config.services.restic.backups.minecraft;
+            bobServicesRestic = config.services.restic.backups.bob-services;
+            deepthoughtRestic = deepthought.services.restic.backups.deepthought;
+            resticGateway = config.systemd.services.restic-gateway;
+            resticMaintenance = config.systemd.services.restic-maintenance;
             minecraftSanoid = config.services.sanoid.datasets."zpool/var/minecraft";
             minecraftSanoidService = config.systemd.services.sanoid;
             minecraftService = config.systemd.services.minecraft-server-pwppp;
@@ -441,6 +445,14 @@
           assert config.sops.secrets.rutorrent-htpasswd.mode == "0440";
           assert config.sops.secrets.minecraft-rcon-password.mode == "0400";
           assert config.sops.secrets.minecraft-restic-password.mode == "0400";
+          assert config.sops.secrets.restic-b2-application-key-id.mode == "0400";
+          assert config.sops.secrets.restic-b2-application-key.mode == "0400";
+          assert config.sops.secrets.bob-restic-http-password.mode == "0400";
+          assert config.sops.secrets.bob-restic-http-password-hash.mode == "0400";
+          assert config.sops.secrets.deepthought-restic-http-password-hash.mode == "0400";
+          assert config.sops.secrets.deepthought-restic-repository-password.mode == "0400";
+          assert deepthought.sops.secrets.restic-http-password.mode == "0400";
+          assert deepthought.sops.secrets.restic-repository-password.mode == "0400";
           assert config.sops.secrets.playit-secret.mode == "0400";
           assert config.sops.secrets.atticd-environment.mode == "0400";
           assert config.sops.secrets.grafana-admin-password.mode == "0400";
@@ -501,6 +513,17 @@
           assert
             config.services.nginx.virtualHosts."cache.4amlunch.net".locations."/".proxyPass
             == "http://127.0.0.1:18081";
+          assert config.services.nginx.virtualHosts ? "restic.4amlunch.net";
+          assert
+            config.services.nginx.virtualHosts."restic.4amlunch.net".locations."/".proxyPass
+            == "http://127.0.0.1:18082";
+          assert resticGateway.serviceConfig.DynamicUser;
+          assert resticGateway.serviceConfig.ProtectSystem == "strict";
+          assert lib.hasInfix "--append-only" resticGateway.serviceConfig.ExecStart;
+          assert lib.hasInfix "--private-repos" resticGateway.serviceConfig.ExecStart;
+          assert lib.hasInfix "b2:4amlunch-restic/restic" resticGateway.serviceConfig.ExecStart;
+          assert resticMaintenance.serviceConfig.DynamicUser;
+          assert config.systemd.timers.restic-maintenance.timerConfig.OnCalendar == "Sun *-*-* 12:00:00";
           assert attic.enable;
           assert attic.settings.listen == "127.0.0.1:18081";
           assert attic.settings.allowed-hosts == [ "cache.4amlunch.net" ];
@@ -610,13 +633,35 @@
           assert minecraftSanoid.recursive == "zfs";
           assert lib.elem "minecraft" minecraftSanoidService.serviceConfig.SupplementaryGroups;
           assert minecraftRestic.user == "root";
-          assert minecraftRestic.repository == "/nfs/Minecraft/restic-bob";
+          assert minecraftRestic.repository == "rest:https://restic.4amlunch.net/bob/";
+          assert minecraftRestic.environmentFile == config.sops.templates.bob-restic-environment.path;
+          assert minecraftRestic.pruneOpts == [ ];
           assert
             minecraftRestic.paths == [
               "/var/lib/minecraft/pwppp/.zfs/snapshot/restic"
               "/var/lib/minecraft/gigglesomething/.zfs/snapshot/restic"
             ];
-          assert lib.elem "nfs-Minecraft.mount" config.systemd.services.restic-backups-minecraft.requires;
+          assert bobServicesRestic.repository == "rest:https://restic.4amlunch.net/bob/";
+          assert bobServicesRestic.passwordFile == config.sops.secrets.minecraft-restic-password.path;
+          assert bobServicesRestic.pruneOpts == [ ];
+          assert
+            bobServicesRestic.paths == [
+              "/var/.zfs/snapshot/restic-services"
+              "/var/lib/jackett/.zfs/snapshot/restic-services"
+              "/var/lib/paperless/.zfs/snapshot/restic-services"
+              "/var/lib/plexmediaserver/.zfs/snapshot/restic-services"
+              "/var/lib/postgresql/.zfs/snapshot/restic-services"
+              "/var/lib/redis-paperless/.zfs/snapshot/restic-services"
+              "/var/www/.zfs/snapshot/restic-services"
+            ];
+          assert !lib.elem "nfs-Minecraft.mount" config.systemd.services.restic-backups-minecraft.requires;
+          assert deepthoughtRestic.repository == "rest:https://restic.4amlunch.net/deepthought/";
+          assert deepthoughtRestic.pruneOpts == [ ];
+          assert
+            deepthoughtRestic.paths == [
+              "/home/.zfs/snapshot/restic-deepthought/wonko"
+              "/run/restic-deepthought/postgresql.sql"
+            ];
           assert builtins.length config.swapDevices == 1;
           assert
             (builtins.head config.swapDevices).device

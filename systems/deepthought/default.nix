@@ -20,6 +20,7 @@
     ./hardware.nix
     ./desktop.nix
     ./postgresql.nix
+    ./restic.nix
     ./atuin.nix
     ./audio.nix
   ];
