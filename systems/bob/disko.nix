@@ -72,6 +72,14 @@
           mountpoint = "/var/lib/minecraft";
           options.snapdir = "visible";
         };
+        "var/minecraft/pwppp" = {
+          type = "zfs_fs";
+          mountpoint = "/var/lib/minecraft/pwppp";
+        };
+        "var/minecraft/gigglesomething" = {
+          type = "zfs_fs";
+          mountpoint = "/var/lib/minecraft/gigglesomething";
+        };
         plex = {
           type = "zfs_fs";
           mountpoint = "/var/lib/plexmediaserver";
@@ -103,6 +111,8 @@
     "/var".enable = false;
     "/var/lib/jackett".enable = false;
     "/var/lib/minecraft".enable = false;
+    "/var/lib/minecraft/pwppp".enable = false;
+    "/var/lib/minecraft/gigglesomething".enable = false;
     "/var/lib/paperless".enable = false;
     "/var/lib/plexmediaserver".enable = false;
     "/var/lib/postgresql".enable = false;

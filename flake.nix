@@ -235,6 +235,8 @@
             gigglesomething = config.services.minecraft-servers.servers.gigglesomething;
             gigglesomethingPackFiles = lib.filesystem.listFilesRecursive ./systems/bob/minecraft/gigglesomething;
             minecraftRestic = config.services.restic.backups.minecraft;
+            minecraftSanoid = config.services.sanoid.datasets."zpool/var/minecraft";
+            minecraftSanoidService = config.systemd.services.sanoid;
             minecraftService = config.systemd.services.minecraft-server-pwppp;
             minecraftWhitelist = config.systemd.services.minecraft-whitelist-pwppp;
             gigglesomethingService = config.systemd.services.minecraft-server-gigglesomething;
@@ -437,7 +439,7 @@
           assert config.sops.secrets.paperless-environment.mode == "0400";
           assert config.sops.secrets.rutorrent-htpasswd.mode == "0440";
           assert config.sops.secrets.minecraft-rcon-password.mode == "0400";
-          assert config.sops.secrets.minecraft-restic-password.mode == "0440";
+          assert config.sops.secrets.minecraft-restic-password.mode == "0400";
           assert config.sops.secrets.playit-secret.mode == "0400";
           assert config.sops.secrets.atticd-environment.mode == "0400";
           assert config.sops.secrets.grafana-admin-password.mode == "0400";
@@ -520,6 +522,9 @@
           assert bobDatasets.redis.mountpoint == "/var/lib/redis-paperless";
           assert bobDatasets.www.mountpoint == "/var/www";
           assert bobDatasets ? "var/minecraft";
+          assert bobDatasets."var/minecraft/pwppp".mountpoint == "/var/lib/minecraft/pwppp";
+          assert
+            bobDatasets."var/minecraft/gigglesomething".mountpoint == "/var/lib/minecraft/gigglesomething";
           assert config.services.minecraft-servers.enable;
           assert config.services.minecraft-servers.eula;
           assert lib.all (path: !lib.hasSuffix ".jar" (toString path)) minecraftPackFiles;
@@ -533,6 +538,7 @@
           assert minecraft.autoStart;
           assert minecraft.serverProperties.server-ip == "127.0.0.11";
           assert minecraft.serverProperties.server-port == 25566;
+          assert minecraft.serverProperties.motd == "A NEOFORGE server on 1.21.1\\nrunning pwppp 1.1.7";
           assert minecraft.serverProperties.online-mode;
           assert minecraft.serverProperties.white-list;
           assert minecraft.serverProperties.enforce-whitelist;
@@ -553,6 +559,8 @@
           assert gigglesomething.autoStart;
           assert gigglesomething.serverProperties.server-ip == "127.0.0.12";
           assert gigglesomething.serverProperties.server-port == 25567;
+          assert
+            gigglesomething.serverProperties.motd == "A FORGE server on 1.20.1\\nrunning gigglesomething 1.0.1";
           assert gigglesomething.serverProperties.online-mode;
           assert gigglesomething.serverProperties.white-list;
           assert gigglesomething.serverProperties.enforce-whitelist;
@@ -593,9 +601,15 @@
           assert config.services.nginx.virtualHosts."minecraft.4amlunch.net".useACMEHost == "4amlunch.net";
           assert config.services.sanoid.datasets ? "zpool/var/minecraft";
           assert config.services.sanoid.datasets."zpool/var/minecraft".autosnap;
-          assert minecraftRestic.user == "minecraft-backup";
+          assert minecraftSanoid.recursive == "zfs";
+          assert lib.elem "minecraft" minecraftSanoidService.serviceConfig.SupplementaryGroups;
+          assert minecraftRestic.user == "root";
           assert minecraftRestic.repository == "/nfs/Minecraft/restic-bob";
-          assert minecraftRestic.paths == [ "/var/lib/minecraft/.zfs/snapshot/restic" ];
+          assert
+            minecraftRestic.paths == [
+              "/var/lib/minecraft/pwppp/.zfs/snapshot/restic"
+              "/var/lib/minecraft/gigglesomething/.zfs/snapshot/restic"
+            ];
           assert lib.elem "nfs-Minecraft.mount" config.systemd.services.restic-backups-minecraft.requires;
           assert builtins.length config.swapDevices == 1;
           assert

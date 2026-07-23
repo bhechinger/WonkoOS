@@ -622,17 +622,17 @@ let
     name = "minecraft-prepare-backup";
     runtimeInputs = [ pkgs.zfs ];
     text = ''
-      zfs destroy zpool/var/minecraft@restic 2>/dev/null || true
+      zfs destroy -r zpool/var/minecraft@restic 2>/dev/null || true
       trap '${lib.getExe saveOn}' EXIT
       ${lib.getExe saveOff}
-      zfs snapshot zpool/var/minecraft@restic
+      zfs snapshot -r zpool/var/minecraft@restic
     '';
   };
   cleanupBackup = pkgs.writeShellApplication {
     name = "minecraft-cleanup-backup";
     runtimeInputs = [ pkgs.zfs ];
     text = ''
-      zfs destroy zpool/var/minecraft@restic 2>/dev/null || true
+      zfs destroy -r zpool/var/minecraft@restic 2>/dev/null || true
     '';
   };
 in
@@ -667,9 +667,7 @@ in
         sopsFile = ../secrets/minecraft.sops;
         format = "yaml";
         key = "restic-password";
-        owner = "minecraft-backup";
-        group = "minecraft-backup";
-        mode = "0440";
+        mode = "0400";
       };
       playit-secret = {
         sopsFile = ../secrets/playit.toml.sops;
@@ -714,7 +712,7 @@ in
         serverProperties = {
           server-ip = "127.0.0.11";
           server-port = 25566;
-          motd = "pwppp";
+          motd = "A NEOFORGE server on ${pack.versions.minecraft}\\nrunning ${pack.name} ${pack.version}";
           max-players = 20;
           online-mode = true;
           white-list = true;
@@ -737,7 +735,7 @@ in
         serverProperties = {
           server-ip = "127.0.0.12";
           server-port = 25567;
-          motd = "gigglesomething";
+          motd = "A FORGE server on ${gigglesomethingPack.versions.minecraft}\\nrunning ${gigglesomethingPack.name} ${gigglesomethingPack.version}";
           max-players = 20;
           online-mode = true;
           white-list = true;
@@ -775,6 +773,7 @@ in
       datasets."zpool/var/minecraft" = {
         autosnap = true;
         autoprune = true;
+        recursive = "zfs";
         hourly = 24;
         daily = 14;
         monthly = 3;
@@ -787,11 +786,13 @@ in
     };
 
     restic.backups.minecraft = {
-      user = "minecraft-backup";
       repository = "/nfs/Minecraft/restic-bob";
       passwordFile = config.sops.secrets.minecraft-restic-password.path;
       initialize = true;
-      paths = [ "/var/lib/minecraft/.zfs/snapshot/restic" ];
+      paths = [
+        "/var/lib/minecraft/pwppp/.zfs/snapshot/restic"
+        "/var/lib/minecraft/gigglesomething/.zfs/snapshot/restic"
+      ];
       backupPrepareCommand = lib.getExe prepareBackup;
       backupCleanupCommand = lib.getExe cleanupBackup;
       pruneOpts = [
@@ -808,15 +809,7 @@ in
   };
 
   users = {
-    users = {
-      wonko.extraGroups = [ "minecraft" ];
-      minecraft-backup = {
-        isSystemUser = true;
-        group = "minecraft-backup";
-        extraGroups = [ "minecraft" ];
-      };
-    };
-    groups.minecraft-backup = { };
+    users.wonko.extraGroups = [ "minecraft" ];
   };
 
   networking.firewall.interfaces.internal = {
@@ -936,28 +929,13 @@ in
         };
       };
 
-      minecraft-zfs-delegation = {
-        description = "Delegate Minecraft backup snapshots";
-        after = [ "zfs-mount.service" ];
-        wantedBy = [ "multi-user.target" ];
-        serviceConfig = {
-          Type = "oneshot";
-          RemainAfterExit = true;
-          ExecStart = "${lib.getExe' pkgs.zfs "zfs"} allow minecraft-backup snapshot,destroy zpool/var/minecraft";
-        };
-      };
-
       restic-backups-minecraft = {
         after = [
           "minecraft-server-gigglesomething.service"
           "minecraft-server-pwppp.service"
-          "minecraft-zfs-delegation.service"
           "nfs-Minecraft.mount"
         ];
-        requires = [
-          "minecraft-zfs-delegation.service"
-          "nfs-Minecraft.mount"
-        ];
+        requires = [ "nfs-Minecraft.mount" ];
       };
 
       sanoid = {
@@ -967,6 +945,7 @@ in
           "sops-install-secrets.service"
         ];
         requires = [ "sops-install-secrets.service" ];
+        serviceConfig.SupplementaryGroups = [ "minecraft" ];
       };
     };
   };
