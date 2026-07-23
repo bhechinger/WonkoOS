@@ -116,8 +116,10 @@ generic anonymous account. NFS exports of the Paperless consume/export
 directories separately map the single authorized client (`10.42.0.10`) to the
 Paperless account with `all_squash`.
 
-The old `/nfs/Minecraft/restic-bob` repository remains mounted temporarily as
-a rollback source during the Backblaze migration. Nothing writes to it.
+Bob's Restic server stores the primary `bob` and `deepthought` repositories
+under `/nfs/Minecraft/restic`. Clients use HTTPS and do not mount or know the
+NFS storage path. Normal Restic commands and restores therefore use Bob's
+NFS-backed endpoint.
 
 Create the `NixCache` share on Basket with a 1 TiB quota and Bob
 as its only NFS client. Squash all users to a dedicated `nix-cache` QNAP
@@ -125,11 +127,14 @@ account. Attic is the sole NFS writer; other hosts publish through its HTTPS
 API. See the [cache runbook](../../docs/superpowers/plans/2026-07-10-harmonia-cache.md)
 for bootstrap and client setup.
 
-Bob serves an append-only Restic REST endpoint at
-`https://restic.4amlunch.net`, backed by the private
-`4amlunch-restic` Backblaze B2 bucket. The endpoint is available only through
-the private networks. Bob and Deepthought have isolated repositories; only
-Bob's weekly maintenance job has delete-capable B2 credentials.
+Bob serves the NFS primary through the append-only endpoint at
+`https://restic.4amlunch.net`. Bob copies missing snapshots to the private
+`4amlunch-restic` Backblaze B2 bucket after the daily backups. The separate
+append-only endpoint at `https://restic-b2.4amlunch.net` exposes that mirror
+for disaster recovery. Both endpoints are available only through the private
+networks. Bob and Deepthought have isolated repositories; only Bob's weekly
+maintenance job has delete-capable B2 credentials. If NFS is unavailable, use
+`sudo restic-bob-b2` on Bob or `sudo restic-deepthought-b2` on Deepthought.
 
 Bob service state is backed up from temporary ZFS snapshots at 03:30 daily.
 Minecraft keeps its two backup layers: Sanoid retains 24 hourly, 14 daily,
@@ -137,17 +142,19 @@ and 3 monthly snapshots on Bob, while Restic takes a consistent ZFS snapshot
 after an RCON `save-all flush` and backs it up at 04:30 daily. Deepthought
 backs up its home dataset and a PostgreSQL logical dump at 02:30 daily. Weekly
 maintenance retains every snapshot from the last six months, prunes older
-data, and checks both repositories.
+data, and checks the NFS and B2 repositories.
 
 Check or trigger the Bob jobs with:
 
 ```sh
 systemctl status sanoid.timer restic-backups-bob-services.timer \
-  restic-backups-minecraft.timer restic-maintenance.timer
+  restic-backups-minecraft.timer restic-maintenance-nfs.timer \
+  restic-copy-bob.timer restic-copy-deepthought.timer \
+  restic-maintenance.timer
 sudo systemctl start restic-backups-bob-services.service
 sudo systemctl start restic-backups-minecraft.service
 journalctl -u restic-backups-bob-services.service \
-  -u restic-backups-minecraft.service
+  -u restic-backups-minecraft.service -u restic-copy-bob.service
 ```
 
 The 1 GiB disk swap partition is retained and encrypted with a fresh random

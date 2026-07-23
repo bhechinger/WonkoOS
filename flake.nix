@@ -238,6 +238,9 @@
             bobServicesRestic = config.services.restic.backups.bob-services;
             deepthoughtRestic = deepthought.services.restic.backups.deepthought;
             resticGateway = config.systemd.services.restic-gateway;
+            resticB2Gateway = config.systemd.services.restic-b2-gateway;
+            resticCopyBob = config.systemd.services.restic-copy-bob;
+            resticCopyDeepthought = config.systemd.services.restic-copy-deepthought;
             resticMaintenance = config.systemd.services.restic-maintenance;
             minecraftSanoid = config.services.sanoid.datasets."zpool/var/minecraft";
             minecraftSanoidService = config.systemd.services.sanoid;
@@ -519,10 +522,21 @@
             == "http://127.0.0.1:18082";
           assert resticGateway.serviceConfig.DynamicUser;
           assert resticGateway.serviceConfig.ProtectSystem == "strict";
+          assert resticGateway.serviceConfig.UMask == "0077";
           assert lib.hasInfix "--append-only" resticGateway.serviceConfig.ExecStart;
           assert lib.hasInfix "--private-repos" resticGateway.serviceConfig.ExecStart;
-          assert lib.hasInfix "b2:4amlunch-restic/restic" resticGateway.serviceConfig.ExecStart;
+          assert lib.hasInfix "/nfs/Minecraft/restic" resticGateway.serviceConfig.ExecStart;
+          assert config.services.nginx.virtualHosts ? "restic-b2.4amlunch.net";
+          assert
+            config.services.nginx.virtualHosts."restic-b2.4amlunch.net".locations."/".proxyPass
+            == "http://127.0.0.1:18083";
+          assert resticB2Gateway.serviceConfig.DynamicUser;
+          assert lib.hasInfix "--append-only" resticB2Gateway.serviceConfig.ExecStart;
+          assert lib.hasInfix "b2:4amlunch-restic/restic" resticB2Gateway.serviceConfig.ExecStart;
           assert resticMaintenance.serviceConfig.DynamicUser;
+          assert lib.elem "/nfs/Minecraft/restic/bob" resticCopyBob.serviceConfig.ReadWritePaths;
+          assert lib.elem "/nfs/Minecraft/restic/deepthought"
+            resticCopyDeepthought.serviceConfig.ReadWritePaths;
           assert config.systemd.timers.restic-maintenance.timerConfig.OnCalendar == "Sun *-*-* 12:00:00";
           assert attic.enable;
           assert attic.settings.listen == "127.0.0.1:18081";
@@ -635,6 +649,11 @@
           assert minecraftRestic.user == "root";
           assert minecraftRestic.repository == "rest:https://restic.4amlunch.net/bob/";
           assert minecraftRestic.environmentFile == config.sops.templates.bob-restic-environment.path;
+          assert
+            minecraftRestic.extraBackupArgs == [
+              "--option"
+              "rest.connections=20"
+            ];
           assert minecraftRestic.pruneOpts == [ ];
           assert
             minecraftRestic.paths == [
@@ -643,6 +662,7 @@
             ];
           assert bobServicesRestic.repository == "rest:https://restic.4amlunch.net/bob/";
           assert bobServicesRestic.passwordFile == config.sops.secrets.minecraft-restic-password.path;
+          assert bobServicesRestic.environmentFile == config.sops.templates.bob-restic-environment.path;
           assert bobServicesRestic.pruneOpts == [ ];
           assert
             bobServicesRestic.paths == [
@@ -654,9 +674,12 @@
               "/var/lib/redis-paperless/.zfs/snapshot/restic-services"
               "/var/www/.zfs/snapshot/restic-services"
             ];
+          assert lib.elem "restic-gateway.service" config.systemd.services.restic-backups-minecraft.requires;
           assert !lib.elem "nfs-Minecraft.mount" config.systemd.services.restic-backups-minecraft.requires;
           assert deepthoughtRestic.repository == "rest:https://restic.4amlunch.net/deepthought/";
+          assert deepthoughtRestic.environmentFile == deepthought.sops.templates.restic-environment.path;
           assert deepthoughtRestic.pruneOpts == [ ];
+          assert !builtins.hasAttr "restic-copy-deepthought" deepthought.systemd.services;
           assert
             deepthoughtRestic.paths == [
               "/home/.zfs/snapshot/restic-deepthought/wonko"

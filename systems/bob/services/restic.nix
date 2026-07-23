@@ -7,6 +7,10 @@
 
 let
   repository = "rest:https://restic.4amlunch.net/bob/";
+  b2Repository = "rest:https://restic-b2.4amlunch.net/bob/";
+  nfsRoot = "/nfs/Minecraft/restic";
+  bobNfsRepository = "${nfsRoot}/bob";
+  deepthoughtNfsRepository = "${nfsRoot}/deepthought";
   datasets = [
     "zpool/var"
     "zpool/jackett"
@@ -48,6 +52,7 @@ let
     RestrictRealtime = true;
     RestrictSUIDSGID = true;
   };
+  rootHardening = builtins.removeAttrs hardening [ "DynamicUser" ];
   cleanup = pkgs.writeShellApplication {
     name = "bob-restic-cleanup";
     runtimeInputs = [ pkgs.zfs ];
@@ -68,7 +73,7 @@ let
     '';
   };
   maintenance = pkgs.writeShellApplication {
-    name = "restic-maintenance";
+    name = "restic-b2-maintenance";
     runtimeInputs = [
       pkgs.rclone
       pkgs.restic
@@ -89,8 +94,90 @@ let
       maintain deepthought "$credential_directory/deepthought-password"
     '';
   };
+  nfsMaintenance = pkgs.writeShellApplication {
+    name = "restic-nfs-maintenance";
+    runtimeInputs = [ pkgs.restic ];
+    text = ''
+      credential_directory="$1"
+
+      maintain() {
+        repository="${nfsRoot}/$1"
+        password_file="$2"
+        restic --repo "$repository" --password-file "$password_file" unlock
+        restic --repo "$repository" --password-file "$password_file" forget --prune --keep-within 6m
+        restic --repo "$repository" --password-file "$password_file" check
+      }
+
+      maintain bob "$credential_directory/bob-password"
+      maintain deepthought "$credential_directory/deepthought-password"
+    '';
+  };
+  mirror = pkgs.writeShellApplication {
+    name = "restic-mirror";
+    runtimeInputs = [
+      pkgs.jq
+      pkgs.rclone
+      pkgs.restic
+    ];
+    text = ''
+      rclone_config="$1"
+      repository_password_file="$2"
+      source_repository="$3"
+      destination_repository="$4"
+
+      export RCLONE_CONFIG="$rclone_config"
+
+      destination() {
+        restic \
+          --repo "$destination_repository" \
+          --password-file "$repository_password_file" \
+          --option rclone.connections=20 \
+          --retry-lock 5m \
+          "$@"
+      }
+
+      if ! destination cat config >/dev/null 2>&1; then
+        destination init \
+          --copy-chunker-params \
+          --from-repo "$source_repository" \
+          --from-password-file "$repository_password_file"
+      fi
+
+      source_chunker="$(
+        restic \
+          --repo "$source_repository" \
+          --password-file "$repository_password_file" \
+          cat config |
+          jq -r .chunker_polynomial
+      )"
+      destination_chunker="$(destination cat config | jq -r .chunker_polynomial)"
+      if [[ "$source_chunker" != "$destination_chunker" ]]; then
+        echo "source and destination Restic chunker parameters differ" >&2
+        exit 1
+      fi
+
+      destination copy \
+        --from-repo "$source_repository" \
+        --from-password-file "$repository_password_file"
+    '';
+  };
+  b2Client = pkgs.writeShellApplication {
+    name = "restic-bob-b2";
+    runtimeInputs = [ pkgs.restic ];
+    text = ''
+      RESTIC_REST_USERNAME=bob
+      RESTIC_REST_PASSWORD="$(<${config.sops.secrets.bob-restic-http-password.path})"
+      export RESTIC_REST_USERNAME RESTIC_REST_PASSWORD
+      exec restic \
+        --repo ${lib.escapeShellArg b2Repository} \
+        --password-file ${config.sops.secrets.minecraft-restic-password.path} \
+        "$@"
+    '';
+  };
 in
 {
+  environment.systemPackages = [ b2Client ];
+
   sops = {
     secrets = {
       restic-b2-application-key-id = {
@@ -139,7 +226,7 @@ in
           key = ${config.sops.placeholder.restic-b2-application-key}
         '';
         mode = "0400";
-        restartUnits = [ "restic-gateway.service" ];
+        restartUnits = [ "restic-b2-gateway.service" ];
       };
       restic-htpasswd = {
         content = ''
@@ -147,7 +234,10 @@ in
           deepthought:${config.sops.placeholder.deepthought-restic-http-password-hash}
         '';
         mode = "0400";
-        restartUnits = [ "restic-gateway.service" ];
+        restartUnits = [
+          "restic-b2-gateway.service"
+          "restic-gateway.service"
+        ];
       };
       bob-restic-environment = {
         content = ''
@@ -178,11 +268,33 @@ in
       };
     };
 
+    nginx.virtualHosts."restic-b2.4amlunch.net" = {
+      onlySSL = true;
+      useACMEHost = "4amlunch.net";
+      extraConfig = ''
+        add_header Strict-Transport-Security "max-age=31536000" always;
+      '';
+      locations."/" = {
+        proxyPass = "http://127.0.0.1:18083";
+        extraConfig = ''
+          client_max_body_size 0;
+          proxy_buffering off;
+          proxy_request_buffering off;
+          proxy_read_timeout 3600s;
+          proxy_send_timeout 3600s;
+        '';
+      };
+    };
+
     restic.backups.bob-services = {
       inherit repository;
       passwordFile = config.sops.secrets.minecraft-restic-password.path;
       environmentFile = config.sops.templates.bob-restic-environment.path;
       initialize = true;
+      extraBackupArgs = [
+        "--option"
+        "rest.connections=20"
+      ];
       paths = snapshots;
       exclude = [
         "/var/.zfs/snapshot/restic-services/cache"
@@ -207,7 +319,28 @@ in
   systemd = {
     services = {
       restic-gateway = {
-        description = "Append-only Restic gateway to Backblaze B2";
+        description = "Append-only Restic gateway to the NFS primary";
+        wantedBy = [ "multi-user.target" ];
+        after = [
+          "nfs-Minecraft.mount"
+          "sops-install-secrets.service"
+        ];
+        requires = [
+          "nfs-Minecraft.mount"
+          "sops-install-secrets.service"
+        ];
+        serviceConfig = hardening // {
+          ExecStart = "${lib.getExe pkgs.rclone} serve restic --addr 127.0.0.1:18082 --append-only --private-repos --htpasswd %d/htpasswd --server-read-timeout 1h --server-write-timeout 1h ${nfsRoot}";
+          LoadCredential = [ "htpasswd:${config.sops.templates.restic-htpasswd.path}" ];
+          ReadWritePaths = [ nfsRoot ];
+          Restart = "on-failure";
+          RestartSec = "5s";
+          UMask = "0077";
+        };
+      };
+
+      restic-b2-gateway = {
+        description = "Append-only Restic disaster-recovery gateway to Backblaze B2";
         wantedBy = [ "multi-user.target" ];
         after = [
           "network-online.target"
@@ -216,7 +349,7 @@ in
         wants = [ "network-online.target" ];
         requires = [ "sops-install-secrets.service" ];
         serviceConfig = hardening // {
-          ExecStart = "${lib.getExe pkgs.rclone} --config %d/rclone.conf serve restic --addr 127.0.0.1:18082 --append-only --private-repos --htpasswd %d/htpasswd --server-read-timeout 1h --server-write-timeout 1h b2:4amlunch-restic/restic";
+          ExecStart = "${lib.getExe pkgs.rclone} --config %d/rclone.conf serve restic --addr 127.0.0.1:18083 --append-only --private-repos --htpasswd %d/htpasswd --server-read-timeout 1h --server-write-timeout 1h b2:4amlunch-restic/restic";
           LoadCredential = [
             "rclone.conf:${config.sops.templates.restic-rclone.path}"
             "htpasswd:${config.sops.templates.restic-htpasswd.path}"
@@ -244,6 +377,85 @@ in
           CacheDirectory = "restic-maintenance";
           CacheDirectoryMode = "0700";
           Environment = "RESTIC_CACHE_DIR=/var/cache/restic-maintenance";
+          Type = "oneshot";
+        };
+      };
+
+      restic-maintenance-nfs = {
+        description = "Prune and check the Restic repositories on NFS";
+        after = [
+          "nfs-Minecraft.mount"
+          "sops-install-secrets.service"
+        ];
+        requires = [
+          "nfs-Minecraft.mount"
+          "sops-install-secrets.service"
+        ];
+        serviceConfig = rootHardening // {
+          ExecStart = "${lib.getExe nfsMaintenance} %d";
+          LoadCredential = [
+            "bob-password:${config.sops.secrets.minecraft-restic-password.path}"
+            "deepthought-password:${config.sops.secrets.deepthought-restic-repository-password.path}"
+          ];
+          CacheDirectory = "restic-maintenance-nfs";
+          CacheDirectoryMode = "0700";
+          Environment = "RESTIC_CACHE_DIR=/var/cache/restic-maintenance-nfs";
+          ReadWritePaths = [
+            "-${bobNfsRepository}"
+            "-${deepthoughtNfsRepository}"
+          ];
+          Type = "oneshot";
+        };
+      };
+
+      restic-copy-bob = {
+        description = "Mirror Bob's NFS Restic snapshots to Backblaze B2";
+        after = [
+          "network-online.target"
+          "nfs-Minecraft.mount"
+          "sops-install-secrets.service"
+        ];
+        wants = [ "network-online.target" ];
+        requires = [
+          "nfs-Minecraft.mount"
+          "sops-install-secrets.service"
+        ];
+        serviceConfig = rootHardening // {
+          ExecStart = "${lib.getExe mirror} %d/rclone.conf %d/repository-password ${bobNfsRepository} rclone:b2:4amlunch-restic/restic/bob";
+          LoadCredential = [
+            "rclone.conf:${config.sops.templates.restic-rclone.path}"
+            "repository-password:${config.sops.secrets.minecraft-restic-password.path}"
+          ];
+          CacheDirectory = "restic-copy-bob";
+          CacheDirectoryMode = "0700";
+          Environment = "RESTIC_CACHE_DIR=/var/cache/restic-copy-bob";
+          ReadWritePaths = [ bobNfsRepository ];
+          Type = "oneshot";
+        };
+      };
+
+      restic-copy-deepthought = {
+        description = "Mirror Deepthought's NFS Restic snapshots to Backblaze B2";
+        after = [
+          "network-online.target"
+          "nfs-Minecraft.mount"
+          "sops-install-secrets.service"
+        ];
+        wants = [ "network-online.target" ];
+        requires = [
+          "nfs-Minecraft.mount"
+          "sops-install-secrets.service"
+        ];
+        serviceConfig = rootHardening // {
+          ExecStart = "${lib.getExe mirror} %d/rclone.conf %d/repository-password ${deepthoughtNfsRepository} rclone:b2:4amlunch-restic/restic/deepthought";
+          LoadCredential = [
+            "rclone.conf:${config.sops.templates.restic-rclone.path}"
+            "repository-password:${config.sops.secrets.deepthought-restic-repository-password.path}"
+          ];
+          CacheDirectory = "restic-copy-deepthought";
+          CacheDirectoryMode = "0700";
+          Environment = "RESTIC_CACHE_DIR=/var/cache/restic-copy-deepthought";
+          ReadWritePaths = [ deepthoughtNfsRepository ];
           Type = "oneshot";
         };
       };
@@ -279,6 +491,39 @@ in
         Persistent = true;
         RandomizedDelaySec = "15m";
         Unit = "restic-maintenance.service";
+      };
+    };
+
+    timers.restic-maintenance-nfs = {
+      description = "Weekly NFS Restic repository maintenance";
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnCalendar = "Sun *-*-* 10:00:00";
+        Persistent = true;
+        RandomizedDelaySec = "15m";
+        Unit = "restic-maintenance-nfs.service";
+      };
+    };
+
+    timers.restic-copy-bob = {
+      description = "Daily Bob Restic mirror to Backblaze B2";
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnCalendar = "*-*-* 05:30:00";
+        Persistent = true;
+        RandomizedDelaySec = "15m";
+        Unit = "restic-copy-bob.service";
+      };
+    };
+
+    timers.restic-copy-deepthought = {
+      description = "Daily Deepthought Restic mirror to Backblaze B2";
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnCalendar = "*-*-* 06:00:00";
+        Persistent = true;
+        RandomizedDelaySec = "15m";
+        Unit = "restic-copy-deepthought.service";
       };
     };
   };

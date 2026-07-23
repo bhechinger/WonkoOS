@@ -22,6 +22,7 @@ let
     "paperless"
     "pwppp"
     "restic"
+    "restic-b2"
     "rutorrent"
     "sonarr"
     "voice"

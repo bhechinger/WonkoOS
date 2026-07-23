@@ -6,6 +6,8 @@
 }:
 
 let
+  repository = "rest:https://restic.4amlunch.net/deepthought/";
+  b2Repository = "rest:https://restic-b2.4amlunch.net/deepthought/";
   snapshot = "tank/home@restic-deepthought";
   dump = "/run/restic-deepthought/postgresql.sql";
   cleanup = pkgs.writeShellApplication {
@@ -35,8 +37,23 @@ let
       trap - ERR
     '';
   };
+  b2Client = pkgs.writeShellApplication {
+    name = "restic-deepthought-b2";
+    runtimeInputs = [ pkgs.restic ];
+    text = ''
+      RESTIC_REST_USERNAME=deepthought
+      RESTIC_REST_PASSWORD="$(<${config.sops.secrets.restic-http-password.path})"
+      export RESTIC_REST_USERNAME RESTIC_REST_PASSWORD
+      exec restic \
+        --repo ${lib.escapeShellArg b2Repository} \
+        --password-file ${config.sops.secrets.restic-repository-password.path} \
+        "$@"
+    '';
+  };
 in
 {
+  environment.systemPackages = [ b2Client ];
+
   sops = {
     secrets = {
       restic-http-password = {
@@ -62,10 +79,14 @@ in
   };
 
   services.restic.backups.deepthought = {
-    repository = "rest:https://restic.4amlunch.net/deepthought/";
+    inherit repository;
     passwordFile = config.sops.secrets.restic-repository-password.path;
     environmentFile = config.sops.templates.restic-environment.path;
     initialize = true;
+    extraBackupArgs = [
+      "--option"
+      "rest.connections=20"
+    ];
     paths = [
       "/home/.zfs/snapshot/restic-deepthought/wonko"
       dump

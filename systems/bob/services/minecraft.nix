@@ -790,6 +790,10 @@ in
       passwordFile = config.sops.secrets.minecraft-restic-password.path;
       environmentFile = config.sops.templates.bob-restic-environment.path;
       initialize = true;
+      extraBackupArgs = [
+        "--option"
+        "rest.connections=20"
+      ];
       paths = [
         "/var/lib/minecraft/pwppp/.zfs/snapshot/restic"
         "/var/lib/minecraft/gigglesomething/.zfs/snapshot/restic"
