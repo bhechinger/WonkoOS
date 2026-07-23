@@ -1,0 +1,13 @@
+name = "Polaris's Mobs Pacific Coast Animal Pack"
+filename = "polariss_mobs_pacific_coast-1.0.1-forge-1.20.1.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "bc40cecf4fdffce8bfc5ad498e93f7810c1ccab8"
+url = "https://mediafilez.forgecdn.net/files/7493/404/polariss_mobs_pacific_coast-1.0.1-forge-1.20.1.jar"
+
+[update]
+[update.curseforge]
+file-id = 7493404
+project-id = 1430348

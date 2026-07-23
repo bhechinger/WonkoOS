@@ -1,0 +1,13 @@
+name = "Not So Shrimple - Remolted"
+filename = "NotSoShrimple-Remolted-1.1.0.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "9a1726029f570020379ea65a32deddc21ad9eee0"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 8011091
+project-id = 1514451

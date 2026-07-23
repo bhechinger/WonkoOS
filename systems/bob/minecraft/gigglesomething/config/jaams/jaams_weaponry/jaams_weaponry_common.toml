@@ -1,0 +1,157 @@
+
+["Weapon Traits Handler"]
+
+	["Weapon Traits Handler"."Guard Stance"]
+		#Enable or disable guard stance trait
+		"Guard Stance" = true
+		#Enable or disable the cooldown when releasing the block
+		"Guard Stance Cooldown" = true
+		#Enable or disable the area damage sweep when releasing the block
+		"Guard Stance Area Damage Sweep" = true
+
+	["Weapon Traits Handler".Disarm]
+		#Enable or disable disarm trait
+		Disarm = true
+		#List of item IDs that cannot be disarmed
+		"Non Disarmable Items" = []
+
+	["Weapon Traits Handler"."Dual Wield Bonus"]
+		#Enable or disable dual wield bonus trait trait
+		"Dual Wield Bonus" = true
+
+		["Weapon Traits Handler"."Dual Wield Bonus"."Dual Wield Bonuses"]
+			#Enable or disable bonus for dual wielding rings
+			"Ring Bonus" = true
+			#Enable or disable bonus for dual wielding claws
+			"Claw Bonus" = true
+			#Enable or disable bonus for dual wielding broadswords
+			"Broadsword Bonus" = true
+			#Enable or disable bonus for dual wielding hammers
+			"Hammer Bonus" = true
+			#Enable or disable bonus for dual wielding gauntlets
+			"Gauntlet Bonus" = true
+			#Enable or disable bonus for dual wielding knuckles
+			"Knuckles Bonus" = true
+			#Enable or disable bonus for dual wielding kamas
+			"Kama Bonus" = true
+			#Enable or disable bonus for dual wielding tessen
+			"Tessen Bonus" = true
+			#Enable or disable bonus for dual wielding katanas
+			"Katana Bonus" = true
+
+["Mod Effects Handler"]
+	#Enable or disable Incapable status effect
+	Incapable = true
+	#Enable or disable Depletion status effect
+	Depletion = true
+	#Enable or disable Knocked Up status effect
+	"Knocked Up" = true
+	#Enable or disable Vigorous Rage status effect
+	"Vigorous Rage" = true
+	#Enable or disable Warrior's Grace status effect
+	"Warrior's Grace" = true
+	#Enable or disable Archer's Grace status effect
+	"Archer's Grace" = true
+
+["Projectile Behavior Handler"]
+	#Drop projectile as item when grounded (doesn't work in creative mode)
+	"Projectile Drop As Item" = false
+	#Drop projectile as item when touching lava (doesn't work in creative mode)
+	"Projectile Drop As Item In Lava" = false
+	#List of block item IDs that can be placed on impact by slingshot projectiles
+	"Slingshot Placeable Blocks" = ["minecraft:anvil"]
+
+	["Projectile Behavior Handler"."Dynamite Settings"]
+		#Set whether dynamite explodes when hitting an entity
+		"Dynamite Explode On Hit" = false
+		#Power of the dynamite explosion
+		#Range: 1.0 ~ 10.0
+		"Dynamite Power" = 2.0
+		#Dynamite explosion time in ticks when grounded
+		#Range: 1.0 ~ 1000.0
+		"Dynamite Explosion Time" = 40.0
+		#Set whether dynamite can break blocks
+		"Dynamite Break Blocks" = false
+
+	["Projectile Behavior Handler"."Projectile Despawn Time"]
+		#Despawn time for sharp stones
+		#Range: 100.0 ~ 72000.0
+		"Sharp Stone" = 800.0
+		#Despawn time for stakes
+		#Range: 100.0 ~ 72000.0
+		Stake = 800.0
+		#Despawn time for shurikens
+		#Range: 100.0 ~ 72000.0
+		Shuriken = 800.0
+		#Despawn time for kunais
+		#Range: 100.0 ~ 72000.0
+		Kunai = 800.0
+		#Despawn time for giant shurikens
+		#Range: 100.0 ~ 72000.0
+		"Giant Shuriken" = 1200.0
+		#Despawn time for pronged kunais
+		#Range: 100.0 ~ 72000.0
+		"Pronged Kunai" = 1200.0
+		#Despawn time for brooms
+		#Range: 100.0 ~ 72000.0
+		Broom = 1200.0
+		#Despawn time for spears
+		#Range: 100.0 ~ 72000.0
+		Spear = 1200.0
+		#Despawn time for tridents
+		#Range: 100.0 ~ 72000.0
+		Trident = 1200.0
+		#Despawn time for royal spears
+		#Range: 100.0 ~ 72000.0
+		"Royal Spear" = 1200.0
+		#Despawn time for royal axes
+		#Range: 100.0 ~ 72000.0
+		"Royal Axe" = 1200.0
+		#Despawn time for axes
+		#Range: 100.0 ~ 72000.0
+		Axe = 1200.0
+		#Despawn time for cleavers
+		#Range: 100.0 ~ 72000.0
+		Cleaver = 1200.0
+		#Despawn time for rings
+		#Range: 100.0 ~ 72000.0
+		Ring = 1200.0
+		#Despawn time for hunter's boomerang
+		#Range: 100.0 ~ 72000.0
+		"Hunter's Boomerang" = 1200.0
+
+["Ranged Items Handler"]
+	#Enable or disable automatic firing for short bows
+	"Automatic Short Bow" = true
+	#Enable or disable alternative firing for stake crossbow
+	"Alternative Stake Crossbow" = false
+	#Enable or disable use custom trident behavior
+	"Custom Trident Logic" = true
+
+	["Ranged Items Handler"."Slingshot Settings"]
+		#Take ammo from the player's inventory for slingshot
+		"Slingshot Can Pickup Ammo From Inventory" = true
+		#List of block item IDs that are allowed as slingshot ammo
+		"Slingshot Ammo Whitelist" = ["minecraft:anvil"]
+		#List of block item IDs that are not allowed as slingshot ammo
+		"Slingshot Ammo Blacklist" = []
+
+["Gun System Common Handler"]
+	#Enable or disable the gun inventory
+	"Enable Gun Inventory" = true
+	#Take bullets from the gun's inventory
+	"Bullet From Gun Inventory" = true
+	#Take bullets from the player's inventory
+	"Bullet From Player Inventory" = false
+	#Take bullets from the player's hands
+	"Bullet From Player Hands" = false
+	#Require mobs to have ammunition to shoot guns
+	"Mobs Need Ammo" = false
+	#Enable bundle-like insert/extract behavior when right-clicking guns in containers
+	"Bundle-Like Gun Interaction" = false
+
+["Mob Equipment Handler"]
+	#Enable or disable all mob equipment spawning from the mod
+	"Custom Mob Equipment" = true
+	#List of item IDs that will never be equipped to mobs.
+	"Mob Equipment Blacklist" = ["minecraft:air"]

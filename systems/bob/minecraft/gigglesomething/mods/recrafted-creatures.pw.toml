@@ -1,0 +1,13 @@
+name = "Recrafted Creatures"
+filename = "recrafted_creatures-1.4.6-1.20.1.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "205440faf101a275807075fcbafcb8f5e0098718"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 5853646
+project-id = 835564

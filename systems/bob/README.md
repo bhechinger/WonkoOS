@@ -8,11 +8,11 @@ runtime model.
 
 | Workload | Persistent state |
 |---|---|
-| Paperless-ngx | `/home/docker/paperless` and `/home/docker/pgsql/paperless` |
+| Paperless-ngx | `/var/lib/paperless` and `/var/lib/postgresql/paperless` |
 | Proton Mail Bridge | `/var/lib/protonmail-bridge` |
 | UniFi Network Application | `/var/lib/unifi` |
-| Nginx | `/home/docker/reverse/html` and ACME state under `/var/lib/acme` |
-| Jackett | `/home/docker/jackett` |
+| Nginx | `/var/www` and ACME state under `/var/lib/acme` |
+| Jackett | `/var/lib/jackett` |
 | Sonarr | `/var/lib/sonarr` |
 | rTorrent and ruTorrent | `/var/lib/{rtorrent,rutorrent}` and `/nfs/Torrents` |
 | Plex | `/var/lib/plexmediaserver` and `/nfs/Plex` |
@@ -101,8 +101,9 @@ systemctl status cloudflare-tunnel-sync cloudflared-tunnel
 
 ## Storage
 
-ZFS datasets back `/`, `/nix`, `/var`, `/var/lib/minecraft`,
-`/var/lib/plexmediaserver`, `/home`, and `/home/docker/pgsql`. Basket is
+ZFS datasets back `/`, `/nix`, `/var`, `/var/lib/jackett`,
+`/var/lib/minecraft`, `/var/lib/paperless`, `/var/lib/plexmediaserver`,
+`/var/lib/postgresql`, `/var/lib/redis-paperless`, `/var/www`, and `/home`. Basket is
 automounted over NFSv4 at `/nfs/Minecraft`, `/nfs/NixCache`, `/nfs/Plex`, and
 `/nfs/Torrents`; Bob does not mount the `Brian` share.
 

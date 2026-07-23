@@ -1,0 +1,13 @@
+name = "Spawn"
+filename = "spawn-4.0-1.20.1.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "792a02f8ca568e1fce541c05d88533699157886a"
+url = "https://mediafilez.forgecdn.net/files/7972/539/spawn-4.0-1.20.1.jar"
+
+[update]
+[update.curseforge]
+file-id = 7972539
+project-id = 935694

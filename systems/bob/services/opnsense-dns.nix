@@ -15,6 +15,7 @@ let
   bobServices = [
     "bob"
     "cache"
+    "gigglesomething"
     "jackett"
     "minecraft"
     "paperless"
@@ -56,6 +57,11 @@ let
     }
     {
       name = "pwppp";
+      type = "TXT";
+      value = "local-direct";
+    }
+    {
+      name = "gigglesomething";
       type = "TXT";
       value = "local-direct";
     }

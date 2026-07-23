@@ -1,0 +1,13 @@
+name = "Tome of Wonders"
+filename = "Tome-Of-Wonders-1.20.1-1.0.0.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "018945157de4e3f6b6203999fba84ba5472b966b"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 7259575
+project-id = 1391486

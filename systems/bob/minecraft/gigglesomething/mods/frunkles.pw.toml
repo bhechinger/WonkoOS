@@ -1,0 +1,13 @@
+name = "Frunkles!"
+filename = "frunkles-1.0.0-forge-1.20.1.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "cbbba1b431fcb53cf02c161fa6d1d34bbbb20cad"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 5818200
+project-id = 1122922

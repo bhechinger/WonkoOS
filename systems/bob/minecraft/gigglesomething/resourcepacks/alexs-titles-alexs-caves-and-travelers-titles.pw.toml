@@ -1,0 +1,13 @@
+name = "Alex's Titles (Alex's Caves and Traveler's Titles compatibility)"
+filename = "Alex's Titles 2.0.zip"
+side = "client"
+
+[download]
+hash-format = "sha1"
+hash = "b43f9202ebefcbe6f081ac663a0caf5529ccb62b"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 5895914
+project-id = 979204

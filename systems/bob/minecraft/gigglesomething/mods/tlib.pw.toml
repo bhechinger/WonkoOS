@@ -1,0 +1,13 @@
+name = "TLib"
+filename = "tlib-forge-1.5.0-1.20.1.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "383161c89fd87b5eaf86a81927af00b3086aeb8c"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 8226090
+project-id = 1245655

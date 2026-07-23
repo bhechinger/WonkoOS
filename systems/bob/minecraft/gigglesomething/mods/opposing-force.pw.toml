@@ -1,0 +1,13 @@
+name = "Opposing Force"
+filename = "Opposing-Force-1.20.1-2.0.3.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "a8e4cd1493699cde7dde4a7e8ed427ca094df469"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 7888374
+project-id = 1051360

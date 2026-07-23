@@ -16,6 +16,15 @@ let
   configRoot = packSource + "/config";
   minecraftDataDir = "/var/lib/minecraft/pwppp";
   minecraftStdin = config.services.minecraft-servers.managementSystem.systemd-socket.stdinSocket.path "pwppp";
+  gigglesomethingPackSource = ../minecraft/gigglesomething;
+  gigglesomethingPack = builtins.fromTOML (
+    builtins.readFile (gigglesomethingPackSource + "/pack.toml")
+  );
+  gigglesomethingPackVersion = gigglesomethingPack.version;
+  gigglesomethingClientPackFileName = "${gigglesomethingPack.name}-${gigglesomethingPackVersion}.zip";
+  gigglesomethingConfigRoot = gigglesomethingPackSource + "/config";
+  gigglesomethingDataDir = "/var/lib/minecraft/gigglesomething";
+  gigglesomethingStdin = config.services.minecraft-servers.managementSystem.systemd-socket.stdinSocket.path "gigglesomething";
 
   whitelistedPlayers = [
     "BlockyJackBauer"
@@ -36,6 +45,35 @@ let
     }"
     ).override
       { jre_headless = pkgs.graalvmPackages.graalvm-oracle_25; };
+  gigglesomethingServerPackage = pkgs.callPackage ../minecraft/forge-server.nix {
+    jre = pkgs.temurin-jre-bin-17;
+  };
+  serverList =
+    address:
+    pkgs.runCommand "servers.dat" { } ''
+      ${lib.getExe pkgs.python3} - ${lib.escapeShellArg address} "$out" <<'PY'
+      from pathlib import Path
+      import struct
+      import sys
+
+      address, output = sys.argv[1:]
+
+      def string(value):
+          encoded = value.encode()
+          return struct.pack(">H", len(encoded)) + encoded
+
+      def named(tag, name, value):
+          return bytes([tag]) + string(name) + value
+
+      server = named(8, "name", string("4amlunch"))
+      server += named(8, "ip", string(address))
+      server += b"\0"
+      root = named(9, "servers", b"\x0a" + struct.pack(">i", 1) + server)
+      Path(output).write_bytes(b"\x0a\0\0" + root + b"\0")
+      PY
+    '';
+  pwpppServerList = serverList "pwppp.4amlunch.net";
+  gigglesomethingServerList = serverList "gigglesomething.4amlunch.net";
 
   mcRouter = pkgs.buildGoModule rec {
     pname = "mc-router";
@@ -86,6 +124,13 @@ let
     side = "server";
     packHash = "sha256-SpVDzoOoM1QgaHgkvsYH50MDB476kZD91uJT2sH7nXg=";
   };
+  gigglesomethingServerPack = pkgs.fetchPackwizModpack {
+    pname = "gigglesomething-server";
+    version = gigglesomethingPackVersion;
+    src = gigglesomethingPackSource;
+    side = "server";
+    packHash = "sha256-ipq7XmuA8uCO6d8gQ/DOLeajEN2AUSCvt8dP5/4vWVc=";
+  };
 
   # Packwiz bundles non-CurseForge entries as JARs. Use matching CurseForge file
   # IDs in the client artifact while retaining reliable Modrinth downloads for
@@ -128,9 +173,23 @@ let
     cd pack
     cp ${clientOxidizedMetadata} mods/create-oxidized.pw.toml
     cp ${clientDesignDecorMetadata} mods/create-design-n-decor.pw.toml
+    cp ${pwpppServerList} servers.dat
     packwiz refresh
     packwiz curseforge export --output "$out"
   '';
+  gigglesomethingClientPack =
+    pkgs.runCommand gigglesomethingClientPackFileName
+      {
+        nativeBuildInputs = [ pkgs.packwiz ];
+      }
+      ''
+        cp -r ${gigglesomethingPackSource} pack
+        chmod -R u+w pack
+        cd pack
+        cp ${gigglesomethingServerList} servers.dat
+        packwiz refresh
+        packwiz curseforge export --output "$out"
+      '';
 
   siteIndex = pkgs.writeText "minecraft-index.html" ''
     <!doctype html>
@@ -158,6 +217,13 @@ let
               <td>Whitelist</td>
               <td><a href="/packs/pwppp/${clientPackFileName}">Download</a></td>
             </tr>
+            <tr>
+              <td>gigglesomething</td>
+              <td><code>gigglesomething.4amlunch.net</code></td>
+              <td>Modpack ${gigglesomethingPackVersion} / Minecraft ${gigglesomethingPack.versions.minecraft} / Forge ${gigglesomethingPack.versions.forge}</td>
+              <td>Whitelist</td>
+              <td><a href="/packs/gigglesomething/${gigglesomethingClientPackFileName}">Download</a></td>
+            </tr>
           </tbody>
         </table>
       </body>
@@ -165,10 +231,12 @@ let
   '';
 
   minecraftSite = pkgs.runCommand "minecraft-site" { } ''
-    mkdir -p "$out/packs/pwppp/packwiz"
+    mkdir -p "$out/packs/pwppp/packwiz" "$out/packs/gigglesomething/packwiz"
     cp ${siteIndex} "$out/index.html"
     cp ${clientPack} "$out/packs/pwppp/${clientPackFileName}"
     cp -r ${packSource}/. "$out/packs/pwppp/packwiz/"
+    cp ${gigglesomethingClientPack} "$out/packs/gigglesomething/${gigglesomethingClientPackFileName}"
+    cp -r ${gigglesomethingPackSource}/. "$out/packs/gigglesomething/packwiz/"
   '';
 
   voiceConfig = pkgs.runCommand "pwppp-voicechat-server.properties" { } ''
@@ -176,10 +244,19 @@ let
       --replace-fail 'bind_address=' 'bind_address=127.0.0.11' \
       --replace-fail 'voice_host=' 'voice_host=voice.4amlunch.net:${toString voicePort}'
   '';
+  gigglesomethingVoiceConfig = pkgs.writeText "gigglesomething-voicechat-server.properties" ''
+    port=24454
+    bind_address=127.0.0.12
+    voice_host=voice.4amlunch.net:${toString voicePort}
+  '';
 
   packFiles = pkgs.runCommand "pwppp-managed-files" { } ''
     mkdir "$out"
     cp -r ${packSource}/config ${packSource}/datapacks "$out/"
+  '';
+  gigglesomethingPackFiles = pkgs.runCommand "gigglesomething-managed-files" { } ''
+    mkdir "$out"
+    cp -r ${gigglesomethingPackSource}/config "$out/"
   '';
 
   relativeTo = root: path: lib.removePrefix "${toString root}/" (toString path);
@@ -201,6 +278,15 @@ let
     // {
       "config/voicechat/voicechat-server.properties" = voiceConfig;
     };
+  gigglesomethingManagedConfigs = builtins.listToAttrs (
+    map (path: {
+      name = "config/${relativeTo gigglesomethingConfigRoot path}";
+      value = "${gigglesomethingPackFiles}/config/${relativeTo gigglesomethingConfigRoot path}";
+    }) (lib.filesystem.listFilesRecursive gigglesomethingConfigRoot)
+  );
+  gigglesomethingServerFiles = gigglesomethingManagedConfigs // {
+    "config/voicechat/voicechat-server.properties" = gigglesomethingVoiceConfig;
+  };
 
   packCheck = pkgs.runCommand "pwppp-pack-check" { nativeBuildInputs = [ pkgs.packwiz ]; } ''
     export HOME="$TMPDIR"
@@ -218,6 +304,7 @@ let
       ${packSource} \
       ${serverPack} \
       ${clientPack} \
+      ${pwpppServerList} \
       ${clientOxidizedMetadata} \
       ${clientDesignDecorMetadata} <<'PY'
     from collections import Counter
@@ -228,7 +315,7 @@ let
     import tomllib
     import zipfile
 
-    source, server, client, *override_paths = map(Path, sys.argv[1:])
+    source, server, client, server_list, *override_paths = map(Path, sys.argv[1:])
 
 
     def load_toml(path):
@@ -348,7 +435,7 @@ let
             f"overrides/{entry['file']}"
             for entry in index["files"]
             if not entry.get("metafile", False)
-        }
+        } | {"overrides/servers.dat"}
         override_actual = {
             name
             for name in names
@@ -356,13 +443,90 @@ let
         }
         fail_set("client overrides", override_expected, override_actual)
         for archive_path in override_expected:
-            source_path = source / archive_path.removeprefix("overrides/")
+            source_path = (
+                server_list
+                if archive_path == "overrides/servers.dat"
+                else source / archive_path.removeprefix("overrides/")
+            )
             if source_path.read_bytes() != archive.read(archive_path):
                 raise SystemExit(f"client override mismatch: {archive_path}")
     PY
 
     touch "$out"
   '';
+  gigglesomethingPackCheck =
+    pkgs.runCommand "gigglesomething-pack-check"
+      {
+        nativeBuildInputs = [
+          pkgs.packwiz
+          pkgs.python3
+        ];
+      }
+      ''
+        cp -r ${gigglesomethingPackSource} refreshed
+        chmod -R u+w refreshed
+        cp refreshed/index.toml index.toml
+        cp refreshed/pack.toml pack.toml
+        (cd refreshed && packwiz refresh)
+        diff -u index.toml refreshed/index.toml
+        diff -u pack.toml refreshed/pack.toml
+        diff -qr ${gigglesomethingPackSource}/config ${gigglesomethingPackFiles}/config
+
+        python - \
+          ${gigglesomethingPackSource} \
+          ${gigglesomethingServerPack} \
+          ${gigglesomethingClientPack} \
+          ${gigglesomethingServerList} <<'PY'
+        from collections import Counter
+        import json
+        from pathlib import Path
+        import sys
+        import tomllib
+        import zipfile
+
+        source, server, client, server_list = map(Path, sys.argv[1:])
+
+        with (source / "pack.toml").open("rb") as handle:
+            pack = tomllib.load(handle)
+
+        server_expected = set()
+        client_expected = Counter()
+        for metadata_path in source.rglob("*.pw.toml"):
+            with metadata_path.open("rb") as handle:
+                metadata = tomllib.load(handle)
+            side = metadata.get("side", "both")
+            destination = metadata_path.relative_to(source).parent / metadata["filename"]
+            if side in {"both", "server"}:
+                if destination.parts[0] != "mods":
+                    raise SystemExit(f"server file is not a mod: {destination}")
+                server_expected.add(destination.as_posix())
+            if side in {"both", "client"}:
+                curseforge = metadata["update"]["curseforge"]
+                client_expected[(curseforge["project-id"], curseforge["file-id"])] += 1
+
+        server_actual = {
+            path.relative_to(server).as_posix()
+            for path in (server / "mods").iterdir()
+            if path.is_file()
+        }
+        if server_expected != server_actual:
+            raise SystemExit("server mod set does not match Packwiz metadata")
+
+        with zipfile.ZipFile(client) as archive:
+            if archive.read("overrides/servers.dat") != server_list.read_bytes():
+                raise SystemExit("client server list does not match")
+            manifest = json.loads(archive.read("manifest.json"))
+            if manifest["name"] != pack["name"] or manifest["version"] != pack["version"]:
+                raise SystemExit("client manifest name or version does not match pack.toml")
+            client_actual = Counter(
+                (entry["projectID"], entry["fileID"]) for entry in manifest["files"]
+            )
+            if client_expected != client_actual:
+                raise SystemExit("client mod set does not match Packwiz metadata")
+        PY
+
+        touch "$out"
+      '';
 
   routerHardening = {
     CapabilityBoundingSet = "";
@@ -396,14 +560,24 @@ let
     RestrictSUIDSGID = true;
   };
 
-  rcon = "${lib.getExe pkgs.mcrcon} -H 127.0.0.11 -P 25575";
+  pwpppRcon = "${lib.getExe pkgs.mcrcon} -H 127.0.0.11 -P 25575";
+  gigglesomethingRcon = "${lib.getExe pkgs.mcrcon} -H 127.0.0.12 -P 25576";
   minecraftRcon = pkgs.writeShellApplication {
     name = "minecraft-rcon";
     excludeShellChecks = [ "SC1091" ];
     text = ''
       source ${config.sops.templates.minecraft-environment.path}
       export MCRCON_PASS="$RCON_PASSWORD"
-      exec ${rcon} "$@"
+      exec ${pwpppRcon} "$@"
+    '';
+  };
+  gigglesomethingMinecraftRcon = pkgs.writeShellApplication {
+    name = "gigglesomething-rcon";
+    excludeShellChecks = [ "SC1091" ];
+    text = ''
+      source ${config.sops.templates.minecraft-environment.path}
+      export MCRCON_PASS="$RCON_PASSWORD"
+      exec ${gigglesomethingRcon} "$@"
     '';
   };
   saveOff = pkgs.writeShellApplication {
@@ -411,7 +585,11 @@ let
     excludeShellChecks = [ "SC1091" ];
     text = ''
       source ${config.sops.templates.minecraft-environment.path}
-      MCRCON_PASS="$RCON_PASSWORD" ${rcon} "save-off" "save-all flush"
+      MCRCON_PASS="$RCON_PASSWORD" ${pwpppRcon} "save-off" "save-all flush"
+      if ! MCRCON_PASS="$RCON_PASSWORD" ${gigglesomethingRcon} "save-off" "save-all flush"; then
+        MCRCON_PASS="$RCON_PASSWORD" ${pwpppRcon} "save-on"
+        exit 1
+      fi
     '';
   };
   saveOn = pkgs.writeShellApplication {
@@ -419,7 +597,10 @@ let
     excludeShellChecks = [ "SC1091" ];
     text = ''
       source ${config.sops.templates.minecraft-environment.path}
-      MCRCON_PASS="$RCON_PASSWORD" ${rcon} "save-on"
+      exitCode=0
+      MCRCON_PASS="$RCON_PASSWORD" ${pwpppRcon} "save-on" || exitCode=$?
+      MCRCON_PASS="$RCON_PASSWORD" ${gigglesomethingRcon} "save-on" || exitCode=$?
+      exit "$exitCode"
     '';
   };
   prepareBackup = pkgs.writeShellApplication {
@@ -427,8 +608,8 @@ let
     runtimeInputs = [ pkgs.zfs ];
     text = ''
       zfs destroy zpool/var/minecraft@restic 2>/dev/null || true
-      ${lib.getExe saveOff}
       trap '${lib.getExe saveOn}' EXIT
+      ${lib.getExe saveOff}
       zfs snapshot zpool/var/minecraft@restic
     '';
   };
@@ -449,13 +630,16 @@ in
   assertions = [
     {
       assertion = whitelistIsValid;
-      message = "Each pwppp whitelist entry must be a valid Java player name.";
+      message = "Each Minecraft whitelist entry must be a valid Java player name.";
     }
   ];
 
   nixpkgs.overlays = [ inputs.nix-minecraft.overlay ];
 
-  environment.systemPackages = [ minecraftRcon ];
+  environment.systemPackages = [
+    gigglesomethingMinecraftRcon
+    minecraftRcon
+  ];
 
   sops = {
     secrets = {
@@ -485,7 +669,10 @@ in
       owner = "root";
       group = "minecraft";
       mode = "0440";
-      restartUnits = [ "minecraft-server-pwppp.service" ];
+      restartUnits = [
+        "minecraft-server-gigglesomething.service"
+        "minecraft-server-pwppp.service"
+      ];
     };
   };
 
@@ -520,6 +707,29 @@ in
           enable-rcon = true;
           broadcast-rcon-to-ops = false;
           "rcon.port" = 25575;
+          "rcon.password" = "@RCON_PASSWORD@";
+        };
+      };
+      servers.gigglesomething = {
+        enable = true;
+        autoStart = true;
+        restart = "on-failure";
+        package = gigglesomethingServerPackage;
+        # https://docker-minecraft-server.readthedocs.io/en/latest/configuration/jvm-options/#enable-meowices-flags
+        jvmOpts = "-Xms1G -Xmx4G --add-modules=jdk.incubator.vector -XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis=200 -XX:+UnlockExperimentalVMOptions -XX:+UnlockDiagnosticVMOptions -XX:+DisableExplicitGC -XX:+AlwaysPreTouch -XX:G1NewSizePercent=28 -XX:G1MaxNewSizePercent=50 -XX:G1HeapRegionSize=16M -XX:G1ReservePercent=15 -XX:G1HeapWastePercent=5 -XX:G1MixedGCCountTarget=3 -XX:InitiatingHeapOccupancyPercent=20 -XX:G1MixedGCLiveThresholdPercent=90 -XX:G1RSetUpdatingPauseTimePercent=0 -XX:SurvivorRatio=32 -XX:+PerfDisableSharedMem -XX:MaxTenuringThreshold=1 -XX:G1SATBBufferEnqueueingThresholdPercent=30 -XX:G1ConcMarkStepDurationMillis=5 -XX:+UseNUMA -XX:-DontCompileHugeMethods -XX:MaxNodeLimit=240000 -XX:NodeLimitFudgeFactor=8000 -XX:ReservedCodeCacheSize=400M -XX:NonNMethodCodeHeapSize=12M -XX:ProfiledCodeHeapSize=194M -XX:NonProfiledCodeHeapSize=194M -XX:NmethodSweepActivity=1 -XX:+UseFastUnorderedTimeStamps -XX:+UseCriticalJavaThreadPriority -XX:AllocatePrefetchStyle=3 -XX:+AlwaysActAsServerClassMachine -XX:+UseTransparentHugePages -XX:LargePageSizeInBytes=2M -XX:+UseLargePages -XX:+EagerJVMCI -XX:+UseStringDeduplication -XX:+UseAES -XX:+UseAESIntrinsics -XX:+UseFMA -XX:+UseLoopPredicate -XX:+RangeCheckElimination -XX:+OptimizeStringConcat -XX:+UseCompressedOops -XX:+UseThreadPriorities -XX:+OmitStackTraceInFastThrow -XX:+RewriteBytecodes -XX:+RewriteFrequentPairs -XX:+UseFPUForSpilling -XX:+UseVectorCmov -XX:+UseXMMForArrayCopy -XX:+EliminateLocks -XX:+DoEscapeAnalysis -XX:+AlignVector -XX:+OptimizeFill -XX:+EnableVectorSupport -XX:+UseCharacterCompareIntrinsics -XX:+UseCopySignIntrinsic -XX:+UseVectorStubs -XX:+UseFastStosb -XX:+UseNewLongLShift -XX:+UseXmmI2D -XX:+UseXmmI2F -XX:+UseXmmLoadAndClearUpper -XX:+UseXmmRegToRegMoveAll -XX:UseAVX=2 -XX:UseSSE=4";
+        symlinks.mods = "${gigglesomethingServerPack}/mods";
+        files = gigglesomethingServerFiles;
+        serverProperties = {
+          server-ip = "127.0.0.12";
+          server-port = 25567;
+          motd = "gigglesomething";
+          max-players = 20;
+          online-mode = true;
+          white-list = true;
+          enforce-whitelist = true;
+          enable-rcon = true;
+          broadcast-rcon-to-ops = false;
+          "rcon.port" = 25576;
           "rcon.password" = "@RCON_PASSWORD@";
         };
       };
@@ -599,7 +809,10 @@ in
     allowedUDPPorts = [ voicePort ];
   };
 
-  system.checks = [ packCheck ];
+  system.checks = [
+    gigglesomethingPackCheck
+    packCheck
+  ];
 
   systemd = {
     mounts = [
@@ -624,7 +837,7 @@ in
         after = [ "network.target" ];
         wantedBy = [ "multi-user.target" ];
         serviceConfig = routerHardening // {
-          ExecStart = "${lib.getExe mcRouter} -port 25565 -mapping pwppp.4amlunch.net=127.0.0.11:25566 -connection-rate-limit 10 -webhook-url http://127.0.0.1:${toString routerApiPort}/event";
+          ExecStart = "${lib.getExe mcRouter} -port 25565 -mapping pwppp.4amlunch.net=127.0.0.11:25566,gigglesomething.4amlunch.net=127.0.0.12:25567 -connection-rate-limit 10 -webhook-url http://127.0.0.1:${toString routerApiPort}/event";
           Restart = "on-failure";
           RestartSec = "5s";
         };
@@ -655,6 +868,17 @@ in
           ReadWritePaths = [ minecraftDataDir ];
         };
       };
+      minecraft-server-gigglesomething = {
+        wants = [ "minecraft-whitelist-gigglesomething.service" ];
+        serviceConfig = {
+          MemoryHigh = "5G";
+          MemoryMax = "6G";
+          NoNewPrivileges = true;
+          OOMPolicy = "stop";
+          ProtectSystem = "strict";
+          ReadWritePaths = [ gigglesomethingDataDir ];
+        };
+      };
 
       minecraft-whitelist-pwppp = {
         description = "Apply the declarative pwppp Minecraft whitelist";
@@ -676,6 +900,26 @@ in
           RemainAfterExit = true;
         };
       };
+      minecraft-whitelist-gigglesomething = {
+        description = "Apply the declarative gigglesomething Minecraft whitelist";
+        after = [ "minecraft-server-gigglesomething.service" ];
+        partOf = [ "minecraft-server-gigglesomething.service" ];
+        path = [
+          pkgs.coreutils
+          pkgs.systemd
+        ];
+        script = ''
+          install -d -m 0770 -o minecraft -g minecraft ${gigglesomethingDataDir}
+          install -m 0660 -o minecraft -g minecraft ${emptyWhitelistFile} ${gigglesomethingDataDir}/whitelist.json
+          if systemctl is-active --quiet minecraft-server-gigglesomething.service; then
+            printf %s ${lib.escapeShellArg whitelistCommands} > ${gigglesomethingStdin}
+          fi
+        '';
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+        };
+      };
 
       minecraft-zfs-delegation = {
         description = "Delegate Minecraft backup snapshots";
@@ -690,6 +934,7 @@ in
 
       restic-backups-minecraft = {
         after = [
+          "minecraft-server-gigglesomething.service"
           "minecraft-server-pwppp.service"
           "minecraft-zfs-delegation.service"
           "nfs-Minecraft.mount"
@@ -702,6 +947,7 @@ in
 
       sanoid = {
         after = [
+          "minecraft-server-gigglesomething.service"
           "minecraft-server-pwppp.service"
           "sops-install-secrets.service"
         ];

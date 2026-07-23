@@ -1,0 +1,13 @@
+name = "Polaris's Mobs Indian Animal Pack"
+filename = "polariss_mobs_indian_animal_pack-1.0.1-forge-1.20.1.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "7092defa41d1aabacb8cd83103fd173a431b95ee"
+url = "https://mediafilez.forgecdn.net/files/7493/397/polariss_mobs_indian_animal_pack-1.0.1-forge-1.20.1.jar"
+
+[update]
+[update.curseforge]
+file-id = 7493397
+project-id = 1414526

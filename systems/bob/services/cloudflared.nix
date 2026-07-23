@@ -34,6 +34,11 @@ let
           service = "tcp://localhost:25565";
           originRequest = { };
         }
+        {
+          hostname = "gigglesomething.4amlunch.net";
+          service = "tcp://localhost:25565";
+          originRequest = { };
+        }
         { service = "http_status:404"; }
       ];
       warp-routing.enabled = false;
@@ -65,6 +70,20 @@ let
       {
         type = "TXT";
         name = "pwppp.4amlunch.net";
+        content = "cloudflared-use-tunnel";
+        ttl = 1;
+        proxied = false;
+      }
+      {
+        type = "CNAME";
+        name = "gigglesomething.4amlunch.net";
+        content = tunnelTarget;
+        ttl = 1;
+        proxied = true;
+      }
+      {
+        type = "TXT";
+        name = "gigglesomething.4amlunch.net";
         content = "cloudflared-use-tunnel";
         ttl = 1;
         proxied = false;

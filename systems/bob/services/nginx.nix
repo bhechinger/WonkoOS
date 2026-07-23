@@ -1,6 +1,5 @@
 {
   config,
-  lib,
   pkgs,
   ...
 }:
@@ -68,7 +67,7 @@ in
         locations."/".return = "444";
       };
       "bob.4amlunch.net" = tls // {
-        root = "/home/docker/reverse/html";
+        root = "/var/www";
       };
       "cache.4amlunch.net" = tls // {
         locations."/" = {
@@ -79,7 +78,7 @@ in
           '';
         };
       };
-      "hamburgerking.pt".root = "/home/docker/reverse/html/hbk";
+      "hamburgerking.pt".root = "/var/www/hbk";
       "jackett.4amlunch.net" = tls // {
         locations."/".proxyPass = "http://127.0.0.1:9117";
       };
@@ -113,7 +112,6 @@ in
   systemd.services.nginx = {
     after = [ "sops-install-secrets.service" ];
     requires = [ "sops-install-secrets.service" ];
-    serviceConfig.ProtectHome = lib.mkForce "read-only";
   };
 
   systemd.services."acme-4amlunch.net" = {

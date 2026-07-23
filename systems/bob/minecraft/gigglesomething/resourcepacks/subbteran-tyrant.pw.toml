@@ -1,0 +1,13 @@
+name = "Subbteran Tyrant (Alex's Caves Tremorsaurus Skin)"
+filename = "SubbteranTyrant.zip"
+side = "client"
+
+[download]
+hash-format = "sha1"
+hash = "e8850b5deff9803326e4c60d5af6c588bfc50159"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 7557403
+project-id = 1450479

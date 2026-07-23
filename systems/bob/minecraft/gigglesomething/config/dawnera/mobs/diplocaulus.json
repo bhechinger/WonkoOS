@@ -1,0 +1,235 @@
+{
+  "Replace": false,
+  "StepHeight": 1,
+  "Attributes": {
+    "MaxHealth": 15.0,
+    "MaxHunger": 15.0,
+    "MaxEnergy": 15.0,
+    "MovementSpeed": 1.0,
+    "FollowRange": 16.0,
+    "AttackDamage": 2.0
+  },
+  "SpawnData": {
+    "SpawnCount": "1",
+    "SpawnWeight": 1,
+    "RandomChance": 0.15,
+    "Biomes": [
+      {
+        "ID": "minecraft:swamp"
+      },
+      {
+        "ID": "minecraft:mangrove_swamp"
+      }
+    ]
+  },
+  "ConditionalActions": {
+    "attack_conditional": [
+      {
+        "Action": "attack1",
+        "Conditions": [
+          "dawnera:is_not_in_water"
+        ]
+      },
+      {
+        "Action": "attack2",
+        "Conditions": [
+          "dawnera:is_in_water"
+        ]
+      }
+    ],
+    "eat_conditional": [
+      {
+        "Action": "eat1",
+        "Conditions": [
+          "dawnera:is_not_in_water"
+        ]
+      },
+      {
+        "Action": "eat2",
+        "Conditions": [
+          "dawnera:is_in_water"
+        ]
+      }
+    ]
+  },
+  "AI": {
+    "TargetGoals": [
+      {
+        "Priority": 1,
+        "ID": "dawnera:target_hunt",
+        "SpatialSearch": true
+      }
+    ],
+    "Goals": [
+      {
+        "Priority": 0,
+        "ID": "dawnera:love_timed",
+        "Delay": 1000
+      },
+      {
+        "Priority": 1,
+        "ID": "dawnera:try_to_find_air",
+        "Speed": 0.9,
+        "MinAir": 1000
+      },
+      {
+        "Priority": 1,
+        "ID": "dawnera:breed_pregnancy",
+        "Speed": 0.6
+      },
+      {
+        "Priority": 1,
+        "ID": "dawnera:lay_egg",
+        "Speed": 0.6,
+        "EggBlock": {
+          "ID": "dawnera:diplocaulus_roe",
+          "Properties": {
+            "waterlogged": true
+          }
+        },
+        "PositionChooser": "WATER"
+      },
+      {
+        "Priority": 1,
+        "ID": "dawnera:panic_of_damage",
+        "Speed": 0.6,
+        "StartPanic": {
+          "Conditions": [
+            "dawnera:random_chance,10"
+          ],
+          "Actions": [
+            "dawnera:play_action,ActionController,scream"
+          ]
+        }
+      },
+      {
+        "Priority": 2,
+        "ID": "dawnera:eat_food",
+        "Speed": 0.6,
+        "HorizontalDistance": 10,
+        "VerticalDistance": 10,
+        "MaxItemCountCanEat": 1,
+        "FoodEat": {
+          "Actions": [
+            "dawnera:play_conditional_action,ActionController,eat_conditional"
+          ]
+        }
+      },
+      {
+        "Priority": 3,
+        "ID": "dawnera:melee_attack",
+        "Speed": 0.6,
+        "ShouldSeeTarget": false,
+        "CanUse": [
+          "dawnera:is_air,\u003e,1000"
+        ],
+        "PerformAttack": {
+          "Conditions": [
+            "dawnera:is_no_action"
+          ],
+          "Actions": [
+            "dawnera:focus_on_target",
+            "dawnera:play_conditional_action,ActionController,attack_conditional"
+          ]
+        }
+      },
+      {
+        "Priority": 4,
+        "ID": "dawnera:follow_entity",
+        "Speed": 0.6,
+        "VisibilityDistance": 15,
+        "AcceptableDistance": 4,
+        "CanUse": [
+          "dawnera:is_not_tamed",
+          "dawnera:is_not_sleeping"
+        ],
+        "CanContinueUse": [
+          "dawnera:is_not_tamed",
+          "dawnera:is_not_sleeping"
+        ],
+        "TargetConditions": [
+          "dawnera:is_entity_type,minecraft:witch"
+        ]
+      },
+      {
+        "Priority": 6,
+        "ID": "dawnera:random_stroll",
+        "Speed": 0.6,
+        "Interval": 20,
+        "PositionChooser": "AMPHIBIAN"
+      }
+    ]
+  },
+  "StateMachine": [
+    {
+      "ID": "ActionController",
+      "Actions": [
+        {
+          "ID": "attack1",
+          "Length": 0.48
+        },
+        {
+          "ID": "attack2",
+          "Length": 0.44
+        },
+        {
+          "ID": "eat1",
+          "Length": 1.44
+        },
+        {
+          "ID": "eat2",
+          "Length": 1.44
+        },
+        {
+          "ID": "scream",
+          "Length": 1.28
+        }
+      ]
+    }
+  ],
+  "FoodRation": {
+    "Items": [
+      {
+        "ID": "minecraft:frogspawn"
+      },
+      {
+        "ID": "dawnera:worm"
+      },
+      {
+        "ID": "dawnera:sabertooth_salmon_roe"
+      },
+      {
+        "ID": "dawnera:sturgeon_roe"
+      },
+      {
+        "ID": "dawnera:alligator_gar_roe"
+      },
+      {
+        "Tag": "dawnera:meat_food"
+      }
+    ],
+    "Entities": [
+      {
+        "ID": "dawnera:pond_snail"
+      },
+      {
+        "ID": "dawnera:worm"
+      },
+      {
+        "ID": "minecraft:frog"
+      },
+      {
+        "ID": "minecraft:tadpole"
+      },
+      {
+        "ID": "minecraft:salmon"
+      },
+      {
+        "ID": "minecraft:cod"
+      },
+      {
+        "ID": "minecraft:tropical_fish"
+      }
+    ]
+  }
+}

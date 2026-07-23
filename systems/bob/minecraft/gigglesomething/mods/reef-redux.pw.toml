@@ -1,0 +1,13 @@
+name = "Reef Redux"
+filename = "reefredux-1.3.0.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "94efe0d06dd3d01c0d467d75ed50d427175a42a7"
+url = "https://mediafilez.forgecdn.net/files/6100/739/reefredux-1.3.0.jar"
+
+[update]
+[update.curseforge]
+file-id = 6100739
+project-id = 926538

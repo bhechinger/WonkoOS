@@ -1,0 +1,13 @@
+name = "Kakapos"
+filename = "kakapos-0.1.1-1.20.1.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "0e54e5bafaa5d63646fcf214aae96d0193d1db02"
+url = "https://mediafilez.forgecdn.net/files/5406/676/kakapos-0.1.1-1.20.1.jar"
+
+[update]
+[update.curseforge]
+file-id = 5406676
+project-id = 999752

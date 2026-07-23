@@ -1,0 +1,13 @@
+name = "Bloom Boom"
+filename = "bloom_boom-1.0.7-forge-1.20.1.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "50e5ea3d171fbd0dd87dec933ec5e84ff40e97c4"
+url = "https://mediafilez.forgecdn.net/files/7733/493/bloom_boom-1.0.7-forge-1.20.1.jar"
+
+[update]
+[update.curseforge]
+file-id = 7733493
+project-id = 1250013

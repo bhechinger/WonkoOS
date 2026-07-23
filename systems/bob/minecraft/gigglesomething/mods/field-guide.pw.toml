@@ -1,0 +1,13 @@
+name = "Field Guide"
+filename = "fieldguide-forge-1.20.1-1.8.3.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "4e8f8d7b66c605f29ff6aaf3d2ba9ec23cd3073a"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 8256236
+project-id = 1470590

@@ -1,0 +1,13 @@
+name = "More Hitboxes"
+filename = "morehitboxes-forge-1.20.1-1.9.2.jar"
+side = "client"
+
+[download]
+hash-format = "sha1"
+hash = "4faa402e86c444cf205deac816a501f06a9ecefb"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 6942239
+project-id = 1115989

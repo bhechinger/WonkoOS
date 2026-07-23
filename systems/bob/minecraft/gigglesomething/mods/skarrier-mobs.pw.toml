@@ -1,0 +1,13 @@
+name = "Skarrier Mobs"
+filename = "skarrier_mobs-1.0.5(beta)-forge-1.20.1.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "2e2a45ec82eeb1d9c1af7fccf28c201f56d365b9"
+url = "https://mediafilez.forgecdn.net/files/8280/469/skarrier_mobs-1.0.5(beta)-forge-1.20.1.jar"
+
+[update]
+[update.curseforge]
+file-id = 8280469
+project-id = 1566041

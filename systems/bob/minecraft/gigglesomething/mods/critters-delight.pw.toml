@@ -1,0 +1,13 @@
+name = "Critters Delight"
+filename = "critters_delight-1.1.1.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "cc71def6bfc0cc5d8b7e661f4f60086bc9a53f67"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 7777314
+project-id = 1417861

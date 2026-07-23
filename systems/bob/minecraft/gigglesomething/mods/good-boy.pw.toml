@@ -1,0 +1,13 @@
+name = "Good Boy"
+filename = "goodboy-1.20.1-1.1.0.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "42b65a538fe67740b5ebe2164091150519e85dce"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 7459763
+project-id = 913451

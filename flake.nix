@@ -225,15 +225,20 @@
         bob-policy =
           let
             config = self.nixosConfigurations.bob.config;
+            bobDatasets = config.disko.devices.zpool.zpool.datasets;
             deepthought = self.nixosConfigurations.deepthought.config;
             firewall = config.networking.firewall;
             internal = firewall.interfaces.internal;
             management = firewall.interfaces.management;
             minecraft = config.services.minecraft-servers.servers.pwppp;
             minecraftPackFiles = lib.filesystem.listFilesRecursive ./systems/bob/minecraft/pwppp;
+            gigglesomething = config.services.minecraft-servers.servers.gigglesomething;
+            gigglesomethingPackFiles = lib.filesystem.listFilesRecursive ./systems/bob/minecraft/gigglesomething;
             minecraftRestic = config.services.restic.backups.minecraft;
             minecraftService = config.systemd.services.minecraft-server-pwppp;
             minecraftWhitelist = config.systemd.services.minecraft-whitelist-pwppp;
+            gigglesomethingService = config.systemd.services.minecraft-server-gigglesomething;
+            gigglesomethingWhitelist = config.systemd.services.minecraft-whitelist-gigglesomething;
             mcRouter = config.systemd.services.mc-router;
             svcRouter = config.systemd.services.svc-router;
             cloudflareSync = config.systemd.services.cloudflare-tunnel-sync;
@@ -303,7 +308,11 @@
           assert !(config.systemd.services ? compose-main);
           assert !(config.systemd.services ? compose-unifi);
           assert config.services.jackett.enable;
+          assert config.services.jackett.dataDir == "/var/lib/jackett";
           assert config.services.paperless.enable;
+          assert config.services.paperless.dataDir == "/var/lib/paperless/data";
+          assert config.services.paperless.mediaDir == "/var/lib/paperless/media";
+          assert config.services.paperless.consumptionDir == "/var/lib/paperless/consume";
           assert config.services.paperless.database.createLocally;
           assert !config.services.paperless.consumptionDirIsPublic;
           assert config.services.paperless.settings.PAPERLESS_URL == "https://paperless.4amlunch.net";
@@ -316,6 +325,11 @@
               "https"
             ];
           assert config.services.paperless.environmentFile == config.sops.secrets.paperless-environment.path;
+          assert config.services.postgresql.dataDir == "/var/lib/postgresql/paperless";
+          assert lib.hasInfix "/var/lib/paperless/consume " config.services.nfs.server.exports;
+          assert lib.hasInfix "/var/lib/paperless/export " config.services.nfs.server.exports;
+          assert config.services.nginx.virtualHosts."bob.4amlunch.net".root == "/var/www";
+          assert config.services.nginx.virtualHosts."hamburgerking.pt".root == "/var/www/hbk";
           assert lib.hasInfix "proxy_cookie_flags ~ secure;"
             config.services.nginx.virtualHosts."paperless.4amlunch.net".extraConfig;
           assert !(config.services.nginx.virtualHosts ? "basket.4amlunch.net");
@@ -439,13 +453,22 @@
           assert lib.any (mount: mount.what == "10.42.0.30:/Plex") config.systemd.mounts;
           assert lib.any (mount: mount.what == "10.42.0.30:/Torrents") config.systemd.mounts;
           assert lib.any (mount: mount.what == "10.42.0.30:/Minecraft") config.systemd.mounts;
-          assert !(config.disko.devices.zpool.zpool.datasets ? docker);
-          assert config.disko.devices.zpool.zpool.datasets ? "var/minecraft";
+          assert !(bobDatasets ? docker);
+          assert bobDatasets.jackett.mountpoint == "/var/lib/jackett";
+          assert bobDatasets.paperless.mountpoint == "/var/lib/paperless";
+          assert bobDatasets.postgres.mountpoint == "/var/lib/postgresql";
+          assert bobDatasets.redis.mountpoint == "/var/lib/redis-paperless";
+          assert bobDatasets.www.mountpoint == "/var/www";
+          assert bobDatasets ? "var/minecraft";
           assert config.services.minecraft-servers.enable;
           assert config.services.minecraft-servers.eula;
           assert lib.all (path: !lib.hasSuffix ".jar" (toString path)) minecraftPackFiles;
+          assert lib.all (path: !lib.hasSuffix ".jar" (toString path)) gigglesomethingPackFiles;
           assert !builtins.pathExists ./systems/bob/minecraft/pwppp/options.txt;
           assert !builtins.pathExists ./systems/bob/minecraft/pwppp/servers.dat;
+          assert !builtins.pathExists ./systems/bob/minecraft/gigglesomething/logs;
+          assert !builtins.pathExists ./systems/bob/minecraft/gigglesomething/options.txt;
+          assert !builtins.pathExists ./systems/bob/minecraft/gigglesomething/servers.dat;
           assert minecraft.enable;
           assert minecraft.autoStart;
           assert minecraft.serverProperties.server-ip == "127.0.0.11";
@@ -465,7 +488,34 @@
           assert minecraftWhitelist.after == [ "minecraft-server-pwppp.service" ];
           assert minecraftWhitelist.partOf == [ "minecraft-server-pwppp.service" ];
           assert minecraftWhitelist.serviceConfig.Type == "oneshot";
+          assert gigglesomething.enable;
+          assert gigglesomething.autoStart;
+          assert gigglesomething.serverProperties.server-ip == "127.0.0.12";
+          assert gigglesomething.serverProperties.server-port == 25567;
+          assert gigglesomething.serverProperties.online-mode;
+          assert gigglesomething.serverProperties.white-list;
+          assert gigglesomething.serverProperties.enforce-whitelist;
+          assert gigglesomething.serverProperties.enable-rcon;
+          assert gigglesomething.serverProperties."rcon.port" == 25576;
+          assert gigglesomething.serverProperties."rcon.password" == "@RCON_PASSWORD@";
+          assert lib.hasInfix "-XX:+UseG1GC" gigglesomething.jvmOpts;
+          assert gigglesomethingService.serviceConfig.MemoryMax == "6G";
+          assert gigglesomethingService.serviceConfig.ProtectSystem == "strict";
+          assert gigglesomethingService.restartIfChanged;
+          assert !gigglesomethingService.reloadIfChanged;
+          assert lib.elem "minecraft-whitelist-gigglesomething.service" gigglesomethingService.wants;
+          assert
+            gigglesomethingWhitelist.after == [
+              "minecraft-server-gigglesomething.service"
+            ];
+          assert
+            gigglesomethingWhitelist.partOf == [
+              "minecraft-server-gigglesomething.service"
+            ];
+          assert gigglesomethingWhitelist.serviceConfig.Type == "oneshot";
           assert lib.hasInfix "pwppp.4amlunch.net=127.0.0.11:25566" mcRouter.serviceConfig.ExecStart;
+          assert lib.hasInfix "gigglesomething.4amlunch.net=127.0.0.12:25567"
+            mcRouter.serviceConfig.ExecStart;
           assert lib.hasInfix "127.0.0.1:18080/event" mcRouter.serviceConfig.ExecStart;
           assert mcRouter.serviceConfig.DynamicUser;
           assert mcRouter.serviceConfig.IPAddressDeny == "any";

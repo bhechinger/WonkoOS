@@ -1,0 +1,12 @@
+
+[fun]
+	#should entering a level show a small titlecard
+	level_titles = false
+
+[generation]
+	#chance of a rare room spawning in regular and white biomes of level 0 (from 0.0 to 1.0)
+	level_0_rare_room_chance = 0.2
+	#chance of a rare room spawning in the huge room biome of level 0 (from 0.0 to 1.0)
+	level_0_huge_rare_room_chance = 0.1
+	#chance of additional structure bridge portals and the end portal rooms spawning in the outer level 0 (from 0.0 to 1.0)
+	level_0_the_end_and_structure_bridge_room_chance = 0.01

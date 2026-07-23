@@ -1,16 +1,11 @@
 {
-  lib,
   pkgs,
   ...
 }:
 
 {
   services.postgresql = {
-    dataDir = "/home/docker/pgsql/paperless";
+    dataDir = "/var/lib/postgresql/paperless";
     package = pkgs.postgresql_16;
-  };
-
-  systemd.services.postgresql = {
-    serviceConfig.ProtectHome = lib.mkForce "read-only";
   };
 }

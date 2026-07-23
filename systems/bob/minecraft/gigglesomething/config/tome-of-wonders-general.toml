@@ -1,0 +1,17 @@
+
+[mobs]
+
+	[mobs.baitfish]
+		#Whether baitfish spawn in schools
+		baitfishSchoolSpawning = true
+
+	[mobs.flying_fish]
+		#Whether flying fish spawn in schools
+		flyingFishSchoolSpawning = true
+
+	[mobs.squill]
+		#Spawn height for squills
+		#Range: 0 ~ 320
+		squillSpawnHeight = 128
+		#Whether squills spawn in schools
+		squillSchoolSpawning = true

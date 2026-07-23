@@ -1,0 +1,12 @@
+name = "gigglesomething"
+version = "1.0.0"
+pack-format = "packwiz:1.1.0"
+
+[index]
+file = "index.toml"
+hash-format = "sha256"
+hash = "5353a01b5a6b0ced9350f330486d9327ca2878d88ce82ffa13e72dcfc9990a00"
+
+[versions]
+forge = "47.4.10"
+minecraft = "1.20.1"

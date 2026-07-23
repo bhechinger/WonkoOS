@@ -1,0 +1,13 @@
+name = "Echovoids"
+filename = "echovoids-2.0.3b-forge-1.20.1.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "44694690acba4ede2b59c850fe668eb56eb2e14c"
+url = "https://mediafilez.forgecdn.net/files/7919/598/echovoids-2.0.3b-forge-1.20.1.jar"
+
+[update]
+[update.curseforge]
+file-id = 7919598
+project-id = 1509759

@@ -1,0 +1,13 @@
+name = " Sweety's Items (Alex's Mobs)"
+filename = "sweety_items_20.zip"
+side = "client"
+
+[download]
+hash-format = "sha1"
+hash = "d16e4d3e8e2d405e23d2ce57ab7e4b885f1dfa37"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 7418672
+project-id = 1416722

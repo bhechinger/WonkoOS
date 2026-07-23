@@ -1,0 +1,262 @@
+
+[General]
+	#Gives you the ami wiki book at start
+	AMI_WIKI_ENABLED = true
+	#Whether animals that target food recieve the effects of the food they grab
+	FOOD_FX_ENABLED = true
+	#Animals with eggs will be hostile to those seen holding their eggs
+	EGG_ATTACK_ENABLED = true
+	#Mob Transformation
+	TRANSFORMATION_ENABLED = true
+	#Tamed animals have their behaviors be more passive
+	TAMED_FRIENDLIES_ENABLED = true
+	#--Compatibility with Soul Fire--
+	#Being oiled will cause you to combust more from 'hot' blocks
+	COMBUSTIBLE_ENABLED = true
+
+[Mobs]
+	#Dimensional Carver speeds up with haste
+	HASTY_CARVING_ENABLED = true
+
+	[Mobs."Vanilla Mob Tweaks"]
+		#Witch drinks poison resistance when poisoned
+		WITCH_ADDITIONS_ENABLED = true
+
+	[Mobs."Alligator Snapping Turtle"]
+		#ASTs will sleep unless raining or disturbed
+		SNAPPING_DORMANCY_ENABLED = true
+		#ASTs will rarely accumulate moss when raining or within water or grown by bonemealing watered turtles
+		MOSS_PROPOGATION_ENABLED = true
+
+	[Mobs."Bald Eagle"]
+		#--Compatibility with Alexs Caves--
+		#Bald Eagle can bomb targetted areas when being controlled
+		BIRD_BOMBING_ENABLED = true
+
+	[Mobs."Banana Slug"]
+		#Banana Slugs can be lethally sheared for bananas
+		BANANA_SHEAR_ENABLED = true
+
+	[Mobs."Bone Serpent"]
+		#Bone Serpents have their body segments act as a shield to the main body
+		BODY_SHIELDING_ENABLED = true
+
+	[Mobs.Bunfungus]
+		#Bunfungus harvests crops and heal a bit
+		CROP_FARMING_ENABLED = true
+
+	[Mobs."Capuchin Monkey"]
+		#Capuchin Monkeys's darts can be applied with potions
+		DART_EFFECTS_ENABLED = true
+
+	[Mobs.Catfish]
+		#Catfish has a chance to inflict poison to attackers
+		CAT_VENOM_ENABLED = true
+
+	[Mobs."Cave Centipede"]
+		#--Compatibility with Curios Light--
+		#Cave Centipedes fear light and players that hold light, They will attack if attacked
+		LIGHT_FEAR_ENABLED = true
+
+	[Mobs.Cockroach]
+		#Use 'The Roach Crown',to convert an average cockroach into a king
+		ASMONGOLD_ENABLED = true
+		#--Requires Alexs Caves--
+		#Cockroaches will mutate into Gammaroaches from Alex's Caves when in the Toxic Caves (if the mod is present)
+		COCKROACH_MUTATION_ENABLED = true
+
+	[Mobs.Cosmaw]
+		#Cosmaws will get weak when they carry a heavy player, while weak, they cannot carry their owners at all
+		COSMAW_WEAKENED_ENABLED = true
+
+	[Mobs."Crimson Mosquito"]
+		#Chance of crimson mosquitoes to spawn with blood inside them
+		#Range: 0.0 ~ 1.0
+		BLOODED_CHANCE = 0.2
+		#--Compatibility with Biomes Of Plenty--
+		#New blood interactions with Crimson Mosquitoes and more
+		HEMOGENICISM_ENABLED = true
+
+	[Mobs."Devils Hole Pupfish"]
+		#Added mechanics with Devil Hole Pupfish
+		DEVILS_FISHING_INDUSTRY = true
+
+	[Mobs.Elephant]
+		#Tamed Elephants will trample small entities when ridden
+		ELEPHANT_TRAMPLE_ENABLED = true
+		#Tusked Elephants attack players when lingering long enough,unless holding Acacia Blossom
+		TUSKED_TERRITORIAL_ENABLED = true
+
+	[Mobs.Emu]
+		#Emus will attack any that are seen with a ranged weapon
+		RANGED_AGGRO_ENABLED = true
+
+	[Mobs.Endergrade]
+		#Endergrade and its passengers are immune to the void
+		UNAVOIDABLE_ENABLED = true
+		#Endergrades can be boosted with a chorus fruit on a stick
+		ENDERBOOSTING_ENABLED = true
+
+	[Mobs.Enderiophage]
+		#Enderiophage when created will adapt to their dimension
+		ENDERIOPHAGE_ADAPTION_ENABLED = true
+		#Added interaction with Enderiophage infection
+		INFECT_INTERACTION_ENABLED = true
+
+	[Mobs.Farseer]
+		#--Compatibility with Alexs Caves--
+		#Farseer will discombobulate players when targeted,by scrambling their inventory and flashing them with illusions
+		FARSEER_ALTERING_ENABLED = true
+
+	[Mobs.Flutter]
+		#Flutter can be sheared for azalea and related
+		FLUTTER_SHEAR_ENABLED = true
+		#Flutters attract bees and hummingbirds
+		FLOWERING_ATTRACTION_ENABLED = true
+
+	[Mobs.Fly]
+		#Hoflding a maggot while fishing will cause it to be consumed and increase luck for fishing
+		MAGGOT_FISHING_ENABLED = true
+		#Added interactions with animals and blocks for the fly
+		SCENTED_INTERACTION_ENABLED = true
+
+	[Mobs."Flying Fish"]
+		#Flying Fish Boots's mechanics are changed to be more fluid and based on speed and look angle
+		WEAVING_WATERS_ENABLED = true
+
+	[Mobs."Frilled Shark"]
+		#Frilled Shark will attack players with exsanguination or low on health
+		BLEEDING_HUNGER_ENABLED = true
+
+	[Mobs."Grizzly Bear"]
+		#Grizzlies that are pacified with honey can be brushed for hair
+		BRUSHED_ENABLED = true
+		#Grizzlies hunt food differently when havent had honey for a while
+		HONEYLESS_HUNTING_ENABLED = true
+
+	[Mobs.Guster]
+		#New interactions from gusters, along with a new effect available
+		GUSTING_ENABLED = true
+
+	[Mobs.Hummingbird]
+		#Humming Birds pollinate only in the day
+		DAY_POLINATION_ENABLED = true
+
+	[Mobs.Kangaroo]
+		#Kangaroos can be given totems
+		ARMAMENTS_ENABLED = true
+
+	[Mobs.Laviathan]
+		#Obsidian Laviathans can be mined for obsidian, but will cause them slight harm
+		OBSIDIAN_EXTRACT_ENABLED = true
+
+	[Mobs."Leafcutter Ants"]
+		#Leafcutter Chambers that are bustling with fungus can burst out cockroaches
+		COCKROACH_CHAMBER_ENABLED = true
+		#Whether leafcutter pupi is throwable that places anthills like normal
+		THROWABLE_PUPI_ENABLED = true
+		#Leafcutters have variants which also causes rivalry
+		ANT_WAR_ENABLED = true
+
+	[Mobs.Mimicube]
+		#Mimicubes attempt to mimic targeted player chats
+		MIMICKRY_ENABLED = true
+
+	[Mobs.Murmur]
+		#Murmurs can regrow their head and its health is seperated from the main body
+		MURMUR_REGROW_ENABLED = true
+		#Tendon Whip can pickup items and xp as it moves for its owner, with the new 'Stretchy Accumulation' enchantment
+		TENDON_GRAB_ENABLED = true
+		#Unsettling Kimono will cause mobs that attack monsters to attack its wearer
+		UNSETTLING_BACKFIRE_ENABLED = true
+
+	[Mobs.Orca]
+		#Orca's Might can provide temporary neutrality with skelewags
+		MIGHT_UPGRADE_ENABLED = true
+
+	[Mobs.Potoo]
+		#Potoo give their holder temp night vision when dark enough
+		VISIONARY_ENABLED = true
+
+	[Mobs."Rain Frog"]
+		#Rainfrogs burrow away when threatened
+		BURROW_AWAY_ENABLED = true
+
+	[Mobs."Rocky Roller"]
+		#Rolling Thunder allows the player to roll in liquid with the new enchantment 'Rolling Thunder'
+		ROLLING_THUNDER_ENABLED = true
+
+	[Mobs.Seagull]
+		#--Snatch Interaction--
+		#Seagulls will only snatch food from your main or off hand
+		HELD_FOOD_ENABLED = false
+		#New seagull interaction for stealing food from you
+		SNATCH_INTERACTION_ENABLED = true
+
+	[Mobs.Skreecher]
+		#Skreecher souls can be used on a Screacher block to allow it to spawn wardens
+		SKREECHER_WARD_ENABLED = true
+		#New potion effect that spawns a Warden on the player's position when it is about to ware off
+		SKREECH_YOUR_LAST_ENABLED = true
+
+	[Mobs."Snow Leopard"]
+		#Snow Leopard can cause certain animals to drop certain items related to the prey
+		SNOW_LUCK_ENABLED = true
+		#Snow Leopard will hunt weaker moose, but will also mistakenly hunt players with moose headgear
+		LEOPARD_DESIRES_ENABLED = true
+
+	[Mobs."Soul Vulture"]
+		#Soul Vultures no matter what, when attacking a mob will cause its soul level to go up
+		SOUL_STEAL_ENABLED = true
+
+	[Mobs.Straddler]
+		#Straddlers have ammo,once exhausted it requires time to reload (O Disables this feature)
+		#Range: > 0
+		STRADDLER_SHOTS_AMOUNT = 8
+		#Straddleboards drop half of its material costs if it doesnt drop itself
+		STRADDLE_SCAVENGE_ENABLED = true
+
+	[Mobs.Sunbird]
+		#Sun Bird effects given to players are changed for the better or the worst
+		JUDGEMENTAL_RETURNS_ENABLED = true
+
+	[Mobs.Terrapin]
+		#Terrapin take damage when they get launched
+		TERRAPIN_STOMP_ENABLED = true
+
+	[Mobs.Tusklin]
+		#Tusklin struck by lightning will be converted to zoglins
+		ZOGLINNED_ENABLED = true
+
+	[Mobs."Void Worm"]
+		#Dimensional Carver can be used to make a portal to a linked lodestone when holding the compass off-hand
+		DIMENSIONAL_LODESTONE_ENABLED = true
+		#--Dimensional Lodestone--
+		#The compass linked to a lodestone will be consumed when used to make a portal
+		CONSUME_COMPASS_ENABLED = true
+
+["Easter eggs"]
+	#Grizzlies will turn to Freddy Fazbear when named such
+	FREDDYABLE_ENABLED = true
+	#Crocodile has a halo when named 'Wally'
+	EMOTIONAL_REMEMEMBRANCE_ENABLED = true
+	#Blue Shell Terrapin
+	BLUE_SHELL_ENABLED = true
+	#Withered Variant of Skelewag that can be made with coal
+	WITHERED_SKELEWAG_ENABLED = true
+
+["dumb shit"]
+	#April Fools Banana Slug and Banana Effects
+	GOOFY_BANANA_SLIP_ENABLED = false
+	#April Fools Crimson Mosquito Effects
+	GOOFY_CRIMSON_MULTIPLY_ENABLED = false
+	#April Fools Rain Frog Effects
+	GOOFY_RAINFROG_SPAWNAGE_ENABLED = false
+	#April Fools Capuchin Monkey Effects
+	GOOFY_CAPUCHIN_BOMB_ENABLED = false
+	#April Fools Straddler Effects
+	GOOFY_STRADDLER_SHOTGUN_ENABLED = false
+	#Boxing Gloves
+	BOXING_GLOVES_ENABLED = false
+	#Catfish texture changes when hot thing in mouth
+	GOOFY_HOT_POCKET_ENABLED = false

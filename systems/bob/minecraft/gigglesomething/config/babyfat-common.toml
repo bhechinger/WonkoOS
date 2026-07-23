@@ -1,0 +1,4 @@
+
+[General]
+	#Should Ranchus breed naturally when conditions are met?
+	natural_ranchu_breeding = true

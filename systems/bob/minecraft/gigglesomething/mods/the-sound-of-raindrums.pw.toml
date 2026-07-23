@@ -1,0 +1,13 @@
+name = "The Sound of Raindrums"
+filename = "soundofraindrums-1.0.jar"
+side = "client"
+
+[download]
+hash-format = "sha1"
+hash = "1ef7e8b8c139c94dc278bebc1dcbaf59209ca8b5"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 6944328
+project-id = 1337759

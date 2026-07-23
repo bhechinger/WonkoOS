@@ -1,0 +1,13 @@
+name = "DucLib"
+filename = "duclib-1.20-1.1.4.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "5cc919a229f599625aeac7f95d508e4b6b74f936"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 5258376
+project-id = 823186

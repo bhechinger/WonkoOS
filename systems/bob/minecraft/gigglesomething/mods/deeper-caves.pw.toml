@@ -1,0 +1,13 @@
+name = "Deeper Caves"
+filename = "DeeperCaves-1.20.1-1.2.7.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "6b6e107df6b1cf6ef6d14c8086eecdf8a936e7db"
+url = "https://mediafilez.forgecdn.net/files/5157/225/DeeperCaves-1.20.1-1.2.7.jar"
+
+[update]
+[update.curseforge]
+file-id = 5157225
+project-id = 882911

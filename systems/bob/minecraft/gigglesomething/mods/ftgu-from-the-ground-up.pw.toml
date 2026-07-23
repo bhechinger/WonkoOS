@@ -1,0 +1,13 @@
+name = "FTGU: From The Ground Up"
+filename = "ftgu-1.4.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "931911d902afa16787ac843d93c7f394830ef153"
+url = "https://mediafilez.forgecdn.net/files/7195/984/ftgu-1.4.jar"
+
+[update]
+[update.curseforge]
+file-id = 7195984
+project-id = 1365340

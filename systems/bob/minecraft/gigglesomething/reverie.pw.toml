@@ -1,0 +1,13 @@
+name = "Reverie"
+filename = "Reverie Beta 1.zip"
+side = "client"
+
+[download]
+hash-format = "sha1"
+hash = "de2a3b4c83338e26979db158f36a2ab77f300ee1"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 7644348
+project-id = 1248172

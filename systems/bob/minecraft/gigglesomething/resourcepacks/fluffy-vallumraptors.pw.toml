@@ -1,0 +1,13 @@
+name = "Fluffy Vallumraptors"
+filename = "fluffy_vallumraptors.zip"
+side = "client"
+
+[download]
+hash-format = "sha1"
+hash = "2871ffe8e9e6aaec1214d2b75da4b479e09b8a37"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 6392834
+project-id = 1236183

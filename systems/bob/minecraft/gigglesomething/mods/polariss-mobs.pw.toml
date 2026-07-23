@@ -1,0 +1,13 @@
+name = "Polaris's Mobs"
+filename = "polariss_mobs-1.0.0-forge-1.20.1.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "d94ad7b9612c71f533f3f2874c8f808db25cec27"
+url = "https://mediafilez.forgecdn.net/files/7490/377/polariss_mobs-1.0.0-forge-1.20.1.jar"
+
+[update]
+[update.curseforge]
+file-id = 7490377
+project-id = 1437748

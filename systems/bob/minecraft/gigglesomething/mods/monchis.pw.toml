@@ -1,0 +1,13 @@
+name = "Monchlets! "
+filename = "monchlets-2.0.3.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "939cc8b1b320c281897ae58a92b6d0f736c4ab2a"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 8202846
+project-id = 693284

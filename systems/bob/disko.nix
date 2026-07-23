@@ -59,6 +59,14 @@
           type = "zfs_fs";
           mountpoint = "/var";
         };
+        jackett = {
+          type = "zfs_fs";
+          mountpoint = "/var/lib/jackett";
+        };
+        paperless = {
+          type = "zfs_fs";
+          mountpoint = "/var/lib/paperless";
+        };
         "var/minecraft" = {
           type = "zfs_fs";
           mountpoint = "/var/lib/minecraft";
@@ -75,8 +83,16 @@
         };
         postgres = {
           type = "zfs_fs";
-          mountpoint = "/home/docker/pgsql";
+          mountpoint = "/var/lib/postgresql";
           options.recordsize = "16K";
+        };
+        redis = {
+          type = "zfs_fs";
+          mountpoint = "/var/lib/redis-paperless";
+        };
+        www = {
+          type = "zfs_fs";
+          mountpoint = "/var/www";
         };
       };
     };
@@ -85,9 +101,13 @@
   # OpenZFS owns the native mountpoints; disko still creates them.
   fileSystems = {
     "/var".enable = false;
+    "/var/lib/jackett".enable = false;
     "/var/lib/minecraft".enable = false;
+    "/var/lib/paperless".enable = false;
     "/var/lib/plexmediaserver".enable = false;
+    "/var/lib/postgresql".enable = false;
+    "/var/lib/redis-paperless".enable = false;
+    "/var/www".enable = false;
     "/home".enable = false;
-    "/home/docker/pgsql".enable = false;
   };
 }

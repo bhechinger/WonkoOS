@@ -1,0 +1,13 @@
+name = "Thicket"
+filename = "thicket-1.2.4-1.20.1.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "74a2541292a1af26d10cf8c51a5fc7704c4d62a3"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 7681692
+project-id = 1187792

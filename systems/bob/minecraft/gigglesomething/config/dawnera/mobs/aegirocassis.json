@@ -1,0 +1,74 @@
+{
+  "Replace": false,
+  "Rideable": true,
+  "PassengerZoom": 2,
+  "RidingSpeed": 0.1,
+  "CanSprint": false,
+  "Attributes": {
+    "MaxHealth": 8.0,
+    "MaxHunger": 10.0,
+    "MaxEnergy": 10.0,
+    "MovementSpeed": 1.0,
+    "Gravity": 0.06,
+    "FollowRange": 16.0
+  },
+  "SpawnData": {
+    "SpawnCount": "1-2",
+    "SpawnWeight": 3,
+    "RandomChance": 0.3,
+    "Biomes": [
+      {
+        "ID": "minecraft:ocean"
+      },
+      {
+        "ID": "minecraft:deep_ocean"
+      },
+      {
+        "ID": "minecraft:deep_lukewarm_ocean"
+      }
+    ]
+  },
+  "AI": {
+    "Goals": [
+      {
+        "Priority": 0,
+        "ID": "dawnera:love_timed",
+        "Delay": 1000
+      },
+      {
+        "Priority": 0,
+        "ID": "dawnera:try_to_find_water",
+        "Speed": 1.0
+      },
+      {
+        "Priority": 0,
+        "ID": "dawnera:panic_of_damage",
+        "Speed": 1.2
+      },
+      {
+        "Priority": 1,
+        "ID": "dawnera:breed_pregnancy",
+        "Speed": 1.0
+      },
+      {
+        "Priority": 3,
+        "ID": "dawnera:random_stroll",
+        "Speed": 0.9,
+        "Interval": 30,
+        "PositionChooser": "WATER_SEA",
+        "MovementImplementer": "SQUID_DASH"
+      }
+    ]
+  },
+  "InputControls": {
+    "Buttons": [
+      {
+        "ID": "jump",
+        "Type": "key",
+        "Action": "on_press",
+        "Button": "key_space",
+        "Cooldown": 40
+      }
+    ]
+  }
+}

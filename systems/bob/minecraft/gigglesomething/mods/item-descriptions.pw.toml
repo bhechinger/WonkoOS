@@ -1,0 +1,13 @@
+name = "Item Descriptions"
+filename = "item-descriptions-2.5.4+1.20.1-forge.jar"
+side = "client"
+
+[download]
+hash-format = "sha1"
+hash = "1802da61db5c410d4cb046359b9d89cf0d6ad767"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 7122173
+project-id = 1101501

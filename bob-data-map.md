@@ -6,12 +6,12 @@ Paths are on Bob unless noted otherwise.
 
 | Service | Persistent data | Notes |
 |---|---|---|
-| Paperless-ngx | `/home/docker/paperless/{consume,data,export,media}` | `consume` and `export` are NFS-exported to `10.42.0.10` |
-| PostgreSQL 16 | `/home/docker/pgsql/paperless` | Paperless database cluster; stop PostgreSQL before raw backup |
-| Redis | None required | Paperless broker state is disposable |
-| Nginx | `/home/docker/reverse/{certs,html}` | Virtual-host configuration is declarative in `systems/bob/services.nix` |
+| Paperless-ngx | `/var/lib/paperless/{consume,data,export,media}` | `consume` and `export` are NFS-exported to `10.42.0.10` |
+| PostgreSQL 16 | `/var/lib/postgresql/paperless` | Paperless database cluster; stop PostgreSQL before raw backup |
+| Redis | `/var/lib/redis-paperless` | Paperless broker state is disposable |
+| Nginx | `/var/www` | Virtual-host configuration and certificates are declarative |
 | Cloudflared | `/var/lib/cloudflared/tunnel.env` | Root-only tunnel token |
-| Jackett | `/home/docker/jackett` | Native data directory is `/home/docker/jackett/config/Jackett` |
+| Jackett | `/var/lib/jackett` | Downloads are under `/var/lib/jackett/downloads` |
 | Sonarr | `/var/lib/sonarr` | Shows are on Basket at `/nfs/Plex/Shows` |
 | rTorrent | `/var/lib/rtorrent` | Downloads are on Basket at `/nfs/Torrents` |
 | ruTorrent | `/var/lib/rutorrent` | Includes profile data and HTTP basic-auth files |

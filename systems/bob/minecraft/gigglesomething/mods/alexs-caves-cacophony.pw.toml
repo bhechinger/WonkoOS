@@ -1,0 +1,13 @@
+name = "Alex's Caves: Cacophony"
+filename = "accacophony-0.0.1.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "6e0c0fae1b162848bc415d76d3da35e9b07d44d2"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 7503470
+project-id = 1389474

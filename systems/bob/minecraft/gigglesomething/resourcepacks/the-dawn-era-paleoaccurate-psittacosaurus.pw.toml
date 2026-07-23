@@ -1,0 +1,13 @@
+name = "The Dawn Era PaleoAccurate Psittacosaurus"
+filename = "Paleoaccurate TDE taco.zip"
+side = "client"
+
+[download]
+hash-format = "sha1"
+hash = "1e1f101b2fe8fa7be860671230a8b41d058f4132"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 5197363
+project-id = 989799

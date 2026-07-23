@@ -1,0 +1,13 @@
+name = "Create & Alex's Caves Limestone Compat"
+filename = "Limestone Compat.zip"
+side = "client"
+
+[download]
+hash-format = "sha1"
+hash = "6188ba4a2f6ab001e97d6aebb2f01fd47cf20515"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 6548545
+project-id = 1269363

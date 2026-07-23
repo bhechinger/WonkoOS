@@ -1,0 +1,13 @@
+name = "Better Clouds"
+filename = "better-clouds-1.3.37-beta+1.20.1-forge.rev.e63efe2.jar"
+side = "client"
+
+[download]
+hash-format = "sha1"
+hash = "5970c3134b95963c467c2dd76664ff02224140b6"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 7074847
+project-id = 1285973

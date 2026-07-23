@@ -1,0 +1,13 @@
+name = "Create Touch-Ups"
+filename = "Create Touch-Ups v1.0.zip"
+side = "client"
+
+[download]
+hash-format = "sha1"
+hash = "44bd7c82f3af9c55e810fe9c44c9d0deeed26e40"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 6292157
+project-id = 656900

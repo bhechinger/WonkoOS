@@ -1,0 +1,13 @@
+name = "Barnyard Buddies"
+filename = "BarnyardBuddies_1.20.1Forge_V0.6.4.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "aa617b83af1b1d358a2d82f6c514d6dc0c6634f9"
+url = "https://cursemaven.com/curse/maven/barnyard-buddies-1321667/7904082/barnyard-buddies-1321667-7904082.jar"
+
+[update]
+[update.curseforge]
+file-id = 7904082
+project-id = 1321667

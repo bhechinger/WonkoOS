@@ -1,0 +1,13 @@
+name = "Kiwi Boi"
+filename = "kiwiboi-1.20.1-1.0.2.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "c78844753b998a45a505523043a0d11c2d0fdf9c"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 5890527
+project-id = 530472

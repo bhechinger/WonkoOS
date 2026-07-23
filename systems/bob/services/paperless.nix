@@ -17,9 +17,9 @@
     enable = true;
     address = "127.0.0.1";
     port = 8000;
-    dataDir = "/home/docker/paperless/data";
-    mediaDir = "/home/docker/paperless/media";
-    consumptionDir = "/home/docker/paperless/consume";
+    dataDir = "/var/lib/paperless/data";
+    mediaDir = "/var/lib/paperless/media";
+    consumptionDir = "/var/lib/paperless/consume";
     consumptionDirIsPublic = false;
     database.createLocally = true;
     environmentFile = config.sops.secrets.paperless-environment.path;
@@ -51,14 +51,14 @@
         mode = "0750";
         user = "root";
       };
-      "/home/docker/paperless/consume".d.mode = lib.mkForce "0750";
-      "/home/docker/paperless/data".d.mode = lib.mkForce "0750";
-      "/home/docker/paperless/export".d = {
+      "/var/lib/paperless/consume".d.mode = lib.mkForce "0750";
+      "/var/lib/paperless/data".d.mode = lib.mkForce "0750";
+      "/var/lib/paperless/export".d = {
         group = "paperless";
         mode = "0750";
         user = "paperless";
       };
-      "/home/docker/paperless/media".d.mode = lib.mkForce "0750";
+      "/var/lib/paperless/media".d.mode = lib.mkForce "0750";
     };
   };
 }

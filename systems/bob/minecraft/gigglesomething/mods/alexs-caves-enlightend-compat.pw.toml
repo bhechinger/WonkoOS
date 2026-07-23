@@ -1,0 +1,13 @@
+name = "Alex's Caves - Enlightend Compat"
+filename = "Compat_AlexsCaves-Enlightend.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "f93d47e3eed58062b105b2798c439be3ab4a9a3c"
+url = "https://mediafilez.forgecdn.net/files/6915/959/Compat_AlexsCaves-Enlightend.jar"
+
+[update]
+[update.curseforge]
+file-id = 6915959
+project-id = 1150269

@@ -1,0 +1,13 @@
+name = "Fresh mowzie's mobs textures"
+filename = "Fresh mowzie mobs v. 1.2.1.zip"
+side = "client"
+
+[download]
+hash-format = "sha1"
+hash = "beb14f721d714fbcda8df2b8b53b67ca4ea1d59d"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 7818815
+project-id = 1400608

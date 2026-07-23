@@ -1,0 +1,13 @@
+name = "Fantasy Shaders Reimagined"
+filename = "Fantasy_Shaders_v1.0.zip"
+side = "client"
+
+[download]
+hash-format = "sha1"
+hash = "1ce88fa6c86bdd59fd5913588ccf94535179e7f4"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 6923306
+project-id = 1333879

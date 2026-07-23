@@ -1,0 +1,13 @@
+name = "Soulful Nether"
+filename = "soulfulnether-1.0.2.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "41dbf1ffcbb50f02d2695d7abc9c770a12480da6"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 7980525
+project-id = 1146098

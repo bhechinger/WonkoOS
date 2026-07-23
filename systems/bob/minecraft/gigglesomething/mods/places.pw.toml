@@ -1,0 +1,13 @@
+name = "Places"
+filename = "places-0.4.4-forge-1.20.1.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "16975f1f0c0c5ea7fc07ac3232cf21a876613aa1"
+url = "https://mediafilez.forgecdn.net/files/8120/113/places-0.4.4-forge-1.20.1.jar"
+
+[update]
+[update.curseforge]
+file-id = 8120113
+project-id = 1375619

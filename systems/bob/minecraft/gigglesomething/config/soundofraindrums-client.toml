@@ -1,0 +1,20 @@
+
+#Sound of Raindrums Configuration
+#20 ticks = 1 second = 1000ms
+["sound behaviour"]
+	#The radius that gets checked for noteblocks (in blocks), closest blocks to the player are prioritized[default: 10]
+	#Range: 1 ~ 32
+	soundRadius = 8
+	#Interval in ticks for checking noteblocks within the radius, lower value means more checks per second which can cause lag higher values is the opposite[default: 15]
+	#Range: 1 ~ 200
+	soundInterval = 20
+	#Amount of noteblocks that will be playing sounds within the radius, if its too loud lowering this value can help[default: 10]
+	#Range: 1 ~ 64
+	maxSoundsPerCycle = 3
+	#(for debugging) shows which noteblocks play a sound and provides logs[default: false]
+	debugShowSoundBlock = false
+
+["sound options"]
+	#Enable or disable sound features
+	#Enable rain drum sounds when rain hits noteblocks[default: true]
+	EnableRainDrums = true

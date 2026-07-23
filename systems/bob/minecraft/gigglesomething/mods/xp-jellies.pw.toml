@@ -1,0 +1,13 @@
+name = "Xp Jellies"
+filename = "xp_jellies_industrial_revolution-1.20.1.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "ea3d281052e546a40f1e68bdae693844e43d64bc"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 5786588
+project-id = 1058541

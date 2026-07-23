@@ -1,0 +1,213 @@
+
+["Projectile Size Handler"]
+	#Size of dynamite projectile
+	#Range: 0.1 ~ 10.0
+	Dynamite = 1.5
+	#Size of bullet projectile
+	#Range: 0.1 ~ 10.0
+	Bullet = 1.0
+	#Size of sharp Stone projectile
+	#Range: 0.1 ~ 10.0
+	"Sharp Stone" = 1.9
+	#Size of stake projectile
+	#Range: 0.1 ~ 10.0
+	Stake = 1.6
+	#Size of shuriken projectile
+	#Range: 0.1 ~ 10.0
+	Shuriken = 1.5
+	#Size of kunai projectile
+	#Range: 0.1 ~ 10.0
+	Kunai = 1.7
+	#Size of giant Shuriken projectile
+	#Range: 0.1 ~ 10.0
+	"Giant Shuriken" = 1.9
+	#Size of pronged Kunai projectile
+	#Range: 0.1 ~ 10.0
+	"Pronged Kunai" = 1.9
+	#Size of broom projectile
+	#Range: 0.1 ~ 10.0
+	Broom = 1.0
+	#Size of spear projectile
+	#Range: 0.1 ~ 10.0
+	Spear = 1.0
+	#Size of trident projectile
+	#Range: 0.1 ~ 10.0
+	Trident = 1.0
+	#Size of royal spear projectile
+	#Range: 0.1 ~ 10.0
+	"Royal Spear" = 1.0
+	#Size of royal axe projectile
+	#Range: 0.1 ~ 10.0
+	"Royal Axe" = 1.8
+	#Size of axe projectile
+	#Range: 0.1 ~ 10.0
+	Axe = 1.7
+	#Size of cleaver projectile
+	#Range: 0.1 ~ 10.0
+	Cleaver = 1.7
+	#Size of ring projectile
+	#Range: 0.1 ~ 10.0
+	Ring = 1.7
+	#Size of hunter's boomerang projectile
+	#Range: 0.1 ~ 10.0
+	"Hunter's Boomerang" = 1.7
+	#Size of slingshot projectiles
+	#Range: 0.1 ~ 10.0
+	Slingshot = 1.5
+
+["Camera Effects Handler"]
+	#Enable or disable screen shake effects
+	Shake = true
+	#Enable or disable FOV modifications
+	"Fov Modifier" = true
+
+	["Camera Effects Handler"."FOV Modifier Handler"]
+		#Enable FOV for crossbows
+		Crossbows = true
+		#Enable or disable FOV for bows
+		Bows = true
+		#Enable or disable FOV for slingshots
+		Slingshots = true
+		#Enable FOV or disable for tridents
+		Tridents = true
+		#Enable or disable FOV for brooms
+		Brooms = true
+		#Enable or disable FOV for spears
+		Spear = true
+		#Enable or disable FOV for cleavers
+		Cleaver = true
+		#Enable or disable FOV for sharp stones
+		"Sharp Stone" = true
+		#Enable or disable FOV for kunai
+		Kunai = true
+		#Enable or disable FOV for pronged kunai
+		"Pronged Kunai" = true
+		#Enable or disable FOV for shurikens
+		Shuriken = true
+		#Enable or disable FOV for giant shurikens
+		"Giant Shuriken" = true
+		#Enable or disable FOV for royal spears
+		"Royal Spear" = true
+		#Enable or disable FOV for royal axe
+		"Royal Axe" = true
+		#Enable or disable FOV for axes
+		Axe = true
+		#Enable or disable FOV for sharp stone blades
+		"Sharp Stone Blade" = true
+
+["Gun System Client Handler"]
+	#Enable or disable empty click messages
+	"Empty Click Messages" = false
+	#Enable or disable bullet count messages
+	"Bullet Count Messages" = false
+	#Enable or disable bullet projectile icon
+	"Bullet Projectile Icon" = true
+	#Enable or disable gun inventory sounds
+	"Gun Inventory Sounds" = true
+	#Key to press with right-click to open gun inventory (ALT, SHIFT, or CONTROL)
+	#Allowed Values: ALT, SHIFT, CONTROL
+	"Gun Inventory Key" = "SHIFT"
+
+	["Gun System Client Handler"."Gun Bar Settings"]
+		#Enable or disable the gun color bar
+		"Show Gun Bar" = true
+		#X position of the gun color bar
+		#Range: > -2147483648
+		"Gun Bar X" = 2
+		#Y position of the gun color bar
+		#Range: > -2147483648
+		"Gun Bar Y" = 13
+		#Use only the default color for the bar instead of bullet colors
+		"Gun Default Color" = false
+
+	["Gun System Client Handler"."Gun Storage Overlay Settings"]
+		#Overlay position on the screen
+		#Allowed Values: TOP, BOTTOM
+		"Overlay Position" = "BOTTOM"
+		#Enable or disable bullet render on Overlay
+		"Show Gun Storage Overlay" = true
+		#Enable background for the overlay
+		backgroundEnabled = true
+		#Background color for the overlay
+		#Allowed Values: BLACK, WHITE, LIGHT_GRAY, DARK_GRAY, RED, GREEN, BLUE, PINK, ORANGE, LAVENDER, MINT, SANDY_BEIGE, GOLDEN, OLIVE, PALE_YELLOW, LIGHT_BROWN, BROWN, CYAN, PURPLE, TEAL, BEIGE, TURQUOISE, FUCHSIA
+		backgroundColor = "BLACK"
+		#Transparency level for the overlay background
+		#Allowed Values: TRANSPARENT, SEMI_TRANSPARENT, OPAQUE
+		backgroundTransparency = "TRANSPARENT"
+		#Border color for the overlay
+		#Allowed Values: BLACK, WHITE, LIGHT_GRAY, DARK_GRAY, RED, GREEN, BLUE, PINK, ORANGE, LAVENDER, MINT, SANDY_BEIGE, GOLDEN, OLIVE, PALE_YELLOW, LIGHT_BROWN, BROWN, CYAN, PURPLE, TEAL, BEIGE, TURQUOISE, FUCHSIA
+		borderColor = "WHITE"
+		#Border thickness for the overlay background
+		#Range: 0 ~ 3
+		borderThickness = 1
+		#Enable or disable rendering of slot 0
+		"Render Slot 0" = true
+		#Enable or disable rendering of slot 1
+		"Render Slot 1" = true
+		#Enable or disable rendering of slot 2
+		"Render Slot 2" = true
+
+		["Gun System Client Handler"."Gun Storage Overlay Settings"."Main Hand Overlay Position"]
+			#X position of the main hand gun storage overlay
+			#Range: > -2147483648
+			"Main Hand Overlay X" = 0
+			#Y position of the main hand gun storage overlay
+			#Range: > -2147483648
+			"Main Hand Overlay Y" = 0
+
+		["Gun System Client Handler"."Gun Storage Overlay Settings"."Off Hand Overlay Position"]
+			#X position of the off hand gun storage overlay
+			#Range: > -2147483648
+			"Off Hand Overlay X" = 0
+			#Y position of the off hand gun storage overlay
+			#Range: > -2147483648
+			"Off Hand Overlay Y" = 0
+
+	["Gun System Client Handler"."Gun Storage Render Bullet Gui"]
+		#Enable or disable bullet rendering inside the item Gui
+		"Show Gui Bullet Render" = false
+		#X position of the bullet bar in the GUI
+		#Range: -100.0 ~ 100.0
+		"Gui Bullet Translate X" = -0.3
+		#Y position of the bullet bar in the GUI
+		#Range: -100.0 ~ 100.0
+		"Gui Bullet Translate Y" = 0.3
+		#Scale for bullet rendering in item Gui
+		#Range: 0.1 ~ 10.0
+		"Gui Bullet Scale" = 0.6
+
+["Weapon Bars Handler"]
+	#Enable or disable the hit count bar for Butterfly Swords
+	"Butterfly Hit Count Bar" = true
+	#Enable or disable the hit count bar for Twinblades
+	"Twinblade Hit Count Bar" = true
+	#Enable or disable the hit count bar for Greatswords
+	"Greatsword Hit Count Bar" = true
+	#X position of the weapon bars
+	#Range: > -2147483648
+	"Weapon Hit Count Bar X" = 2
+	#Y position of the weapon bars
+	#Range: > -2147483648
+	"Weapon Hit Count Bar Y" = 13
+
+["Creative Tab Handler"]
+	#The item to use as the creative tab icon. (Require restart)
+	"Creative Tab Icon" = "jaams_weaponry:iron_buster_sword"
+
+["Tooltips System Handler"]
+	#Enable or disable custom tooltips added by the mod
+	"Enable Tooltips" = true
+	#Enable or disable tooltips shown when holding the Control key added by the mod
+	"Enable Extra Info Tooltips" = true
+	#Enable or disable tooltips shown when holding the Alt key added by the mod
+	"Enable Descriptions Tooltips" = true
+	#List of item IDs that are excluded from the mod custom tooltips
+	"Excluded Tooltips Items" = []
+	#List of item IDs that are excluded from the mod Control key tooltips
+	"Excluded Extra Info Tooltips Items" = []
+	#List of item IDs that are excluded from the mod Alt key tooltips
+	"Excluded Descriptions Tooltips Items" = []
+
+["Misc Client Configurations"]
+	#Enable or disable horizontal render for flat bow
+	"Horizontal Flat Bow" = true
