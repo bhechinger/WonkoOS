@@ -796,7 +796,6 @@ in
       ];
       backupPrepareCommand = lib.getExe prepareBackup;
       backupCleanupCommand = lib.getExe cleanupBackup;
-      extraBackupArgs = [ "--one-file-system" ];
       timerConfig = {
         OnCalendar = "*-*-* 04:30:00";
         Persistent = true;

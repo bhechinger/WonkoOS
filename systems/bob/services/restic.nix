@@ -194,7 +194,6 @@ in
         "/var/lib/plexmediaserver/.zfs/snapshot/restic-services/Library/Application Support/Plex Media Server/Crash Reports"
         "/var/lib/plexmediaserver/.zfs/snapshot/restic-services/Library/Application Support/Plex Media Server/Logs"
       ];
-      extraBackupArgs = [ "--one-file-system" ];
       backupPrepareCommand = lib.getExe prepare;
       backupCleanupCommand = lib.getExe cleanup;
       timerConfig = {

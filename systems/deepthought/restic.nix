@@ -76,7 +76,6 @@ in
       "/home/.zfs/snapshot/restic-deepthought/wonko/.local/share/Trash"
       "/home/.zfs/snapshot/restic-deepthought/wonko/.local/share/containers"
     ];
-    extraBackupArgs = [ "--one-file-system" ];
     backupPrepareCommand = lib.getExe prepare;
     backupCleanupCommand = lib.getExe cleanup;
     timerConfig = {
