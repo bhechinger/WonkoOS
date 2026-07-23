@@ -252,6 +252,7 @@
             tempo = config.services.tempo.settings;
             bobNode = config.services.prometheus.exporters.node;
             deepthoughtNode = deepthought.services.prometheus.exporters.node;
+            deepthoughtNvidia = deepthought.services.prometheus.exporters.nvidia-gpu;
             bobAlloy = config.environment.etc."alloy/config.alloy".text;
             deepthoughtAlloy = deepthought.environment.etc."alloy/config.alloy".text;
             vyprvpn = deepthought.services.openvpn.servers.vyprvpn-miami;
@@ -474,6 +475,10 @@
           assert deepthoughtNode.enable;
           assert deepthoughtNode.listenAddress == "10.42.0.10";
           assert lib.elem 9100 deepthought.networking.firewall.interfaces.internal.allowedTCPPorts;
+          assert deepthoughtNvidia.enable;
+          assert deepthoughtNvidia.listenAddress == "10.42.0.10";
+          assert deepthoughtNvidia.port == 9835;
+          assert lib.elem 9835 deepthought.networking.firewall.interfaces.internal.allowedTCPPorts;
           assert lib.all (port: lib.elem port internal.allowedTCPPorts) [
             3100
             4317
@@ -485,6 +490,7 @@
             "10.42.0.251:9100"
             "127.0.0.11:19565"
             "127.0.0.12:19565"
+            "10.42.0.10:9835"
           ];
           assert lib.hasInfix "10.42.0.2:3100/loki/api/v1/push" deepthoughtAlloy;
           assert config.services.nginx.virtualHosts ? "grafana.4amlunch.net";

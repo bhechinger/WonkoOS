@@ -23,10 +23,20 @@ let
       | walk(if . == "$" + "{DS_BONSAI}" then "mimir" else . end)
     ' ${minecraftDashboardSource} > "$out"
   '';
+  nvidiaDashboard = pkgs.runCommand "nvidia-gpu.json" { nativeBuildInputs = [ pkgs.jq ]; } ''
+    jq '
+      del(.id, .__inputs)
+      | walk(if . == "$" + "{DS_PROMETHEUS}" then "mimir" else . end)
+    ' ${pkgs.prometheus-nvidia-gpu-exporter.src}/grafana/dashboard.json > "$out"
+  '';
   dashboards = pkgs.linkFarm "grafana-dashboards" [
     {
       name = "minecraft-server.json";
       path = minecraftDashboard;
+    }
+    {
+      name = "nvidia-gpu.json";
+      path = nvidiaDashboard;
     }
     {
       name = "node-exporter-full.json";
@@ -257,6 +267,14 @@ in
         {"__address__" = "127.0.0.1:9100", "instance" = "bob", "job" = "node"},
         {"__address__" = "10.42.0.10:9100", "instance" = "deepthought", "job" = "node"},
         {"__address__" = "10.42.0.251:9100", "instance" = "sierra", "job" = "node"},
+      ]
+      scrape_interval = "15s"
+      forward_to = [prometheus.remote_write.mimir.receiver]
+    }
+
+    prometheus.scrape "nvidia" {
+      targets = [
+        {"__address__" = "10.42.0.10:9835", "instance" = "deepthought", "job" = "nvidia"},
       ]
       scrape_interval = "15s"
       forward_to = [prometheus.remote_write.mimir.receiver]

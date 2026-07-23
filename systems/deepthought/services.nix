@@ -16,6 +16,12 @@
       openFirewall = false;
     };
 
+    prometheus.exporters.nvidia-gpu = {
+      enable = true;
+      listenAddress = "10.42.0.10";
+      openFirewall = false;
+    };
+
     alloy = {
       enable = true;
       extraFlags = [ "--server.http.listen-addr=127.0.0.1:12345" ];
