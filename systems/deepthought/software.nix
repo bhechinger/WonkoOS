@@ -32,6 +32,8 @@
       yq
       openssl
       wget
+      backblaze-b2
+      rclone
       nfs-utils
       lsof
       file
