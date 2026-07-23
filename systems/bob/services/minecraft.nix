@@ -74,6 +74,19 @@ let
     '';
   pwpppServerList = serverList "pwppp.4amlunch.net";
   gigglesomethingServerList = serverList "gigglesomething.4amlunch.net";
+  prometheusExporterConfig =
+    address:
+    pkgs.writeText "prometheus_exporter-server.toml" ''
+      [collector]
+      jvm = true
+      mc = true
+      mc_dimension_tick_errors = "LOG"
+      mc_entities = true
+
+      [web]
+      listen_address = "${address}"
+      listen_port = 19565
+    '';
 
   mcRouter = pkgs.buildGoModule rec {
     pname = "mc-router";
@@ -122,14 +135,14 @@ let
     version = packVersion;
     src = packSource;
     side = "server";
-    packHash = "sha256-SpVDzoOoM1QgaHgkvsYH50MDB476kZD91uJT2sH7nXg=";
+    packHash = "sha256-mAg9axu85lgGxgHq3CHiIeQIzqpYaUX96SKaQIYcPPo=";
   };
   gigglesomethingServerPack = pkgs.fetchPackwizModpack {
     pname = "gigglesomething-server";
     version = gigglesomethingPackVersion;
     src = gigglesomethingPackSource;
     side = "server";
-    packHash = "sha256-ipq7XmuA8uCO6d8gQ/DOLeajEN2AUSCvt8dP5/4vWVc=";
+    packHash = "sha256-uKimqA4x2fIzZap0MX9BTg9AVkjt724WxhCJfNpsRro=";
   };
 
   # Packwiz bundles non-CurseForge entries as JARs. Use matching CurseForge file
@@ -276,6 +289,7 @@ let
     removeAttrs managedConfigs [ "config/voicechat/voicechat-server.properties" ]
     // datapacks
     // {
+      "config/prometheus_exporter-server.toml" = prometheusExporterConfig "127.0.0.11";
       "config/voicechat/voicechat-server.properties" = voiceConfig;
     };
   gigglesomethingManagedConfigs = builtins.listToAttrs (
@@ -286,6 +300,7 @@ let
   );
   gigglesomethingServerFiles = gigglesomethingManagedConfigs // {
     "config/voicechat/voicechat-server.properties" = gigglesomethingVoiceConfig;
+    "world/serverconfig/prometheus_exporter-server.toml" = prometheusExporterConfig "127.0.0.12";
   };
 
   packCheck = pkgs.runCommand "pwppp-pack-check" { nativeBuildInputs = [ pkgs.packwiz ]; } ''

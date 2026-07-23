@@ -30,6 +30,14 @@ let
           };
         }
         {
+          hostname = "grafana.4amlunch.net";
+          service = "https://localhost:443";
+          originRequest = {
+            httpHostHeader = "grafana.4amlunch.net";
+            originServerName = "grafana.4amlunch.net";
+          };
+        }
+        {
           hostname = "pwppp.4amlunch.net";
           service = "tcp://localhost:25565";
           originRequest = { };
@@ -56,6 +64,13 @@ let
       {
         type = "CNAME";
         name = "minecraft.4amlunch.net";
+        content = tunnelTarget;
+        ttl = 1;
+        proxied = true;
+      }
+      {
+        type = "CNAME";
+        name = "grafana.4amlunch.net";
         content = tunnelTarget;
         ttl = 1;
         proxied = true;

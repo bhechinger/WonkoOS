@@ -1945,6 +1945,11 @@ hash = "82f6783b09e392e282fdb85e22efd5c3570fad971ecbf44a6065d4bd308f17a1"
 metafile = true
 
 [[files]]
+file = "mods/prometheus-exporter.pw.toml"
+hash = "78d17adb22ffb4e48c8dab4565a45bd8de87c185a8e09e4c8f202bdaff3a0012"
+metafile = true
+
+[[files]]
 file = "mods/rainbow-reef.pw.toml"
 hash = "cc71b1c8938a6bbb2f7cb1bd0f49d5ffe4b30a04a866ff32c2457b9ebc5919dc"
 metafile = true

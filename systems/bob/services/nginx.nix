@@ -69,6 +69,12 @@ in
       "bob.4amlunch.net" = tls // {
         root = "/var/www";
       };
+      "grafana.4amlunch.net" = tls // {
+        locations."/" = {
+          proxyPass = "http://127.0.0.1:3000";
+          proxyWebsockets = true;
+        };
+      };
       "cache.4amlunch.net" = tls // {
         locations."/" = {
           proxyPass = "http://127.0.0.1:18081";

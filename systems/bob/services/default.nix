@@ -6,6 +6,7 @@
     ./jackett.nix
     ./media.nix
     ./minecraft.nix
+    ./monitoring.nix
     ./murmur.nix
     ./nfs.nix
     ./nginx.nix

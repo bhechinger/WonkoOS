@@ -244,6 +244,14 @@
             cloudflareSync = config.systemd.services.cloudflare-tunnel-sync;
             attic = config.services.atticd;
             bind = config.services.bind;
+            grafana = config.services.grafana;
+            mimir = config.services.mimir.configuration;
+            loki = config.services.loki.configuration;
+            tempo = config.services.tempo.settings;
+            bobNode = config.services.prometheus.exporters.node;
+            deepthoughtNode = deepthought.services.prometheus.exporters.node;
+            bobAlloy = config.environment.etc."alloy/config.alloy".text;
+            deepthoughtAlloy = deepthought.environment.etc."alloy/config.alloy".text;
             vyprvpn = deepthought.services.openvpn.servers.vyprvpn-miami;
             vyprvpnProfile = builtins.readFile ./systems/deepthought/openvpn/vyprvpn-miami.ovpn;
             dnsUpdate = config.systemd.services.opnsense-dns-sync;
@@ -369,6 +377,9 @@
               80
               443
               2049
+              3100
+              4317
+              4318
               6789
               8443
               25565
@@ -429,6 +440,55 @@
           assert config.sops.secrets.minecraft-restic-password.mode == "0440";
           assert config.sops.secrets.playit-secret.mode == "0400";
           assert config.sops.secrets.atticd-environment.mode == "0400";
+          assert config.sops.secrets.grafana-admin-password.mode == "0400";
+          assert config.sops.secrets.grafana-secret-key.mode == "0400";
+          assert grafana.enable;
+          assert grafana.settings.server.http_addr == "127.0.0.1";
+          assert grafana.settings.server.domain == "grafana.4amlunch.net";
+          assert grafana.settings.security.cookie_secure;
+          assert !grafana.settings."auth.anonymous".enabled;
+          assert config.services.mimir.enable;
+          assert mimir.server.http_listen_address == "127.0.0.1";
+          assert mimir.server.http_listen_port == 9009;
+          assert mimir.frontend.address == "127.0.0.1";
+          assert mimir.query_scheduler.ring.instance_addr == "127.0.0.1";
+          assert mimir.store_gateway.sharding_ring.instance_addr == "127.0.0.1";
+          assert mimir.limits.compactor_blocks_retention_period == "30d";
+          assert config.services.loki.enable;
+          assert loki.server.http_listen_address == "10.42.0.2";
+          assert loki.server.http_listen_port == 3100;
+          assert loki.limits_config.retention_period == "720h";
+          assert config.services.tempo.enable;
+          assert tempo.server.http_listen_address == "127.0.0.1";
+          assert tempo.server.http_listen_port == 3200;
+          assert tempo.compactor.compaction.block_retention == "720h";
+          assert config.services.alloy.enable;
+          assert deepthought.services.alloy.enable;
+          assert config.systemd.services ? alloy-log-access;
+          assert lib.elem "alloy-log-access.service" config.systemd.services.alloy.after;
+          assert bobNode.enable;
+          assert bobNode.listenAddress == "127.0.0.1";
+          assert lib.elem "systemd" bobNode.enabledCollectors;
+          assert deepthoughtNode.enable;
+          assert deepthoughtNode.listenAddress == "10.42.0.10";
+          assert lib.elem 9100 deepthought.networking.firewall.interfaces.internal.allowedTCPPorts;
+          assert lib.all (port: lib.elem port internal.allowedTCPPorts) [
+            3100
+            4317
+            4318
+          ];
+          assert lib.all (target: lib.hasInfix target bobAlloy) [
+            "127.0.0.1:9100"
+            "10.42.0.10:9100"
+            "10.42.0.251:9100"
+            "127.0.0.11:19565"
+            "127.0.0.12:19565"
+          ];
+          assert lib.hasInfix "10.42.0.2:3100/loki/api/v1/push" deepthoughtAlloy;
+          assert config.services.nginx.virtualHosts ? "grafana.4amlunch.net";
+          assert
+            config.services.nginx.virtualHosts."grafana.4amlunch.net".locations."/".proxyPass
+            == "http://127.0.0.1:3000";
           assert config.services.nginx.virtualHosts ? "cache.4amlunch.net";
           assert
             config.services.nginx.virtualHosts."cache.4amlunch.net".locations."/".proxyPass
@@ -478,6 +538,7 @@
           assert minecraft.serverProperties.enforce-whitelist;
           assert minecraft.serverProperties.enable-rcon;
           assert minecraft.serverProperties."rcon.password" == "@RCON_PASSWORD@";
+          assert builtins.hasAttr "config/prometheus_exporter-server.toml" minecraft.files;
           assert lib.hasInfix "-XX:+UseG1GC" minecraft.jvmOpts;
           assert minecraftService.serviceConfig.MemoryMax == "6G";
           assert lib.hasInfix "numactl" minecraftService.environment.LD_LIBRARY_PATH;
@@ -498,6 +559,7 @@
           assert gigglesomething.serverProperties.enable-rcon;
           assert gigglesomething.serverProperties."rcon.port" == 25576;
           assert gigglesomething.serverProperties."rcon.password" == "@RCON_PASSWORD@";
+          assert builtins.hasAttr "world/serverconfig/prometheus_exporter-server.toml" gigglesomething.files;
           assert lib.hasInfix "-XX:+UseG1GC" gigglesomething.jvmOpts;
           assert gigglesomethingService.serviceConfig.MemoryMax == "6G";
           assert gigglesomethingService.serviceConfig.ProtectSystem == "strict";

@@ -16,6 +16,7 @@ let
     "bob"
     "cache"
     "gigglesomething"
+    "grafana"
     "jackett"
     "minecraft"
     "paperless"

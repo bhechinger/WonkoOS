@@ -56,6 +56,7 @@
         22
         1234
       ];
+      interfaces.internal.allowedTCPPorts = [ 9100 ];
     };
   };
 
