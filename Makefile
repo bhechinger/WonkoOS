@@ -1,4 +1,4 @@
-.PHONY: hugepages-inputs boot switch build deploy-bob
+.PHONY: hugepages-inputs boot switch build build-bob deploy-bob
 
 HOST := $(shell hostname -s)
 
@@ -14,5 +14,10 @@ switch: hugepages-inputs
 build: hugepages-inputs
 	nh os build -H $(HOST) .
 
-deploy-bob:
+build-bob:
+	nh os build -H bob --diff never .
+	#nix copy --to ssh-ng://wonko@bob.4amlunch.net ./result
+	#ssh wonko@bob.4amlunch.net nix store diff-closures /run/current-system "$$(readlink -f result)"
+
+deploy-bob: build-bob
 	nh os switch -H bob --target-host wonko@bob.4amlunch.net --elevation-strategy passwordless .

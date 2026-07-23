@@ -40,6 +40,7 @@
       shellAliases = {
         ll = "ls -l";
         oci = "oci --auth security_token";
+        pwppp-rcon = "ssh -t wonko@bob.4amlunch.net minecraft-rcon";
         z = "zeditor .";
       };
 

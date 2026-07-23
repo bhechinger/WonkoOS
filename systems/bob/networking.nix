@@ -81,7 +81,10 @@ in
       address = "10.42.0.1";
       interface = "internal";
     };
-    nameservers = [ "10.42.0.1" ];
+    nameservers = [
+      "10.42.0.1"
+      "10.42.0.2"
+    ];
     search = [ "4amlunch.net" ];
     extraHosts = ''
       10.42.0.30 basket.4amlunch.net basket

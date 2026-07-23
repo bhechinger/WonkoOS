@@ -267,7 +267,16 @@
           assert builtins.attrNames config.networking.vlans == [ "vlan.420" ];
           assert !(config.networking.interfaces ? storage);
           assert !(config.networking.interfaces ? guest);
-          assert config.networking.nameservers == [ "10.42.0.1" ];
+          assert
+            config.networking.nameservers == [
+              "10.42.0.1"
+              "10.42.0.2"
+            ];
+          assert
+            deepthought.networking.nameservers == [
+              "10.42.0.1"
+              "10.42.0.2"
+            ];
           assert bind.enable;
           assert bind.ipv4Only;
           assert bind.directory == "/var/lib/named";

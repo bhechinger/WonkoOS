@@ -18,7 +18,10 @@ let
   minecraftStdin = config.services.minecraft-servers.managementSystem.systemd-socket.stdinSocket.path "pwppp";
 
   whitelistedPlayers = [
-    # "PlayerName"
+    "BlockyJackBauer"
+    "io42"
+    "BennyPlayerX"
+    "IanTheCerato"
   ];
   emptyWhitelistFile = (pkgs.formats.json { }).generate "pwppp-whitelist.json" [ ];
   whitelistCommands =
@@ -393,13 +396,22 @@ let
     RestrictSUIDSGID = true;
   };
 
-  rcon = "${lib.getExe pkgs.mcrcon} -H 127.0.0.11 -P 25575 -p \"$RCON_PASSWORD\"";
+  rcon = "${lib.getExe pkgs.mcrcon} -H 127.0.0.11 -P 25575";
+  minecraftRcon = pkgs.writeShellApplication {
+    name = "minecraft-rcon";
+    excludeShellChecks = [ "SC1091" ];
+    text = ''
+      source ${config.sops.templates.minecraft-environment.path}
+      export MCRCON_PASS="$RCON_PASSWORD"
+      exec ${rcon} "$@"
+    '';
+  };
   saveOff = pkgs.writeShellApplication {
     name = "minecraft-save-off";
     excludeShellChecks = [ "SC1091" ];
     text = ''
       source ${config.sops.templates.minecraft-environment.path}
-      ${rcon} "save-off" "save-all flush"
+      MCRCON_PASS="$RCON_PASSWORD" ${rcon} "save-off" "save-all flush"
     '';
   };
   saveOn = pkgs.writeShellApplication {
@@ -407,7 +419,7 @@ let
     excludeShellChecks = [ "SC1091" ];
     text = ''
       source ${config.sops.templates.minecraft-environment.path}
-      ${rcon} "save-on"
+      MCRCON_PASS="$RCON_PASSWORD" ${rcon} "save-on"
     '';
   };
   prepareBackup = pkgs.writeShellApplication {
@@ -442,6 +454,8 @@ in
   ];
 
   nixpkgs.overlays = [ inputs.nix-minecraft.overlay ];
+
+  environment.systemPackages = [ minecraftRcon ];
 
   sops = {
     secrets = {

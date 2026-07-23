@@ -43,7 +43,10 @@
       interface internal
         ipv6only
     '';
-    nameservers = [ "10.42.0.1" ];
+    nameservers = [
+      "10.42.0.1"
+      "10.42.0.2"
+    ];
     extraHosts = ''
       10.42.0.30 basket.4amlunch.net basket
     '';
