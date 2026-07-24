@@ -113,14 +113,18 @@ end
 
 local function reconcile_links()
   for _, desired_link in ipairs(desired_links) do
-    local output_port = find_port(desired_link.output, "out")
     local input_port = find_port(desired_link.input, "in")
 
-    if output_port and input_port then
-      create_link(output_port, input_port)
+    if input_port then
+      for output_port in ports:iterate {
+        Constraint { "port.alias", "equals", desired_link.output },
+        Constraint { "port.direction", "equals", "out" },
+      } do
+        create_link(output_port, input_port)
 
-      if desired_link.exclusive then
-        remove_competing_links(output_port, input_port)
+        if desired_link.exclusive then
+          remove_competing_links(output_port, input_port)
+        end
       end
     end
   end
