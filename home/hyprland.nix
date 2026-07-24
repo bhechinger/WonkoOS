@@ -1,13 +1,71 @@
-{ lib, pkgs, ... }:
+{
+  lib,
+  pkgs,
+  unstable-pkgs,
+  ...
+}:
 let
   browser = "firefox";
   terminal = "kitty";
   telegram = lib.getExe pkgs.telegram-desktop;
 in
 {
+  home.packages = with pkgs; [
+    kdePackages.ark
+    kdePackages.gwenview
+    libreoffice-qt
+  ];
+
   systemd.user.targets.hyprland-session.Unit.Wants = [
     "xdg-desktop-autostart.target"
   ];
+
+  xdg = {
+    configFile."mimeapps.list".force = true;
+    configFile."menus/applications.menu".text = ''
+      <!DOCTYPE Menu PUBLIC "-//freedesktop//DTD Menu 1.0//EN"
+        "http://www.freedesktop.org/standards/menu-spec/menu-1.0.dtd">
+      <Menu>
+        <Name>Applications</Name>
+        <DefaultAppDirs/>
+        <DefaultDirectoryDirs/>
+        <DefaultMergeDirs/>
+        <Include>
+          <All/>
+        </Include>
+      </Menu>
+    '';
+    mimeApps = {
+      enable = true;
+      defaultApplications = {
+        "application/x-krita" = "org.kde.krita.desktop";
+        "image/x-xcf" = "gimp.desktop";
+        "inode/directory" = "org.kde.dolphin.desktop";
+        "text/plain" = "dev.zed.Zed.desktop";
+        "x-scheme-handler/jetbrains" = "jetbrains-toolbox.desktop";
+        "x-scheme-handler/jetbrains-gateway" = "jetbrains-gateway.desktop";
+      };
+      defaultApplicationPackages = with pkgs; [
+        kdePackages.gwenview
+        evince
+        kdePackages.ark
+        libreoffice-qt
+        audacious
+        vlc
+        firefox
+        unstable-pkgs.zed-editor
+        thunderbird
+        telegram-desktop
+        signal-desktop
+        slack
+        heroic
+        r2modman
+        gimp
+        inkscape
+        krita
+      ];
+    };
+  };
 
   wayland.windowManager.hyprland.configType = "hyprlang";
   wayland.windowManager.hyprland = {
