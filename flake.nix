@@ -525,7 +525,7 @@
           assert resticGateway.serviceConfig.UMask == "0077";
           assert lib.hasInfix "--append-only" resticGateway.serviceConfig.ExecStart;
           assert lib.hasInfix "--private-repos" resticGateway.serviceConfig.ExecStart;
-          assert lib.hasInfix "/nfs/Minecraft/restic" resticGateway.serviceConfig.ExecStart;
+          assert lib.hasInfix "/nfs/Restic" resticGateway.serviceConfig.ExecStart;
           assert config.services.nginx.virtualHosts ? "restic-b2.4amlunch.net";
           assert
             config.services.nginx.virtualHosts."restic-b2.4amlunch.net".locations."/".proxyPass
@@ -534,9 +534,8 @@
           assert lib.hasInfix "--append-only" resticB2Gateway.serviceConfig.ExecStart;
           assert lib.hasInfix "b2:4amlunch-restic/restic" resticB2Gateway.serviceConfig.ExecStart;
           assert resticMaintenance.serviceConfig.DynamicUser;
-          assert lib.elem "/nfs/Minecraft/restic/bob" resticCopyBob.serviceConfig.ReadWritePaths;
-          assert lib.elem "/nfs/Minecraft/restic/deepthought"
-            resticCopyDeepthought.serviceConfig.ReadWritePaths;
+          assert lib.elem "/nfs/Restic/bob" resticCopyBob.serviceConfig.ReadWritePaths;
+          assert lib.elem "/nfs/Restic/deepthought" resticCopyDeepthought.serviceConfig.ReadWritePaths;
           assert config.systemd.timers.restic-maintenance.timerConfig.OnCalendar == "Sun *-*-* 12:00:00";
           assert attic.enable;
           assert attic.settings.listen == "127.0.0.1:18081";
@@ -557,7 +556,7 @@
           assert lib.any (mount: mount.what == "10.42.0.30:/NixCache") config.systemd.mounts;
           assert lib.any (mount: mount.what == "10.42.0.30:/Plex") config.systemd.mounts;
           assert lib.any (mount: mount.what == "10.42.0.30:/Torrents") config.systemd.mounts;
-          assert lib.any (mount: mount.what == "10.42.0.30:/Minecraft") config.systemd.mounts;
+          assert lib.any (mount: mount.what == "10.42.0.30:/Restic") config.systemd.mounts;
           assert !(bobDatasets ? docker);
           assert bobDatasets.jackett.mountpoint == "/var/lib/jackett";
           assert bobDatasets.paperless.mountpoint == "/var/lib/paperless";
@@ -675,7 +674,7 @@
               "/var/www/.zfs/snapshot/restic-services"
             ];
           assert lib.elem "restic-gateway.service" config.systemd.services.restic-backups-minecraft.requires;
-          assert !lib.elem "nfs-Minecraft.mount" config.systemd.services.restic-backups-minecraft.requires;
+          assert !lib.elem "nfs-Restic.mount" config.systemd.services.restic-backups-minecraft.requires;
           assert deepthoughtRestic.repository == "rest:https://restic.4amlunch.net/deepthought/";
           assert deepthoughtRestic.environmentFile == deepthought.sops.templates.restic-environment.path;
           assert deepthoughtRestic.pruneOpts == [ ];

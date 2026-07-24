@@ -104,7 +104,7 @@ systemctl status cloudflare-tunnel-sync cloudflared-tunnel
 ZFS datasets back `/`, `/nix`, `/var`, `/var/lib/jackett`,
 `/var/lib/minecraft`, `/var/lib/paperless`, `/var/lib/plexmediaserver`,
 `/var/lib/postgresql`, `/var/lib/redis-paperless`, `/var/www`, and `/home`. Basket is
-automounted over NFSv4 at `/nfs/Minecraft`, `/nfs/NixCache`, `/nfs/Plex`, and
+automounted over NFSv4 at `/nfs/Restic`, `/nfs/NixCache`, `/nfs/Plex`, and
 `/nfs/Torrents`; Bob does not mount the `Brian` share.
 
 Jackett, Sonarr, rTorrent, and Plex keep separate service accounts. Basket's
@@ -117,7 +117,7 @@ directories separately map the single authorized client (`10.42.0.10`) to the
 Paperless account with `all_squash`.
 
 Bob's Restic server stores the primary `bob` and `deepthought` repositories
-under `/nfs/Minecraft/restic`. Clients use HTTPS and do not mount or know the
+under `/nfs/Restic`. Clients use HTTPS and do not mount or know the
 NFS storage path. Normal Restic commands and restores therefore use Bob's
 NFS-backed endpoint.
 
@@ -178,7 +178,7 @@ systemctl --failed
 systemctl status nginx postgresql paperless-web paperless-task-queue \
   protonmail-bridge unifi jackett sonarr rtorrent minecraft-server-pwppp \
   mc-router svc-router playit atticd
-findmnt /nfs/Minecraft /nfs/NixCache /nfs/Plex /nfs/Torrents
+findmnt /nfs/Restic /nfs/NixCache /nfs/Plex /nfs/Torrents
 ss -ltnup
 ```
 

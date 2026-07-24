@@ -8,7 +8,7 @@
 let
   repository = "rest:https://restic.4amlunch.net/bob/";
   b2Repository = "rest:https://restic-b2.4amlunch.net/bob/";
-  nfsRoot = "/nfs/Minecraft/restic";
+  nfsRoot = "/nfs/Restic";
   bobNfsRepository = "${nfsRoot}/bob";
   deepthoughtNfsRepository = "${nfsRoot}/deepthought";
   datasets = [
@@ -317,16 +317,32 @@ in
   };
 
   systemd = {
+    mounts = [
+      {
+        what = "10.42.0.30:/Restic";
+        where = nfsRoot;
+        type = "nfs4";
+        mountConfig.Options = "noatime,nodev,nosuid,noexec";
+      }
+    ];
+    automounts = [
+      {
+        where = nfsRoot;
+        wantedBy = [ "multi-user.target" ];
+        automountConfig.TimeoutIdleSec = "600";
+      }
+    ];
+
     services = {
       restic-gateway = {
         description = "Append-only Restic gateway to the NFS primary";
         wantedBy = [ "multi-user.target" ];
         after = [
-          "nfs-Minecraft.mount"
+          "nfs-Restic.mount"
           "sops-install-secrets.service"
         ];
         requires = [
-          "nfs-Minecraft.mount"
+          "nfs-Restic.mount"
           "sops-install-secrets.service"
         ];
         serviceConfig = hardening // {
@@ -384,11 +400,11 @@ in
       restic-maintenance-nfs = {
         description = "Prune and check the Restic repositories on NFS";
         after = [
-          "nfs-Minecraft.mount"
+          "nfs-Restic.mount"
           "sops-install-secrets.service"
         ];
         requires = [
-          "nfs-Minecraft.mount"
+          "nfs-Restic.mount"
           "sops-install-secrets.service"
         ];
         serviceConfig = rootHardening // {
@@ -412,12 +428,12 @@ in
         description = "Mirror Bob's NFS Restic snapshots to Backblaze B2";
         after = [
           "network-online.target"
-          "nfs-Minecraft.mount"
+          "nfs-Restic.mount"
           "sops-install-secrets.service"
         ];
         wants = [ "network-online.target" ];
         requires = [
-          "nfs-Minecraft.mount"
+          "nfs-Restic.mount"
           "sops-install-secrets.service"
         ];
         serviceConfig = rootHardening // {
@@ -438,12 +454,12 @@ in
         description = "Mirror Deepthought's NFS Restic snapshots to Backblaze B2";
         after = [
           "network-online.target"
-          "nfs-Minecraft.mount"
+          "nfs-Restic.mount"
           "sops-install-secrets.service"
         ];
         wants = [ "network-online.target" ];
         requires = [
-          "nfs-Minecraft.mount"
+          "nfs-Restic.mount"
           "sops-install-secrets.service"
         ];
         serviceConfig = rootHardening // {

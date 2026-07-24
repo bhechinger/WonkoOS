@@ -823,22 +823,6 @@ in
   ];
 
   systemd = {
-    mounts = [
-      {
-        what = "10.42.0.30:/Minecraft";
-        where = "/nfs/Minecraft";
-        type = "nfs4";
-        mountConfig.Options = "noatime,nodev,nosuid,noexec";
-      }
-    ];
-    automounts = [
-      {
-        where = "/nfs/Minecraft";
-        wantedBy = [ "multi-user.target" ];
-        automountConfig.TimeoutIdleSec = "600";
-      }
-    ];
-
     services = {
       mc-router = {
         description = "Minecraft hostname router";
