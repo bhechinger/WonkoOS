@@ -831,6 +831,7 @@ in
         after = [ "network.target" ];
         wantedBy = [ "multi-user.target" ];
         serviceConfig = routerHardening // {
+          IPAddressAllow = [ "0.0.0.0/0" ];
           ExecStart = "${lib.getExe mcRouter} -port 25565 -mapping pwppp.4amlunch.net=127.0.0.11:25566,gigglesomething.4amlunch.net=127.0.0.12:25567 -connection-rate-limit 10 -webhook-url http://127.0.0.1:${toString routerApiPort}/event";
           Restart = "on-failure";
           RestartSec = "5s";

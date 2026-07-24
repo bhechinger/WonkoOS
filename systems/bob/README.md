@@ -88,17 +88,18 @@ resolve internally unless they are also added to that Nix record list.
 Internet game traffic enters the `minecraft-tcp.4amlunch.net` Spectrum app on
 TCP `25565`. Public DNS-only aliases `pwppp.4amlunch.net` and
 `gigglesomething.4amlunch.net` point to that app. Spectrum forwards to Sierra's
-current WAN IPv4, where a Cloudflare-source-only NAT rule sends TCP `25565` to
-Bob at `10.42.0.2:25565`; `mc-router` then selects the server from the requested
-hostname. The reconciler refreshes the Spectrum origin every five minutes so
-WAN DHCP changes do not require manual updates.
+current WAN IPv4, where DNAT sends TCP `25565` to Bob at
+`10.42.0.2:25565` and a separate WAN pass rule admits only Cloudflare sources;
+`mc-router` then selects the server from the requested hostname. The reconciler
+refreshes the Spectrum origin every five minutes so WAN DHCP changes do not
+require manual updates.
 
 The Spectrum token in `secrets/cloudflare-spectrum.sops` is separate from the
 ACME/tunnel token and is limited to the `4amlunch.net` zone with **Zone
 Settings: Edit**. Sierra uses the URL-table alias `Cloudflare_Spectrum_IPv4`,
 populated hourly from `https://www.cloudflare.com/ips-v4`. Its WAN TCP `25565`
-port forward accepts that alias as its only source and redirects to
-`10.42.0.2:25565`, with NAT reflection disabled.
+pass rule accepts that alias as its only source; the corresponding port forward
+redirects to `10.42.0.2:25565` with NAT reflection disabled.
 
 Internet voice traffic remains on Playit UDP at `147.185.221.19:34934`,
 forwarded to `127.0.0.1:34934`. Public `voice.4amlunch.net` DNS points to that
