@@ -10,6 +10,7 @@ let
   zoneId = "50e75230ae53eaa54f02f0834c900fdf";
   tunnelId = "9abf5de3-8a12-4350-8e2f-06b59bb595b0";
   tunnelTarget = "${tunnelId}.cfargotunnel.com";
+  spectrumHost = "minecraft-tcp.4amlunch.net";
   tunnelConfig = pkgs.writeText "cloudflare-tunnel-config.json" (
     builtins.toJSON {
       ingress = [
@@ -36,16 +37,6 @@ let
             httpHostHeader = "grafana.4amlunch.net";
             originServerName = "grafana.4amlunch.net";
           };
-        }
-        {
-          hostname = "pwppp.4amlunch.net";
-          service = "tcp://localhost:25565";
-          originRequest = { };
-        }
-        {
-          hostname = "gigglesomething.4amlunch.net";
-          service = "tcp://localhost:25565";
-          originRequest = { };
         }
         { service = "http_status:404"; }
       ];
@@ -78,30 +69,26 @@ let
       {
         type = "CNAME";
         name = "pwppp.4amlunch.net";
-        content = tunnelTarget;
+        content = spectrumHost;
         ttl = 1;
-        proxied = true;
+        proxied = false;
       }
       {
         type = "TXT";
         name = "pwppp.4amlunch.net";
-        content = "cloudflared-use-tunnel";
-        ttl = 1;
-        proxied = false;
+        absent = true;
       }
       {
         type = "CNAME";
         name = "gigglesomething.4amlunch.net";
-        content = tunnelTarget;
+        content = spectrumHost;
         ttl = 1;
-        proxied = true;
+        proxied = false;
       }
       {
         type = "TXT";
         name = "gigglesomething.4amlunch.net";
-        content = "cloudflared-use-tunnel";
-        ttl = 1;
-        proxied = false;
+        absent = true;
       }
       {
         type = "A";
@@ -132,9 +119,14 @@ in
     restartUnits = [ "cloudflared-tunnel.service" ];
   };
   sops.secrets.cloudflare-acme-token.restartUnits = [ "cloudflare-tunnel-sync.service" ];
+  sops.secrets.cloudflare-spectrum-token = {
+    sopsFile = ../secrets/cloudflare-spectrum.sops;
+    mode = "0400";
+    restartUnits = [ "cloudflare-tunnel-sync.service" ];
+  };
 
   systemd.services.cloudflare-tunnel-sync = {
-    description = "Reconcile the Cloudflare Tunnel and its public DNS";
+    description = "Reconcile Cloudflare Tunnel, Spectrum, and public DNS";
     after = [
       "network-online.target"
       "sops-install-secrets.service"
@@ -147,8 +139,11 @@ in
       AmbientCapabilities = "";
       CapabilityBoundingSet = "";
       DynamicUser = true;
-      ExecStart = "${cloudflareTunnelSync}/bin/cloudflare-tunnel-sync %d/cloudflare-api-token ${accountId} ${zoneId} ${tunnelId} ${tunnelConfig} ${dnsRecords}";
-      LoadCredential = "cloudflare-api-token:${config.sops.secrets.cloudflare-acme-token.path}";
+      ExecStart = "${cloudflareTunnelSync}/bin/cloudflare-tunnel-sync %d/cloudflare-api-token %d/cloudflare-spectrum-token ${accountId} ${zoneId} ${tunnelId} ${tunnelConfig} ${dnsRecords} ${spectrumHost}";
+      LoadCredential = [
+        "cloudflare-api-token:${config.sops.secrets.cloudflare-acme-token.path}"
+        "cloudflare-spectrum-token:${config.sops.secrets.cloudflare-spectrum-token.path}"
+      ];
       LockPersonality = true;
       MemoryDenyWriteExecute = true;
       NoNewPrivileges = true;
@@ -162,7 +157,6 @@ in
       ProtectKernelModules = true;
       ProtectKernelTunables = true;
       ProtectSystem = "strict";
-      RemainAfterExit = true;
       Restart = "on-failure";
       RestartSec = "30s";
       # Bob does not currently have a working outbound IPv6 route.
@@ -170,6 +164,13 @@ in
       RestrictSUIDSGID = true;
       Type = "oneshot";
       UMask = "0077";
+    };
+  };
+  systemd.timers.cloudflare-tunnel-sync = {
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      OnBootSec = "5min";
+      OnUnitActiveSec = "5min";
     };
   };
 

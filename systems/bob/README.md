@@ -60,9 +60,10 @@ substitutes the matching CurseForge file IDs because CurseForge exports omit
 Modrinth entries. Update both sets of pinned metadata when changing either mod.
 
 `cloudflare-tunnel-sync.service` declaratively manages the remotely managed
-Cloudflare Tunnel and its public DNS records. It publishes Paperless and the
-Minecraft download page through `https://localhost:443`, using each public
-hostname for the TLS and HTTP host names. TLS verification remains enabled.
+Cloudflare Tunnel, Spectrum app, and public DNS records. It publishes
+Paperless and the Minecraft download page through `https://localhost:443`,
+using each public hostname for the TLS and HTTP host names. TLS verification
+remains enabled.
 
 `mc-router` accepts Minecraft TCP traffic on internal port `25565` and routes
 `pwppp.4amlunch.net` to the isolated NeoForge listener at
@@ -82,17 +83,27 @@ Sierra's BIND server is authoritative for the internal `4amlunch.net` view.
 and their two IPv4 reverse zones, and performs recursion independently so DNS
 continues working if Sierra is unavailable. DHCP advertises Sierra first and
 Bob second on both LANs. Public-only Cloudflare names deliberately do not
-resolve internally unless they are also added to that Nix record list. The
-internal `pwppp` TXT value is `local-direct`, masking the public
-`cloudflared-use-tunnel` value so Modflared clients connect directly instead
-of hairpinning through Cloudflare.
+resolve internally unless they are also added to that Nix record list.
 
-Internet game traffic uses the same tunnel at `pwppp.4amlunch.net`, with a
-`tcp://localhost:25565` origin and the public TXT value
-`cloudflared-use-tunnel`. Internet voice traffic cannot use that TCP tunnel and
-instead uses Playit UDP at `147.185.221.19:34934`, forwarded to
-`127.0.0.1:34934`. Public `voice.4amlunch.net` DNS points to that Playit IP and
-is DNS-only. Apply or inspect the declarative Cloudflare state with:
+Internet game traffic enters the `minecraft-tcp.4amlunch.net` Spectrum app on
+TCP `25565`. Public DNS-only aliases `pwppp.4amlunch.net` and
+`gigglesomething.4amlunch.net` point to that app. Spectrum forwards to Sierra's
+current WAN IPv4, where a Cloudflare-source-only NAT rule sends TCP `25565` to
+Bob at `10.42.0.2:25565`; `mc-router` then selects the server from the requested
+hostname. The reconciler refreshes the Spectrum origin every five minutes so
+WAN DHCP changes do not require manual updates.
+
+The Spectrum token in `secrets/cloudflare-spectrum.sops` is separate from the
+ACME/tunnel token and is limited to the `4amlunch.net` zone with **Zone
+Settings: Edit**. Sierra uses the URL-table alias `Cloudflare_Spectrum_IPv4`,
+populated hourly from `https://www.cloudflare.com/ips-v4`. Its WAN TCP `25565`
+port forward accepts that alias as its only source and redirects to
+`10.42.0.2:25565`, with NAT reflection disabled.
+
+Internet voice traffic remains on Playit UDP at `147.185.221.19:34934`,
+forwarded to `127.0.0.1:34934`. Public `voice.4amlunch.net` DNS points to that
+Playit IP and is DNS-only. Apply or inspect the declarative Cloudflare state
+with:
 
 ```sh
 sudo systemctl restart cloudflare-tunnel-sync

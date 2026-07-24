@@ -58,16 +58,6 @@ let
       type = "A";
       value = "10.42.0.251";
     }
-    {
-      name = "pwppp";
-      type = "TXT";
-      value = "local-direct";
-    }
-    {
-      name = "gigglesomething";
-      type = "TXT";
-      value = "local-direct";
-    }
   ]
   ++ map (name: {
     inherit name;

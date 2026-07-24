@@ -251,6 +251,7 @@
             mcRouter = config.systemd.services.mc-router;
             svcRouter = config.systemd.services.svc-router;
             cloudflareSync = config.systemd.services.cloudflare-tunnel-sync;
+            cloudflareSyncTimer = config.systemd.timers.cloudflare-tunnel-sync;
             attic = config.services.atticd;
             bind = config.services.bind;
             grafana = config.services.grafana;
@@ -439,8 +440,13 @@
           assert config.sops.secrets.opnsense-api-netrc.mode == "0400";
           assert config.sops.secrets.cloudflared-environment.mode == "0400";
           assert config.sops.secrets.cloudflare-acme-token.mode == "0400";
+          assert config.sops.secrets.cloudflare-spectrum-token.mode == "0400";
           assert lib.elem "cloudflare-tunnel-sync.service" config.systemd.services.cloudflared-tunnel.after;
-          assert lib.hasPrefix "cloudflare-api-token:" cloudflareSync.serviceConfig.LoadCredential;
+          assert lib.any (lib.hasPrefix "cloudflare-api-token:") cloudflareSync.serviceConfig.LoadCredential;
+          assert lib.any (lib.hasPrefix "cloudflare-spectrum-token:")
+            cloudflareSync.serviceConfig.LoadCredential;
+          assert cloudflareSyncTimer.timerConfig.OnBootSec == "5min";
+          assert cloudflareSyncTimer.timerConfig.OnUnitActiveSec == "5min";
           assert cloudflareSync.serviceConfig.DynamicUser;
           assert cloudflareSync.serviceConfig.ProtectSystem == "strict";
           assert config.sops.secrets.murmur-environment.mode == "0400";
@@ -571,6 +577,7 @@
           assert config.services.minecraft-servers.eula;
           assert lib.all (path: !lib.hasSuffix ".jar" (toString path)) minecraftPackFiles;
           assert lib.all (path: !lib.hasSuffix ".jar" (toString path)) gigglesomethingPackFiles;
+          assert !builtins.pathExists ./systems/bob/minecraft/pwppp/mods/modflared.pw.toml;
           assert !builtins.pathExists ./systems/bob/minecraft/pwppp/options.txt;
           assert !builtins.pathExists ./systems/bob/minecraft/pwppp/servers.dat;
           assert !builtins.pathExists ./systems/bob/minecraft/gigglesomething/logs;
