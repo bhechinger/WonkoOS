@@ -11,6 +11,14 @@ let
   nfsRoot = "/nfs/Restic";
   bobNfsRepository = "${nfsRoot}/bob";
   deepthoughtNfsRepository = "${nfsRoot}/deepthought";
+  retentionArgs = lib.escapeShellArgs [
+    "--keep-within-hourly"
+    "24h"
+    "--keep-within-daily"
+    "7d"
+    "--keep-within-monthly"
+    "6m"
+  ];
   datasets = [
     "zpool/var"
     "zpool/jackett"
@@ -85,8 +93,8 @@ let
         repository="rclone:b2:4amlunch-restic/restic/$1"
         password_file="$2"
         restic --repo "$repository" --password-file "$password_file" unlock
-        restic --repo "$repository" --password-file "$password_file" forget --prune --keep-within 6m
-        restic --repo "$repository" --password-file "$password_file" check
+        restic --repo "$repository" --password-file "$password_file" --retry-lock 2h forget --prune ${retentionArgs}
+        restic --repo "$repository" --password-file "$password_file" --retry-lock 2h check
       }
 
       export RCLONE_CONFIG="$credential_directory/rclone.conf"
@@ -104,8 +112,8 @@ let
         repository="${nfsRoot}/$1"
         password_file="$2"
         restic --repo "$repository" --password-file "$password_file" unlock
-        restic --repo "$repository" --password-file "$password_file" forget --prune --keep-within 6m
-        restic --repo "$repository" --password-file "$password_file" check
+        restic --repo "$repository" --password-file "$password_file" --retry-lock 2h forget --prune ${retentionArgs}
+        restic --repo "$repository" --password-file "$password_file" --retry-lock 2h check
       }
 
       maintain bob "$credential_directory/bob-password"
@@ -132,7 +140,7 @@ let
           --repo "$destination_repository" \
           --password-file "$repository_password_file" \
           --option rclone.connections=20 \
-          --retry-lock 5m \
+          --retry-lock 2h \
           "$@"
       }
 
@@ -147,6 +155,7 @@ let
         restic \
           --repo "$source_repository" \
           --password-file "$repository_password_file" \
+          --retry-lock 2h \
           cat config |
           jq -r .chunker_polynomial
       )"
@@ -159,6 +168,12 @@ let
       destination copy \
         --from-repo "$source_repository" \
         --from-password-file "$repository_password_file"
+      destination forget ${retentionArgs}
+      restic \
+        --repo "$source_repository" \
+        --password-file "$repository_password_file" \
+        --retry-lock 2h \
+        forget ${retentionArgs}
     '';
   };
   b2Client = pkgs.writeShellApplication {
@@ -294,6 +309,8 @@ in
       extraBackupArgs = [
         "--option"
         "rest.connections=20"
+        "--retry-lock"
+        "2h"
       ];
       paths = snapshots;
       exclude = [
@@ -309,7 +326,7 @@ in
       backupPrepareCommand = lib.getExe prepare;
       backupCleanupCommand = lib.getExe cleanup;
       timerConfig = {
-        OnCalendar = "*-*-* 03:30:00";
+        OnCalendar = "*-*-* *:00:00";
         Persistent = true;
         RandomizedDelaySec = "15m";
       };

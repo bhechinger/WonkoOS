@@ -648,11 +648,22 @@
           assert minecraftRestic.user == "root";
           assert minecraftRestic.repository == "rest:https://restic.4amlunch.net/bob/";
           assert minecraftRestic.environmentFile == config.sops.templates.bob-restic-environment.path;
-          assert
-            minecraftRestic.extraBackupArgs == [
-              "--option"
-              "rest.connections=20"
+          assert lib.all
+            (
+              backup:
+              backup.extraBackupArgs == [
+                "--option"
+                "rest.connections=20"
+                "--retry-lock"
+                "2h"
+              ]
+            )
+            [
+              minecraftRestic
+              bobServicesRestic
+              deepthoughtRestic
             ];
+          assert minecraftRestic.timerConfig.OnCalendar == "*-*-* 00,04,08,12,16,20:40:00";
           assert minecraftRestic.pruneOpts == [ ];
           assert
             minecraftRestic.paths == [
@@ -662,6 +673,7 @@
           assert bobServicesRestic.repository == "rest:https://restic.4amlunch.net/bob/";
           assert bobServicesRestic.passwordFile == config.sops.secrets.minecraft-restic-password.path;
           assert bobServicesRestic.environmentFile == config.sops.templates.bob-restic-environment.path;
+          assert bobServicesRestic.timerConfig.OnCalendar == "*-*-* *:00:00";
           assert bobServicesRestic.pruneOpts == [ ];
           assert
             bobServicesRestic.paths == [
@@ -677,6 +689,7 @@
           assert !lib.elem "nfs-Restic.mount" config.systemd.services.restic-backups-minecraft.requires;
           assert deepthoughtRestic.repository == "rest:https://restic.4amlunch.net/deepthought/";
           assert deepthoughtRestic.environmentFile == deepthought.sops.templates.restic-environment.path;
+          assert deepthoughtRestic.timerConfig.OnCalendar == "*-*-* *:20:00";
           assert deepthoughtRestic.pruneOpts == [ ];
           assert !builtins.hasAttr "restic-copy-deepthought" deepthought.systemd.services;
           assert

@@ -86,6 +86,8 @@ in
     extraBackupArgs = [
       "--option"
       "rest.connections=20"
+      "--retry-lock"
+      "2h"
     ];
     paths = [
       "/home/.zfs/snapshot/restic-deepthought/wonko"
@@ -100,7 +102,7 @@ in
     backupPrepareCommand = lib.getExe prepare;
     backupCleanupCommand = lib.getExe cleanup;
     timerConfig = {
-      OnCalendar = "*-*-* 02:30:00";
+      OnCalendar = "*-*-* *:20:00";
       Persistent = true;
       RandomizedDelaySec = "15m";
     };

@@ -129,20 +129,29 @@ for bootstrap and client setup.
 
 Bob serves the NFS primary through the append-only endpoint at
 `https://restic.4amlunch.net`. Bob copies missing snapshots to the private
-`4amlunch-restic` Backblaze B2 bucket after the daily backups. The separate
+`4amlunch-restic` Backblaze B2 bucket daily at 05:30 for Bob and 06:00 for
+Deepthought. The separate
 append-only endpoint at `https://restic-b2.4amlunch.net` exposes that mirror
 for disaster recovery. Both endpoints are available only through the private
-networks. Bob and Deepthought have isolated repositories; only Bob's weekly
-maintenance job has delete-capable B2 credentials. If NFS is unavailable, use
-`sudo restic-bob-b2` on Bob or `sudo restic-deepthought-b2` on Deepthought.
+networks. Bob and Deepthought have isolated repositories; only Bob's mirror
+and weekly maintenance jobs have delete-capable B2 credentials. If NFS is
+unavailable, use `sudo restic-bob-b2` on Bob or `sudo restic-deepthought-b2`
+on Deepthought.
 
-Bob service state is backed up from temporary ZFS snapshots at 03:30 daily.
+Bob service state is backed up from temporary ZFS snapshots at the start of
+each hour.
 Minecraft keeps its two backup layers: Sanoid retains 24 hourly, 14 daily,
 and 3 monthly snapshots on Bob, while Restic takes a consistent ZFS snapshot
-after an RCON `save-all flush` and backs it up at 04:30 daily. Deepthought
-backs up its home dataset and a PostgreSQL logical dump at 02:30 daily. Weekly
-maintenance retains every snapshot from the last six months, prunes older
-data, and checks the NFS and B2 repositories.
+after an RCON `save-all flush` and backs it up every four hours at 00:40,
+04:40, 08:40, 12:40, 16:40, and 20:40. Deepthought backs up its home dataset
+and a PostgreSQL logical dump hourly at 20 minutes past the hour. All backup
+timers add up to 15 minutes of randomized delay.
+
+After each successful B2 mirror, Restic retains hourly and four-hour snapshots
+for 24 hours, daily snapshots for 7 days, and monthly snapshots for 6 months
+on both NFS and B2. Weekly maintenance physically prunes unreferenced data and
+checks both repositories. Backup, mirror, retention, and maintenance commands
+wait up to two hours for repository locks.
 
 Check or trigger the Bob jobs with:
 

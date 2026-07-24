@@ -793,6 +793,8 @@ in
       extraBackupArgs = [
         "--option"
         "rest.connections=20"
+        "--retry-lock"
+        "2h"
       ];
       paths = [
         "/var/lib/minecraft/pwppp/.zfs/snapshot/restic"
@@ -801,7 +803,7 @@ in
       backupPrepareCommand = lib.getExe prepareBackup;
       backupCleanupCommand = lib.getExe cleanupBackup;
       timerConfig = {
-        OnCalendar = "*-*-* 04:30:00";
+        OnCalendar = "*-*-* 00,04,08,12,16,20:40:00";
         Persistent = true;
         RandomizedDelaySec = "15m";
       };
