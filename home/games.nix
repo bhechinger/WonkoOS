@@ -25,6 +25,7 @@
       enableSessionWide = true;
       settings = {
         full = true;
+        media_player = false;
         vsync = 0;
         no_display = true;
       };
