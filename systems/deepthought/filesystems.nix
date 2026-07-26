@@ -1,5 +1,18 @@
-{ config, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
+let
+  basketMountUnits = [
+    "basket.mount"
+    "basket-wonko.mount"
+    "home-wonko-Documents.mount"
+    "home-wonko-projects.mount"
+  ];
+in
 {
   # OpenZFS owns these native mountpoints; disko still provisions and mounts
   # them during installation.
@@ -11,6 +24,15 @@
 
   # NFS mounts
   systemd = {
+    units = lib.genAttrs basketMountUnits (_: {
+      overrideStrategy = "asDropin";
+      text = ''
+        [Unit]
+        After=zfs-import-basket.service
+        Requires=zfs-import-basket.service
+      '';
+    });
+
     mounts =
       let
         commonMountOptions = {
@@ -83,6 +105,11 @@
         Type = "oneshot";
         RemainAfterExit = true;
       };
+      preStop = ''
+        if zpool list -H -o name basket >/dev/null 2>&1; then
+          zpool export basket
+        fi
+      '';
       script = ''
         for attempt in $(seq 1 24); do
           if zpool list -H -o name basket >/dev/null 2>&1; then

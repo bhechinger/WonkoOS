@@ -191,6 +191,12 @@
           let
             config = self.nixosConfigurations.deepthought.config;
             activeMounts = map (filesystem: filesystem.mountPoint) config.system.build.fileSystems;
+            basketMountUnits = [
+              "basket.mount"
+              "basket-wonko.mount"
+              "home-wonko-Documents.mount"
+              "home-wonko-projects.mount"
+            ];
           in
           assert
             builtins.attrNames config.disko.devices.disk == [
@@ -218,6 +224,12 @@
             "/home"
           ];
           assert !lib.elem "basket" config.boot.zfs.extraPools;
+          assert lib.hasInfix "zpool export basket" config.systemd.services.zfs-import-basket.preStop;
+          assert lib.all (
+            unit:
+            lib.hasInfix "After=zfs-import-basket.service" config.systemd.units.${unit}.text
+            && lib.hasInfix "Requires=zfs-import-basket.service" config.systemd.units.${unit}.text
+          ) basketMountUnits;
           pkgs.runCommand "storage-layout-test" { } ''
             touch "$out"
           '';
