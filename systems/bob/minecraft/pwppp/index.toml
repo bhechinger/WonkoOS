@@ -98,7 +98,7 @@ hash = "1c632f62c30f4e1223669267196d2ff1a2c03e400bf565ff4fe81e20c7cd2bdf"
 
 [[files]]
 file = "config/create-server.toml"
-hash = "7012faa11c288e0f378f62cc5732f2ec92ce9e7331dfffeb320d33122612d8c4"
+hash = "56bd9e4ef9a9c1ce4650bd67c477f7a1d0ae5e9ddce0551dd843d123e1a2b696"
 
 [[files]]
 file = "config/create-stuff-additions.toml"

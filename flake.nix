@@ -242,6 +242,7 @@
             firewall = config.networking.firewall;
             internal = firewall.interfaces.internal;
             management = firewall.interfaces.management;
+            minecraftProfile = name: "/nix/var/nix/profiles/per-user/root/minecraft-${name}";
             minecraft = config.services.minecraft-servers.servers.pwppp;
             minecraftPackFiles = lib.filesystem.listFilesRecursive ./systems/bob/minecraft/pwppp;
             gigglesomething = config.services.minecraft-servers.servers.gigglesomething;
@@ -605,7 +606,10 @@
           assert minecraft.serverProperties.enforce-whitelist;
           assert minecraft.serverProperties.enable-rcon;
           assert minecraft.serverProperties."rcon.password" == "@RCON_PASSWORD@";
-          assert builtins.hasAttr "config/prometheus_exporter-server.toml" minecraft.files;
+          assert minecraft.symlinks.mods == "${minecraftProfile "pwppp"}/mods";
+          assert minecraft.files.config == "${minecraftProfile "pwppp"}/config";
+          assert minecraft.files."world/datapacks" == "${minecraftProfile "pwppp"}/datapacks";
+          assert minecraft.files."server.properties" == "${minecraftProfile "pwppp"}/server.properties";
           assert lib.hasInfix "-XX:+UseG1GC" minecraft.jvmOpts;
           assert minecraftService.serviceConfig.MemoryMax == "6G";
           assert lib.hasInfix "numactl" minecraftService.environment.LD_LIBRARY_PATH;
@@ -628,7 +632,22 @@
           assert gigglesomething.serverProperties.enable-rcon;
           assert gigglesomething.serverProperties."rcon.port" == 25576;
           assert gigglesomething.serverProperties."rcon.password" == "@RCON_PASSWORD@";
-          assert builtins.hasAttr "world/serverconfig/prometheus_exporter-server.toml" gigglesomething.files;
+          assert gigglesomething.symlinks.mods == "${minecraftProfile "gigglesomething"}/mods";
+          assert gigglesomething.files.config == "${minecraftProfile "gigglesomething"}/config";
+          assert
+            gigglesomething.files."world/serverconfig"
+            == "${minecraftProfile "gigglesomething"}/world/serverconfig";
+          assert
+            gigglesomething.files."server.properties"
+            == "${minecraftProfile "gigglesomething"}/server.properties";
+          assert
+            config.services.nginx.virtualHosts."minecraft.4amlunch.net".locations."/packs/pwppp/".alias
+            == "${minecraftProfile "pwppp"}/site/";
+          assert
+            config.services.nginx.virtualHosts."minecraft.4amlunch.net".locations."/packs/gigglesomething/".alias
+            == "${minecraftProfile "gigglesomething"}/site/";
+          assert lib.isDerivation config.system.build.minecraftDeployments.pwppp;
+          assert lib.isDerivation config.system.build.minecraftDeployments.gigglesomething;
           assert lib.hasInfix "-XX:+UseG1GC" gigglesomething.jvmOpts;
           assert gigglesomethingService.serviceConfig.MemoryMax == "6G";
           assert gigglesomethingService.serviceConfig.ProtectSystem == "strict";

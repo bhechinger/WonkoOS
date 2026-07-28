@@ -13,7 +13,7 @@ let
   pack = builtins.fromTOML (builtins.readFile (packSource + "/pack.toml"));
   packVersion = pack.version;
   clientPackFileName = "${pack.name}-${packVersion}.zip";
-  configRoot = packSource + "/config";
+  minecraftProfile = name: "/nix/var/nix/profiles/per-user/root/minecraft-${name}";
   minecraftDataDir = "/var/lib/minecraft/pwppp";
   minecraftStdin = config.services.minecraft-servers.managementSystem.systemd-socket.stdinSocket.path "pwppp";
   gigglesomethingPackSource = ../minecraft/gigglesomething;
@@ -22,7 +22,6 @@ let
   );
   gigglesomethingPackVersion = gigglesomethingPack.version;
   gigglesomethingClientPackFileName = "${gigglesomethingPack.name}-${gigglesomethingPackVersion}.zip";
-  gigglesomethingConfigRoot = gigglesomethingPackSource + "/config";
   gigglesomethingDataDir = "/var/lib/minecraft/gigglesomething";
   gigglesomethingStdin = config.services.minecraft-servers.managementSystem.systemd-socket.stdinSocket.path "gigglesomething";
 
@@ -48,6 +47,46 @@ let
   gigglesomethingServerPackage = pkgs.callPackage ../minecraft/forge-server.nix {
     jre = pkgs.temurin-jre-bin-17;
   };
+  pwpppProfile = minecraftProfile "pwppp";
+  gigglesomethingProfile = minecraftProfile "gigglesomething";
+  profileServer =
+    name:
+    pkgs.writeShellApplication {
+      name = "minecraft-server";
+      text = ''
+        exec ${minecraftProfile name}/server/bin/minecraft-server "$@"
+      '';
+      meta.mainProgram = "minecraft-server";
+    };
+  pwpppServerProperties = {
+    server-ip = "127.0.0.11";
+    server-port = 25566;
+    motd = "A NEOFORGE server on ${pack.versions.minecraft}\\nrunning ${pack.name} ${pack.version}";
+    max-players = 20;
+    online-mode = true;
+    white-list = true;
+    enforce-whitelist = true;
+    enable-rcon = true;
+    broadcast-rcon-to-ops = false;
+    "rcon.port" = 25575;
+    "rcon.password" = "@RCON_PASSWORD@";
+  };
+  gigglesomethingServerProperties = {
+    server-ip = "127.0.0.12";
+    server-port = 25567;
+    motd = "A FORGE server on ${gigglesomethingPack.versions.minecraft}\\nrunning ${gigglesomethingPack.name} ${gigglesomethingPack.version}";
+    max-players = 20;
+    online-mode = true;
+    white-list = true;
+    enforce-whitelist = true;
+    enable-rcon = true;
+    broadcast-rcon-to-ops = false;
+    "rcon.port" = 25576;
+    "rcon.password" = "@RCON_PASSWORD@";
+  };
+  propertiesFormat = pkgs.formats.keyValue { };
+  pwpppServerPropertiesFile = propertiesFormat.generate "pwppp-server.properties" pwpppServerProperties;
+  gigglesomethingServerPropertiesFile = propertiesFormat.generate "gigglesomething-server.properties" gigglesomethingServerProperties;
   serverList =
     address:
     pkgs.runCommand "servers.dat" { } ''
@@ -135,7 +174,7 @@ let
     version = packVersion;
     src = packSource;
     side = "server";
-    packHash = "sha256-vBufphwd4bm5UtXtigwJPwg7CXliVKRVks5hbsPLFZ4=";
+    packHash = "sha256-dk6kfT5BhVkMegDSwJxAWkgYIDpeGPs8ymsAxvGejNI=";
   };
   gigglesomethingServerPack = pkgs.fetchPackwizModpack {
     pname = "gigglesomething-server";
@@ -221,21 +260,19 @@ let
       <body>
         <h1>4amlunch Minecraft servers</h1>
         <table>
-          <thead><tr><th>Server</th><th>Hostname</th><th>Version</th><th>Access</th><th>Client pack</th></tr></thead>
+          <thead><tr><th>Server</th><th>Hostname</th><th>Access</th><th>Client pack</th></tr></thead>
           <tbody>
             <tr>
               <td>pwppp</td>
               <td><code>pwppp.4amlunch.net</code></td>
-              <td>Modpack ${packVersion} / Minecraft ${pack.versions.minecraft} / NeoForge ${pack.versions.neoforge}</td>
               <td>Whitelist</td>
-              <td><a href="/packs/pwppp/${clientPackFileName}">Download</a></td>
+              <td><a href="/packs/pwppp/client.zip">Download</a></td>
             </tr>
             <tr>
               <td>gigglesomething</td>
               <td><code>gigglesomething.4amlunch.net</code></td>
-              <td>Modpack ${gigglesomethingPackVersion} / Minecraft ${gigglesomethingPack.versions.minecraft} / Forge ${gigglesomethingPack.versions.forge}</td>
               <td>Whitelist</td>
-              <td><a href="/packs/gigglesomething/${gigglesomethingClientPackFileName}">Download</a></td>
+              <td><a href="/packs/gigglesomething/client.zip">Download</a></td>
             </tr>
           </tbody>
         </table>
@@ -244,12 +281,8 @@ let
   '';
 
   minecraftSite = pkgs.runCommand "minecraft-site" { } ''
-    mkdir -p "$out/packs/pwppp/packwiz" "$out/packs/gigglesomething/packwiz"
+    mkdir "$out"
     cp ${siteIndex} "$out/index.html"
-    cp ${clientPack} "$out/packs/pwppp/${clientPackFileName}"
-    cp -r ${packSource}/. "$out/packs/pwppp/packwiz/"
-    cp ${gigglesomethingClientPack} "$out/packs/gigglesomething/${gigglesomethingClientPackFileName}"
-    cp -r ${gigglesomethingPackSource}/. "$out/packs/gigglesomething/packwiz/"
   '';
 
   voiceConfig = pkgs.runCommand "pwppp-voicechat-server.properties" { } ''
@@ -271,37 +304,6 @@ let
     mkdir "$out"
     cp -r ${gigglesomethingPackSource}/config "$out/"
   '';
-
-  relativeTo = root: path: lib.removePrefix "${toString root}/" (toString path);
-  managedConfigs = builtins.listToAttrs (
-    map (path: {
-      name = "config/${relativeTo configRoot path}";
-      value = "${packFiles}/config/${relativeTo configRoot path}";
-    }) (lib.filesystem.listFilesRecursive configRoot)
-  );
-  datapacks = builtins.listToAttrs (
-    map (path: {
-      name = "world/datapacks/${baseNameOf path}";
-      value = "${packFiles}/datapacks/${baseNameOf path}";
-    }) (lib.filesystem.listFilesRecursive (packSource + "/datapacks"))
-  );
-  serverFiles =
-    removeAttrs managedConfigs [ "config/voicechat/voicechat-server.properties" ]
-    // datapacks
-    // {
-      "config/prometheus_exporter-server.toml" = prometheusExporterConfig "127.0.0.11";
-      "config/voicechat/voicechat-server.properties" = voiceConfig;
-    };
-  gigglesomethingManagedConfigs = builtins.listToAttrs (
-    map (path: {
-      name = "config/${relativeTo gigglesomethingConfigRoot path}";
-      value = "${gigglesomethingPackFiles}/config/${relativeTo gigglesomethingConfigRoot path}";
-    }) (lib.filesystem.listFilesRecursive gigglesomethingConfigRoot)
-  );
-  gigglesomethingServerFiles = gigglesomethingManagedConfigs // {
-    "config/voicechat/voicechat-server.properties" = gigglesomethingVoiceConfig;
-    "world/serverconfig/prometheus_exporter-server.toml" = prometheusExporterConfig "127.0.0.12";
-  };
 
   packCheck = pkgs.runCommand "pwppp-pack-check" { nativeBuildInputs = [ pkgs.packwiz ]; } ''
     export HOME="$TMPDIR"
@@ -543,6 +545,40 @@ let
         touch "$out"
       '';
 
+  pwpppDeployment = pkgs.runCommand "minecraft-pwppp-deployment" { } ''
+    test -e ${packCheck}
+
+    mkdir -p "$out/site/packwiz"
+    ln -s ${serverPackage} "$out/server"
+    ln -s ${serverPack}/mods "$out/mods"
+    cp -r ${packFiles}/config "$out/config"
+    cp -r ${packFiles}/datapacks "$out/datapacks"
+    chmod -R u+w "$out/config"
+    cp ${prometheusExporterConfig "127.0.0.11"} "$out/config/prometheus_exporter-server.toml"
+    cp ${voiceConfig} "$out/config/voicechat/voicechat-server.properties"
+    cp ${pwpppServerPropertiesFile} "$out/server.properties"
+    cp ${clientPack} "$out/site/${clientPackFileName}"
+    ln -s ${clientPackFileName} "$out/site/client.zip"
+    cp -r ${packSource}/. "$out/site/packwiz/"
+  '';
+
+  gigglesomethingDeployment = pkgs.runCommand "minecraft-gigglesomething-deployment" { } ''
+    test -e ${gigglesomethingPackCheck}
+
+    mkdir -p "$out/config/voicechat" "$out/world/serverconfig" "$out/site/packwiz"
+    ln -s ${gigglesomethingServerPackage} "$out/server"
+    ln -s ${gigglesomethingServerPack}/mods "$out/mods"
+    cp -r ${gigglesomethingPackFiles}/config/. "$out/config/"
+    chmod -R u+w "$out/config"
+    cp ${gigglesomethingVoiceConfig} "$out/config/voicechat/voicechat-server.properties"
+    cp ${prometheusExporterConfig "127.0.0.12"} \
+      "$out/world/serverconfig/prometheus_exporter-server.toml"
+    cp ${gigglesomethingServerPropertiesFile} "$out/server.properties"
+    cp ${gigglesomethingClientPack} "$out/site/${gigglesomethingClientPackFileName}"
+    ln -s ${gigglesomethingClientPackFileName} "$out/site/client.zip"
+    cp -r ${gigglesomethingPackSource}/. "$out/site/packwiz/"
+  '';
+
   routerHardening = {
     CapabilityBoundingSet = "";
     DeviceAllow = "";
@@ -704,47 +740,31 @@ in
         enable = true;
         autoStart = true;
         restart = "on-failure";
-        package = serverPackage;
+        package = profileServer "pwppp";
         # https://github.com/MeowIce/meowice-flags#the-flags-set (G1GC, below 32 GiB)
         jvmOpts = "-Xms1G -Xmx4G --add-modules=jdk.incubator.vector -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UnlockExperimentalVMOptions -XX:+UnlockDiagnosticVMOptions -XX:+DisableExplicitGC -XX:+AlwaysPreTouch -XX:G1NewSizePercent=28 -XX:G1MaxNewSizePercent=50 -XX:G1HeapRegionSize=16M -XX:G1ReservePercent=15 -XX:G1MixedGCCountTarget=3 -XX:InitiatingHeapOccupancyPercent=20 -XX:G1MixedGCLiveThresholdPercent=90 -XX:SurvivorRatio=32 -XX:G1HeapWastePercent=5 -XX:+PerfDisableSharedMem -XX:G1SATBBufferEnqueueingThresholdPercent=30 -XX:G1ConcMarkStepDurationMillis=5 -XX:G1RSetUpdatingPauseTimePercent=0 -XX:+UseNUMA -XX:-DontCompileHugeMethods -XX:MaxNodeLimit=240000 -XX:NodeLimitFudgeFactor=8000 -XX:ReservedCodeCacheSize=400M -XX:NonNMethodCodeHeapSize=12M -XX:ProfiledCodeHeapSize=194M -XX:NonProfiledCodeHeapSize=194M -XX:NmethodSweepActivity=1 -XX:+UseCriticalJavaThreadPriority -XX:AllocatePrefetchStyle=3 -XX:+AlwaysActAsServerClassMachine -XX:+UseTransparentHugePages -XX:LargePageSizeInBytes=2M -XX:+UseLargePages -XX:+EagerJVMCI -XX:+UseStringDeduplication -XX:+UseAES -XX:+UseAESIntrinsics -XX:+UseFMA -XX:+UseLoopPredicate -XX:+RangeCheckElimination -XX:+OptimizeStringConcat -XX:+UseCompressedOops -XX:+UseThreadPriorities -XX:+OmitStackTraceInFastThrow -XX:+RewriteBytecodes -XX:+RewriteFrequentPairs -XX:+UseFPUForSpilling -XX:+UseFastStosb -XX:+UseNewLongLShift -XX:+UseVectorCmov -XX:+UseXMMForArrayCopy -XX:+UseXmmI2D -XX:+UseXmmI2F -XX:+UseXmmLoadAndClearUpper -XX:+UseXmmRegToRegMoveAll -XX:+EliminateLocks -XX:+DoEscapeAnalysis -XX:+AlignVector -XX:+OptimizeFill -XX:+EnableVectorSupport -XX:+UseCharacterCompareIntrinsics -XX:+UseCopySignIntrinsic -XX:+UseVectorStubs -XX:+UseFastJNIAccessors -XX:+UseInlineCaches -XX:+SegmentedCodeCache -XX:+UseCompactObjectHeaders -Djdk.nio.maxCachedBufferSize=262144 -Djdk.graal.UsePriorityInlining=true -Djdk.graal.Vectorization=true -Djdk.graal.OptDuplication=true -Djdk.graal.DetectInvertedLoopsAsCounted=true -Djdk.graal.LoopInversion=true -Djdk.graal.VectorizeHashes=true -Djdk.graal.EnterprisePartialUnroll=true -Djdk.graal.VectorizeSIMD=true -Djdk.graal.StripMineNonCountedLoops=true -Djdk.graal.SpeculativeGuardMovement=true -Djdk.graal.TuneInlinerExploration=1 -Djdk.graal.LoopRotation=true -Djdk.graal.CompilerConfiguration=enterprise";
-        symlinks.mods = "${serverPack}/mods";
-        files = serverFiles;
-        serverProperties = {
-          server-ip = "127.0.0.11";
-          server-port = 25566;
-          motd = "A NEOFORGE server on ${pack.versions.minecraft}\\nrunning ${pack.name} ${pack.version}";
-          max-players = 20;
-          online-mode = true;
-          white-list = true;
-          enforce-whitelist = true;
-          enable-rcon = true;
-          broadcast-rcon-to-ops = false;
-          "rcon.port" = 25575;
-          "rcon.password" = "@RCON_PASSWORD@";
+        symlinks.mods = "${pwpppProfile}/mods";
+        files = {
+          config = "${pwpppProfile}/config";
+          "world/datapacks" = "${pwpppProfile}/datapacks";
+          "server.properties" = "${pwpppProfile}/server.properties";
         };
+        serverProperties = pwpppServerProperties;
       };
       servers.gigglesomething = {
         enable = true;
         autoStart = true;
         restart = "on-failure";
-        package = gigglesomethingServerPackage;
+        package = profileServer "gigglesomething";
         # https://docker-minecraft-server.readthedocs.io/en/latest/configuration/jvm-options/#enable-meowices-flags
         jvmOpts = "-Xms1G -Xmx4G --add-modules=jdk.incubator.vector -XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis=200 -XX:+UnlockExperimentalVMOptions -XX:+UnlockDiagnosticVMOptions -XX:+DisableExplicitGC -XX:+AlwaysPreTouch -XX:G1NewSizePercent=28 -XX:G1MaxNewSizePercent=50 -XX:G1HeapRegionSize=16M -XX:G1ReservePercent=15 -XX:G1HeapWastePercent=5 -XX:G1MixedGCCountTarget=3 -XX:InitiatingHeapOccupancyPercent=20 -XX:G1MixedGCLiveThresholdPercent=90 -XX:G1RSetUpdatingPauseTimePercent=0 -XX:SurvivorRatio=32 -XX:+PerfDisableSharedMem -XX:MaxTenuringThreshold=1 -XX:G1SATBBufferEnqueueingThresholdPercent=30 -XX:G1ConcMarkStepDurationMillis=5 -XX:+UseNUMA -XX:-DontCompileHugeMethods -XX:MaxNodeLimit=240000 -XX:NodeLimitFudgeFactor=8000 -XX:ReservedCodeCacheSize=400M -XX:NonNMethodCodeHeapSize=12M -XX:ProfiledCodeHeapSize=194M -XX:NonProfiledCodeHeapSize=194M -XX:NmethodSweepActivity=1 -XX:+UseFastUnorderedTimeStamps -XX:+UseCriticalJavaThreadPriority -XX:AllocatePrefetchStyle=3 -XX:+AlwaysActAsServerClassMachine -XX:+UseTransparentHugePages -XX:LargePageSizeInBytes=2M -XX:+UseLargePages -XX:+EagerJVMCI -XX:+UseStringDeduplication -XX:+UseAES -XX:+UseAESIntrinsics -XX:+UseFMA -XX:+UseLoopPredicate -XX:+RangeCheckElimination -XX:+OptimizeStringConcat -XX:+UseCompressedOops -XX:+UseThreadPriorities -XX:+OmitStackTraceInFastThrow -XX:+RewriteBytecodes -XX:+RewriteFrequentPairs -XX:+UseFPUForSpilling -XX:+UseVectorCmov -XX:+UseXMMForArrayCopy -XX:+EliminateLocks -XX:+DoEscapeAnalysis -XX:+AlignVector -XX:+OptimizeFill -XX:+EnableVectorSupport -XX:+UseCharacterCompareIntrinsics -XX:+UseCopySignIntrinsic -XX:+UseVectorStubs -XX:+UseFastStosb -XX:+UseNewLongLShift -XX:+UseXmmI2D -XX:+UseXmmI2F -XX:+UseXmmLoadAndClearUpper -XX:+UseXmmRegToRegMoveAll -XX:UseAVX=2 -XX:UseSSE=4";
-        symlinks.mods = "${gigglesomethingServerPack}/mods";
-        files = gigglesomethingServerFiles;
-        serverProperties = {
-          server-ip = "127.0.0.12";
-          server-port = 25567;
-          motd = "A FORGE server on ${gigglesomethingPack.versions.minecraft}\\nrunning ${gigglesomethingPack.name} ${gigglesomethingPack.version}";
-          max-players = 20;
-          online-mode = true;
-          white-list = true;
-          enforce-whitelist = true;
-          enable-rcon = true;
-          broadcast-rcon-to-ops = false;
-          "rcon.port" = 25576;
-          "rcon.password" = "@RCON_PASSWORD@";
+        symlinks.mods = "${gigglesomethingProfile}/mods";
+        files = {
+          config = "${gigglesomethingProfile}/config";
+          "world/serverconfig" = "${gigglesomethingProfile}/world/serverconfig";
+          "server.properties" = "${gigglesomethingProfile}/server.properties";
         };
+        serverProperties = gigglesomethingServerProperties;
       };
     };
 
@@ -761,6 +781,18 @@ in
       locations."/".extraConfig = ''
         limit_except GET HEAD { deny all; }
       '';
+      locations."/packs/pwppp/" = {
+        alias = "${pwpppProfile}/site/";
+        extraConfig = ''
+          limit_except GET HEAD { deny all; }
+        '';
+      };
+      locations."/packs/gigglesomething/" = {
+        alias = "${gigglesomethingProfile}/site/";
+        extraConfig = ''
+          limit_except GET HEAD { deny all; }
+        '';
+      };
     };
 
     playit = {
@@ -819,10 +851,10 @@ in
     allowedUDPPorts = [ voicePort ];
   };
 
-  system.checks = [
-    gigglesomethingPackCheck
-    packCheck
-  ];
+  system.build.minecraftDeployments = {
+    pwppp = pwpppDeployment;
+    gigglesomething = gigglesomethingDeployment;
+  };
 
   systemd = {
     services = {
