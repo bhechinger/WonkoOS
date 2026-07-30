@@ -44,11 +44,23 @@ build-pwppp build-gigglesomething: build-%: refresh-%
 	nix build .#nixosConfigurations.bob.config.system.build.minecraftDeployments.$* --out-link result-minecraft-$*
 
 stage-pwppp stage-gigglesomething: stage-%: build-%
-	nix copy --no-check-sigs --to ssh-ng://$(BOB) ./result-minecraft-$*
-	ssh $(BOB) sudo nix-env --profile $(MINECRAFT_PROFILE)-$* --set "$$(readlink -f result-minecraft-$*)"
+	@new="$$(readlink -f result-minecraft-$*)"; \
+	old="$$($(BOB_SSH) readlink -f $(MINECRAFT_PROFILE)-$* 2>/dev/null || :)"; \
+	if [ "$$new" = "$$old" ]; then \
+		echo "$*: unchanged; skipping stage"; \
+	else \
+		nix copy --no-check-sigs --to ssh-ng://$(BOB) ./result-minecraft-$*; \
+	fi
 
 deploy-pwppp deploy-gigglesomething: deploy-%: stage-%
-	ssh $(BOB) sudo systemctl restart minecraft-server-$*.service
+	@new="$$(readlink -f result-minecraft-$*)"; \
+	old="$$($(BOB_SSH) readlink -f $(MINECRAFT_PROFILE)-$* 2>/dev/null || :)"; \
+	if [ "$$new" = "$$old" ]; then \
+		echo "$*: unchanged; skipping deploy"; \
+	else \
+		$(BOB_SSH) sudo nix-env --profile $(MINECRAFT_PROFILE)-$* --set "$$new" && \
+		$(BOB_SSH) sudo systemctl restart minecraft-server-$*.service; \
+	fi
 
 rollback-pwppp rollback-gigglesomething: rollback-%:
 	ssh $(BOB) sudo nix-env --profile $(MINECRAFT_PROFILE)-$* --rollback

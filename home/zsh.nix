@@ -47,6 +47,11 @@
 
       initContent = ''
         bindkey -v
+
+        codex() {
+          local unlock=(~/.password-store/secret_service/*/*.gpg(N[1]))
+          gpg --quiet --decrypt "$unlock" >/dev/null && command codex "$@"
+        }
       '';
     };
   };
