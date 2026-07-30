@@ -182,6 +182,20 @@
               touch "$out"
             '';
 
+        sierra-bind =
+          pkgs.runCommand "sierra-bind-test"
+            {
+              nativeBuildInputs = with pkgs; [
+                bind
+                shellcheck
+              ];
+            }
+            ''
+              shellcheck -s sh ${./systems/sierra/install-bind.sh}
+              ${./systems/sierra/install-bind.sh} --self-test
+              touch "$out"
+            '';
+
         cloudflare-tunnel-sync = pkgs.runCommand "cloudflare-tunnel-sync-test" { } ''
           ${lib.getExe pkgs.python3} ${./scripts/cloudflare-tunnel-sync.py} --self-test
           touch "$out"
