@@ -884,6 +884,7 @@ in
       playit.serviceConfig.ExecCondition = "${lib.getExe' pkgs.gnugrep "grep"} -qv REPLACE_WITH_PLAYIT_SECRET %d/secret";
 
       minecraft-server-pwppp = {
+        restartIfChanged = lib.mkForce false;
         wants = [ "minecraft-whitelist-pwppp.service" ];
         environment.LD_LIBRARY_PATH = lib.makeLibraryPath [ pkgs.numactl ];
         serviceConfig = {
@@ -896,6 +897,7 @@ in
         };
       };
       minecraft-server-gigglesomething = {
+        restartIfChanged = lib.mkForce false;
         wants = [ "minecraft-whitelist-gigglesomething.service" ];
         serviceConfig = {
           MemoryHigh = "5G";

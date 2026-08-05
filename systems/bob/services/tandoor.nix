@@ -44,6 +44,7 @@
     serviceConfig = {
       EnvironmentFile = config.sops.secrets.tandoor-environment.path;
       StateDirectoryMode = "0750";
+      TimeoutStartSec = "10min";
       UMask = lib.mkForce "0027";
     };
   };

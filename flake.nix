@@ -382,6 +382,7 @@
           assert tandoor.extraConfig.ALLOWED_HOSTS == "recipes.4amlunch.net";
           assert tandoor.extraConfig.ENABLE_SIGNUP == 0;
           assert tandoorService.serviceConfig.EnvironmentFile == config.sops.secrets.tandoor-environment.path;
+          assert tandoorService.serviceConfig.TimeoutStartSec == "10min";
           assert tandoorNginx.locations."/".proxyPass == "http://127.0.0.1:18084";
           assert !tandoorNginx.locations."/".recommendedProxySettings;
           assert lib.hasInfix "proxy_set_header X-Forwarded-For $remote_addr;"
@@ -645,7 +646,7 @@
           assert minecraftService.serviceConfig.MemoryMax == "6G";
           assert lib.hasInfix "numactl" minecraftService.environment.LD_LIBRARY_PATH;
           assert minecraftService.serviceConfig.ProtectSystem == "strict";
-          assert minecraftService.restartIfChanged;
+          assert !minecraftService.restartIfChanged;
           assert !minecraftService.reloadIfChanged;
           assert lib.elem "minecraft-whitelist-pwppp.service" minecraftService.wants;
           assert minecraftWhitelist.after == [ "minecraft-server-pwppp.service" ];
@@ -682,7 +683,7 @@
           assert lib.hasInfix "-XX:+UseG1GC" gigglesomething.jvmOpts;
           assert gigglesomethingService.serviceConfig.MemoryMax == "6G";
           assert gigglesomethingService.serviceConfig.ProtectSystem == "strict";
-          assert gigglesomethingService.restartIfChanged;
+          assert !gigglesomethingService.restartIfChanged;
           assert !gigglesomethingService.reloadIfChanged;
           assert lib.elem "minecraft-whitelist-gigglesomething.service" gigglesomethingService.wants;
           assert
