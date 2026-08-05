@@ -68,6 +68,9 @@ with public signup disabled; create the initial administrator on Bob with:
 sudo sh -c 'set -a; . /run/secrets/tandoor-environment; exec /var/lib/tandoor-recipes/tandoor-recipes-manage createsuperuser'
 ```
 
+Until that administrator exists, the one-time `/setup/` wizard is reachable
+only from the internal and Tailscale networks.
+
 Share invitation links manually. Tandoor has no SMTP configuration, so an
 administrator must also handle password resets.
 

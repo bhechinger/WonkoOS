@@ -387,6 +387,7 @@
           assert !tandoorNginx.locations."/".recommendedProxySettings;
           assert lib.hasInfix "proxy_set_header X-Forwarded-For $remote_addr;"
             tandoorNginx.locations."/".extraConfig;
+          assert lib.hasInfix "deny all;" tandoorNginx.locations."^~ /setup/".extraConfig;
           assert tandoorNginx.locations."/media/".alias == "/var/lib/tandoor-recipes/media/";
           assert config.services.postgresqlBackup.databases == [ "tandoor_recipes" ];
           assert lib.hasInfix "/var/lib/paperless/consume " config.services.nfs.server.exports;

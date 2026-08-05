@@ -8,6 +8,14 @@ let
   hsts = ''
     add_header Strict-Transport-Security "max-age=31536000" always;
   '';
+  tandoorProxyHeaders = ''
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-Server $hostname;
+  '';
   paperlessLocations = {
     "/" = {
       proxyPass = "http://paperless";
@@ -124,13 +132,18 @@ in
           "/" = {
             proxyPass = "http://127.0.0.1:18084";
             recommendedProxySettings = false;
+            extraConfig = tandoorProxyHeaders;
+          };
+          "^~ /setup/" = {
+            proxyPass = "http://127.0.0.1:18084";
+            recommendedProxySettings = false;
             extraConfig = ''
-              proxy_set_header Host $host;
-              proxy_set_header X-Real-IP $remote_addr;
-              proxy_set_header X-Forwarded-For $remote_addr;
-              proxy_set_header X-Forwarded-Proto $scheme;
-              proxy_set_header X-Forwarded-Host $host;
-              proxy_set_header X-Forwarded-Server $hostname;
+              allow 127.0.0.1;
+              allow ::1;
+              allow 10.42.0.0/16;
+              allow 100.64.0.0/10;
+              deny all;
+              ${tandoorProxyHeaders}
             '';
           };
           "/media/".alias = "/var/lib/tandoor-recipes/media/";
