@@ -20,6 +20,7 @@
     ./rtorrent.nix
     ./rutorrent.nix
     ./sonarr.nix
+    ./tandoor.nix
     ./tailscale.nix
     ./timesyncd.nix
     ./unifi-controller.nix

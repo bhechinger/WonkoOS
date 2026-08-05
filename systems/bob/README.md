@@ -9,6 +9,7 @@ runtime model.
 | Workload | Persistent state |
 |---|---|
 | Paperless-ngx | `/var/lib/paperless` and `/var/lib/postgresql/paperless` |
+| Tandoor Recipes | `/var/lib/tandoor-recipes` and the `tandoor_recipes` database in `/var/lib/postgresql/paperless` |
 | Proton Mail Bridge | `/var/lib/protonmail-bridge` |
 | UniFi Network Application | `/var/lib/unifi` |
 | Nginx | `/var/www` and ACME state under `/var/lib/acme` |
@@ -21,10 +22,10 @@ runtime model.
 | Minecraft routers and Playit | Stateless; configuration is in this repository |
 | Murmur, Postfix, NFS, Tailscale, ZeroTier | Their standard NixOS state paths |
 
-Runtime credentials for Attic, Paperless, Cloudflare Tunnel, Minecraft RCON
-and backups, Playit, Murmur, and ruTorrent are encrypted with SOPS in
-[`secrets/`](./secrets/) and materialized under `/run/secrets`. Do not recreate
-plaintext copies under `/home` or `/var/lib`.
+Runtime credentials for Attic, Paperless, Tandoor, Cloudflare Tunnel,
+Minecraft RCON and backups, Playit, Murmur, and ruTorrent are encrypted with
+SOPS in [`secrets/`](./secrets/) and materialized under `/run/secrets`. Do not
+recreate plaintext copies under `/home` or `/var/lib`.
 
 Paperless connects to the native Proton Mail Bridge on loopback port `1143`
 using STARTTLS. The Bridge certificate is trusted through
@@ -43,11 +44,12 @@ Bob has an internal network at `10.42.0.2` and a management network at
 TCP `8080` and UDP `1900`, `3478`, `5514`, and `10001`. Administration and all
 other application traffic use internal, Tailscale, or ZeroTier.
 
-Nginx serves Bob, Paperless, Jackett, Sonarr, and ruTorrent with the wildcard
-ACME certificate. It also serves the Minecraft server list and current pwppp
-client pack at `https://minecraft.4amlunch.net`. Unknown HTTP hosts receive
-`444` and unknown TLS handshakes are rejected. The rTorrent XML-RPC listener is
-only reachable through its Unix socket and the loopback nginx endpoint.
+Nginx serves Bob, Paperless, Tandoor, Jackett, Sonarr, and ruTorrent with the
+wildcard ACME certificate. It also serves the Minecraft server list and current
+pwppp client pack at `https://minecraft.4amlunch.net`. Unknown HTTP hosts
+receive `444` and unknown TLS handshakes are rejected. The rTorrent XML-RPC
+listener is only reachable through its Unix socket and the loopback nginx
+endpoint.
 
 Attic listens only on loopback and Nginx exposes it internally at
 `https://cache.4amlunch.net`. Pulls are public on the trusted networks; pushes
@@ -59,11 +61,21 @@ Decor so Bob can fetch them reproducibly. The generated CurseForge client ZIP
 substitutes the matching CurseForge file IDs because CurseForge exports omit
 Modrinth entries. Update both sets of pinned metadata when changing either mod.
 
+Tandoor is available at `https://recipes.4amlunch.net`. It uses local accounts
+with public signup disabled; create the initial administrator on Bob with:
+
+```sh
+sudo sh -c 'set -a; . /run/secrets/tandoor-environment; exec /var/lib/tandoor-recipes/tandoor-recipes-manage createsuperuser'
+```
+
+Share invitation links manually. Tandoor has no SMTP configuration, so an
+administrator must also handle password resets.
+
 `cloudflare-tunnel-sync.service` declaratively manages the remotely managed
 Cloudflare Tunnel, Spectrum app, and public DNS records. It publishes
-Paperless and the Minecraft download page through `https://localhost:443`,
-using each public hostname for the TLS and HTTP host names. TLS verification
-remains enabled.
+Paperless, Tandoor, and the Minecraft download page through
+`https://localhost:443`, using each public hostname for the TLS and HTTP host
+names. TLS verification remains enabled.
 
 `mc-router` accepts Minecraft TCP traffic on internal port `25565` and routes
 `pwppp.4amlunch.net` to the isolated NeoForge listener at
@@ -119,6 +131,9 @@ ZFS datasets back `/`, `/nix`, `/var`, `/var/lib/jackett`,
 automounted over NFSv4 at `/nfs/Restic`, `/nfs/NixCache`, `/nfs/Plex`, and
 `/nfs/Torrents`; Bob does not mount the `Brian` share.
 
+Tandoor media stays on the parent `/var` dataset at
+`/var/lib/tandoor-recipes/media`; no separate dataset is required.
+
 Jackett, Sonarr, rTorrent, and Plex keep separate service accounts. Basket's
 NFS host entries for Bob on both `Plex` and `Torrents` use **Squash all users**
 and map to the dedicated QNAP user `bob-nfs` and group `bob-media`. Those
@@ -152,6 +167,12 @@ on Deepthought.
 
 Bob service state is backed up from temporary ZFS snapshots at the start of
 each hour.
+
+Tandoor also writes an hourly zstd-compressed logical database dump to
+`/var/backup/postgresql/tandoor_recipes.sql.zstd`; the next Bob service backup
+captures it alongside the media directory. Restore the database dump and media
+directory together while `tandoor-recipes.service` is stopped.
+
 Minecraft keeps its two backup layers: Sanoid retains 24 hourly, 14 daily,
 and 3 monthly snapshots on Bob, while Restic takes a consistent ZFS snapshot
 after an RCON `save-all flush` and backs it up every four hours at 00:40,
@@ -197,6 +218,7 @@ After deploying Bob, verify the native services and their listeners:
 ```sh
 systemctl --failed
 systemctl status nginx postgresql paperless-web paperless-task-queue \
+  tandoor-recipes postgresqlBackup-tandoor_recipes \
   protonmail-bridge unifi jackett sonarr rtorrent minecraft-server-pwppp \
   mc-router svc-router playit atticd
 findmnt /nfs/Restic /nfs/NixCache /nfs/Plex /nfs/Torrents

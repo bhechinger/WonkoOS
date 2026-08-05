@@ -21,6 +21,7 @@ let
     "minecraft"
     "paperless"
     "pwppp"
+    "recipes"
     "restic"
     "restic-b2"
     "rutorrent"

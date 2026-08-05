@@ -38,6 +38,14 @@ let
             originServerName = "grafana.4amlunch.net";
           };
         }
+        {
+          hostname = "recipes.4amlunch.net";
+          service = "https://localhost:443";
+          originRequest = {
+            httpHostHeader = "recipes.4amlunch.net";
+            originServerName = "recipes.4amlunch.net";
+          };
+        }
         { service = "http_status:404"; }
       ];
       warp-routing.enabled = false;
@@ -62,6 +70,13 @@ let
       {
         type = "CNAME";
         name = "grafana.4amlunch.net";
+        content = tunnelTarget;
+        ttl = 1;
+        proxied = true;
+      }
+      {
+        type = "CNAME";
+        name = "recipes.4amlunch.net";
         content = tunnelTarget;
         ttl = 1;
         proxied = true;

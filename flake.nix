@@ -293,6 +293,9 @@
             vyprvpn = deepthought.services.openvpn.servers.vyprvpn-miami;
             vyprvpnProfile = builtins.readFile ./systems/deepthought/openvpn/vyprvpn-miami.ovpn;
             dnsUpdate = config.systemd.services.opnsense-dns-sync;
+            tandoor = config.services.tandoor-recipes;
+            tandoorService = config.systemd.services.tandoor-recipes;
+            tandoorNginx = config.services.nginx.virtualHosts."recipes.4amlunch.net";
           in
           assert config.services.tailscale.enable;
           assert config.services.zerotierone.enable;
@@ -372,6 +375,19 @@
             ];
           assert config.services.paperless.environmentFile == config.sops.secrets.paperless-environment.path;
           assert config.services.postgresql.dataDir == "/var/lib/postgresql/paperless";
+          assert tandoor.enable;
+          assert tandoor.address == "127.0.0.1";
+          assert tandoor.port == 18084;
+          assert tandoor.database.createLocally;
+          assert tandoor.extraConfig.ALLOWED_HOSTS == "recipes.4amlunch.net";
+          assert tandoor.extraConfig.ENABLE_SIGNUP == 0;
+          assert tandoorService.serviceConfig.EnvironmentFile == config.sops.secrets.tandoor-environment.path;
+          assert tandoorNginx.locations."/".proxyPass == "http://127.0.0.1:18084";
+          assert !tandoorNginx.locations."/".recommendedProxySettings;
+          assert lib.hasInfix "proxy_set_header X-Forwarded-For $remote_addr;"
+            tandoorNginx.locations."/".extraConfig;
+          assert tandoorNginx.locations."/media/".alias == "/var/lib/tandoor-recipes/media/";
+          assert config.services.postgresqlBackup.databases == [ "tandoor_recipes" ];
           assert lib.hasInfix "/var/lib/paperless/consume " config.services.nfs.server.exports;
           assert lib.hasInfix "/var/lib/paperless/export " config.services.nfs.server.exports;
           assert config.services.nginx.virtualHosts."bob.4amlunch.net".root == "/var/www";
@@ -478,6 +494,7 @@
           assert cloudflareSync.serviceConfig.ProtectSystem == "strict";
           assert config.sops.secrets.murmur-environment.mode == "0400";
           assert config.sops.secrets.paperless-environment.mode == "0400";
+          assert config.sops.secrets.tandoor-environment.mode == "0400";
           assert config.sops.secrets.rutorrent-htpasswd.mode == "0440";
           assert config.sops.secrets.minecraft-rcon-password.mode == "0400";
           assert config.sops.secrets.minecraft-restic-password.mode == "0400";

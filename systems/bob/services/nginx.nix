@@ -112,6 +112,31 @@ in
       "sonarr.4amlunch.net" = tls // {
         locations."/".proxyPass = "http://127.0.0.1:8989";
       };
+      "recipes.4amlunch.net" = tls // {
+        extraConfig = hsts + ''
+          client_max_body_size 512M;
+          proxy_cookie_flags ~ secure;
+          set_real_ip_from 127.0.0.1;
+          set_real_ip_from ::1;
+          real_ip_header CF-Connecting-IP;
+        '';
+        locations = {
+          "/" = {
+            proxyPass = "http://127.0.0.1:18084";
+            recommendedProxySettings = false;
+            extraConfig = ''
+              proxy_set_header Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+              proxy_set_header X-Forwarded-For $remote_addr;
+              proxy_set_header X-Forwarded-Proto $scheme;
+              proxy_set_header X-Forwarded-Host $host;
+              proxy_set_header X-Forwarded-Server $hostname;
+            '';
+          };
+          "/media/".alias = "/var/lib/tandoor-recipes/media/";
+          "/static/".alias = "${config.services.tandoor-recipes.package}/lib/tandoor-recipes/staticfiles/";
+        };
+      };
     };
   };
 
