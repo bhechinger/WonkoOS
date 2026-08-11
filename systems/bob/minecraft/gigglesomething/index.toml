@@ -997,7 +997,7 @@ hash = "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
 
 [[files]]
 file = "config/incontrol/spawn.json"
-hash = "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+hash = "fc330f4bf630260a63784cceb4b07b3537efef395dc1a4a2ca036dd1e66523e9"
 
 [[files]]
 file = "config/incontrol/spawner.json"
@@ -1547,6 +1547,11 @@ metafile = true
 [[files]]
 file = "mods/create-alexs-caves-compat.pw.toml"
 hash = "8591ffe782c9ffb7b16752062fae9a676a049cb885039299bd864f1ce4d7f585"
+metafile = true
+
+[[files]]
+file = "mods/create-extra-gauges.pw.toml"
+hash = "b4066f8ee6f30a59e0550e258e5ef15e59bcb20eac3ec06af4bf2e1d772c3707"
 metafile = true
 
 [[files]]

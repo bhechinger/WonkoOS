@@ -22,6 +22,8 @@ let
   );
   gigglesomethingPackVersion = gigglesomethingPack.version;
   gigglesomethingClientPackFileName = "${gigglesomethingPack.name}-${gigglesomethingPackVersion}.zip";
+  pwpppVersionInfo = pkgs.writeText "pwppp-version.html" "Modpack ${packVersion} / Minecraft ${pack.versions.minecraft} / NeoForge ${pack.versions.neoforge}";
+  gigglesomethingVersionInfo = pkgs.writeText "gigglesomething-version.html" "Modpack ${gigglesomethingPackVersion} / Minecraft ${gigglesomethingPack.versions.minecraft} / Forge ${gigglesomethingPack.versions.forge}";
   gigglesomethingDataDir = "/var/lib/minecraft/gigglesomething";
   gigglesomethingStdin = config.services.minecraft-servers.managementSystem.systemd-socket.stdinSocket.path "gigglesomething";
 
@@ -174,14 +176,14 @@ let
     version = packVersion;
     src = packSource;
     side = "server";
-    packHash = "sha256-dk6kfT5BhVkMegDSwJxAWkgYIDpeGPs8ymsAxvGejNI=";
+    packHash = "sha256-xYHt4UXdJXP1jaXdh2SCDYsW5U/+co7QpcCUqoGw2o8=";
   };
   gigglesomethingServerPack = pkgs.fetchPackwizModpack {
     pname = "gigglesomething-server";
     version = gigglesomethingPackVersion;
     src = gigglesomethingPackSource;
     side = "server";
-    packHash = "sha256-uKimqA4x2fIzZap0MX9BTg9AVkjt724WxhCJfNpsRro=";
+    packHash = "sha256-3O0BBO+zydZMGMD7uEtgyoIDeRgbj0IJSmcag7pZQ+Y=";
   };
 
   # Packwiz bundles non-CurseForge entries as JARs. Use matching CurseForge file
@@ -260,17 +262,19 @@ let
       <body>
         <h1>4amlunch Minecraft servers</h1>
         <table>
-          <thead><tr><th>Server</th><th>Hostname</th><th>Access</th><th>Client pack</th></tr></thead>
+          <thead><tr><th>Server</th><th>Hostname</th><th>Version</th><th>Access</th><th>Client pack</th></tr></thead>
           <tbody>
             <tr>
               <td>pwppp</td>
               <td><code>pwppp.4amlunch.net</code></td>
+              <td><!--# include virtual="/packs/pwppp/version.html" --></td>
               <td>Whitelist</td>
               <td><a href="/packs/pwppp/client.zip">Download</a></td>
             </tr>
             <tr>
               <td>gigglesomething</td>
               <td><code>gigglesomething.4amlunch.net</code></td>
+              <td><!--# include virtual="/packs/gigglesomething/version.html" --></td>
               <td>Whitelist</td>
               <td><a href="/packs/gigglesomething/client.zip">Download</a></td>
             </tr>
@@ -557,6 +561,7 @@ let
     cp ${prometheusExporterConfig "127.0.0.11"} "$out/config/prometheus_exporter-server.toml"
     cp ${voiceConfig} "$out/config/voicechat/voicechat-server.properties"
     cp ${pwpppServerPropertiesFile} "$out/server.properties"
+    cp ${pwpppVersionInfo} "$out/site/version.html"
     cp ${clientPack} "$out/site/${clientPackFileName}"
     ln -s ${clientPackFileName} "$out/site/client.zip"
     cp -r ${packSource}/. "$out/site/packwiz/"
@@ -574,6 +579,7 @@ let
     cp ${prometheusExporterConfig "127.0.0.12"} \
       "$out/world/serverconfig/prometheus_exporter-server.toml"
     cp ${gigglesomethingServerPropertiesFile} "$out/server.properties"
+    cp ${gigglesomethingVersionInfo} "$out/site/version.html"
     cp ${gigglesomethingClientPack} "$out/site/${gigglesomethingClientPackFileName}"
     ln -s ${gigglesomethingClientPackFileName} "$out/site/client.zip"
     cp -r ${gigglesomethingPackSource}/. "$out/site/packwiz/"
@@ -780,6 +786,7 @@ in
       '';
       locations."/".extraConfig = ''
         limit_except GET HEAD { deny all; }
+        ssi on;
       '';
       locations."/packs/pwppp/" = {
         alias = "${pwpppProfile}/site/";

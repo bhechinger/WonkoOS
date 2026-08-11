@@ -2,6 +2,17 @@
   {
     "when": "position",
     "spawntype": ["natural", "chunk_generation"],
+    "mod": "koopascritters",
+    "mincount": {
+      "amount": 64,
+      "mod": "koopascritters",
+      "perplayer": true
+    },
+    "result": "deny"
+  },
+  {
+    "when": "position",
+    "spawntype": ["natural", "chunk_generation"],
     "passive": true,
     "mincount": {
       "amount": 64,

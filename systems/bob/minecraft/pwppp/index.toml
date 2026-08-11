@@ -289,6 +289,10 @@ file = "config/immersive_paintings/common_config.toml"
 hash = "952032c00e3e37dc8193ba24b247ca1066e532186a7cde002c7538cde2b29958"
 
 [[files]]
+file = "config/incontrol/spawn.json"
+hash = "dcff955c91f34343716c3f9b5b6f17b6f6e05cb20d3ba78db598757c070d7921"
+
+[[files]]
 file = "config/inventorysorter-client.toml"
 hash = "982a6647903815de1f741618e0ef5bf40b3e06d4a2ef231bd5806ac7e8fede7c"
 
@@ -815,6 +819,11 @@ hash = "040e5ed9eafedf380f2dcf058efd2cc2a15d5cdfe29a49b7ef41b21c6d935f75"
 metafile = true
 
 [[files]]
+file = "mods/create-extra-gauges.pw.toml"
+hash = "372f992cc0bbd5120fb02e66ffa01e7cc507f92aa1aad8b6da3e46818da679e5"
+metafile = true
+
+[[files]]
 file = "mods/create-liquid-fuel.pw.toml"
 hash = "ec65f48e74ac39be1d5a99e0bc74fd1013abd9efcf361e52043990ff5fba4c2b"
 metafile = true
@@ -892,6 +901,11 @@ metafile = true
 [[files]]
 file = "mods/curios.pw.toml"
 hash = "6b6683fd8ec53d10d4fbef3b3d53922a1aaa8ef4d2e4b52bb819dc451f5d6b3d"
+metafile = true
+
+[[files]]
+file = "mods/deployer.pw.toml"
+hash = "498c2403baf1f07fc91e7f03d20c181df99ce89d3308fdcce5c337b05023e9bb"
 metafile = true
 
 [[files]]
@@ -992,6 +1006,11 @@ metafile = true
 [[files]]
 file = "mods/immersive-paintings.pw.toml"
 hash = "4efdc3a8dbe691136c0a07d4ba16c62d3f21efdf05e8c17c6adbab4485c67f78"
+metafile = true
+
+[[files]]
+file = "mods/in-control.pw.toml"
+hash = "38ad3e2d199cc5185c5f93031ad9c7f045453b61b35639ae03e62306df215588"
 metafile = true
 
 [[files]]
