@@ -1,13 +1,10 @@
 # PipeWire/FFADO FireWire audio
 
-- **Status:** The patched NixOS generation 167 and ordered external-host Home
-  Manager generation are active. Saffire production duplex passes at
-  48 kHz/256/2 with normal Ardour, its complete managed routes, plugins, saved
-  session, and eight CPU workers for two minutes with zero steady-state xruns
-  or graph errors. AudioFire is exported from a distinct PipeWire PID into the
-  same graph, suspended with exactly zero links. Ardour and AudioFire autostart
-  are restored and enabled. Stop and bulk route-rebuild transitions can still
-  cause a single recoverable FFADO xrun; steady-state operation is clean.
+- **Status:** The recovery reboot restored 48 kHz/256/2, both FireWire devices,
+  all services and routes, and normal playback and capture. Both 128/3 and
+  128/2 are rejected after delayed xruns. The restored 256/2 transport produced
+  three Ardour-startup xruns and one first-playback xrun, then remained clean;
+  it is usable but has not regained its earlier clean qualification.
 - **Host:** `deepthought`
 - **Last updated:** 2026-08-12
 
@@ -701,19 +698,121 @@ installed.
   42, AudioFire suspended with zero links, and zero matching journal errors for
   the entire load interval. Ardour and AudioFire boot enablement is restored.
 
+### 2026-08-12 — post-deployment xrun and priority correction
+
+- Normal use exposed that the earlier bounded test was not sufficient. At
+  256/2, activating Ardour and Firefox repeatedly filled FFADO's playback
+  ringbuffer, produced cycle-timer discrepancies and xruns, and eventually
+  left playback as a loud right-channel tone with capture stalled. PipeWire
+  links were correct; restarting restored clean stereo playback and microphone
+  capture, confirming a transport failure rather than a routing error.
+- Increasing only `ffado.period-num` to three and four did not prevent the
+  same 544-frame playback write from overflowing. Do not retain extra periods
+  as a workaround; the final configuration remains 256/2.
+- Live scheduling inspection found the Saffire controller IRQ and FFADO
+  transmit worker tied at FIFO 94. Lowering `ffado.rtprio` from 93 to 92 put
+  the FFADO ARM/transmit/receive workers at FIFO 92/93/91, below IRQ 39 at 94
+  and above PipeWire's data loop at 88.
+- Before the priority change, 256/4 failed under the eight-worker load. With
+  only the live priority changed, the same graph completed two minutes under
+  eight nice-15 `sha256sum /dev/zero` workers with zero new PipeWire or FFADO
+  xruns, ringbuffer overruns, cycle-timer discrepancies, errors, or timeouts.
+- The final 256/2 plus `ffado.rtprio = 92` Home Manager generation built and
+  activated successfully. Its restart could not be validated because the old
+  xrunned FFADO process hung during teardown and required SIGKILL. The Saffire
+  then failed to enumerate after a physical power cycle, controller-local bus
+  reset, PCI function reset, PCI hot-remove/rescan, and `firewire_ohci`
+  unbind/rebind. PCI still sees `07:00.0`, but no local node or Saffire GUID is
+  created; the audio stack is stopped and a host reboot is the next recovery
+  boundary.
+- Generation 167 rebooted with both FireWire GUIDs present and the final Home
+  Manager generation active. Ardour initially waited at its crash-recovery
+  prompt; accepting recovery loaded every expected route and caused one
+  recoverable FFADO xrun. Firefox then played clean stereo through Ardour and
+  the Saffire, and the Saffire microphone reached Ardour correctly.
+- The final steady-state test ran the complete normal Ardour graph at
+  48 kHz/256/2 for two minutes with eight nice-15 `sha256sum /dev/zero`
+  workers. The interval contained zero new FFADO/PipeWire xruns, ringbuffer
+  overruns, cycle-timer discrepancies, errors, or timeouts. Both GUIDs remained
+  present, all managed Saffire routes remained connected, and AudioFire had
+  zero links.
+- **2026-08-12:** Accept one recoverable FFADO xrun while Ardour bulk-loads its
+  session after startup. Steady-state operation must remain xrun-free; repeated
+  xruns, a stuck tone, missing capture, or a failed load interval are not
+  acceptable.
+
+### 2026-08-12 — 128/3 production validation
+
+- PipeWire's quantum and Ardour's `PIPEWIRE_LATENCY` were reduced from 256 to
+  128 frames, while FFADO changed from two to three periods. Sample rate remains
+  48 kHz and `ffado.rtprio` remains 92. The Home Manager check built as
+  `/nix/store/p5gpy7nmrv8karikhrg7yxcifxa4i6lk-home-manager-generation` and
+  activated successfully.
+- Home Manager activation restarted Ardour before PipeWire and caused one
+  recoverable transition xrun on the old transport. The deliberate PipeWire
+  restart then reproduced the known FFADO shutdown hang; systemd killed only
+  the stale process at its stop timeout and started the new one without a
+  FireWire controller reset.
+- Ardour's initial bulk graph load at 128/3 filled the 511-frame playback
+  ringbuffer with a 544-frame write and caused one recoverable startup xrun.
+  No further transport errors occurred. Realtime ordering remained IRQ 94,
+  FFADO transmit/ARM/receive 93/92/91, and PipeWire data loop 88.
+- The user reported normal audio after the restart. The complete managed
+  Ardour graph then ran for two minutes with eight nice-15
+  `sha256sum /dev/zero` workers and zero new xruns, ringbuffer overruns,
+  cycle-timer discrepancies, errors, fatals, timeouts, or quantum changes.
+  PipeWire remained at 48 kHz/128 frames, all four user audio services stayed
+  active, Saffire routes remained connected, and AudioFire remained present
+  with zero links.
+- **2026-08-12:** Promote 128/3 to the current production configuration. Keep
+  the validated 256/2 Home Manager generation as the rollback point. The
+  existing allowance for one recoverable Ardour startup xrun still applies;
+  steady-state operation must remain xrun-free.
+
+### 2026-08-12 — delayed 128-frame failures and rollback
+
+- A later audit found that 128/3 produced a second ringbuffer overflow and xrun
+  at 11:06:31, 82 seconds after its first startup xrun and 22 seconds before the
+  recorded CPU-load interval began. The clean load interval therefore did not
+  qualify 128/3; it is superseded as a production choice.
+- The 128/2 Home Manager generation built and activated successfully. Playback
+  and microphone capture both worked normally, but the transport again wrote
+  544 frames into a 511-frame ringbuffer and produced a second xrun at 11:15:25,
+  about one minute after startup. The CPU load test was skipped because 128/2
+  had already failed the steady-state acceptance criterion.
+- The repository was returned to 48 kHz/256/2 with `ffado.rtprio = 92` and
+  Ardour `PIPEWIRE_LATENCY=256/48000`. The check reused the validated
+  `/nix/store/k3m4pq1hqx7alyab0137f6y5hlivhdaz-home-manager-generation`, which
+  was activated successfully.
+- Shutdown of the failed 128/2 process reached an unhandled FFADO xrun. After
+  SIGTERM and SIGKILL, its main thread became a zombie while thread 27460
+  remained uninterruptibly blocked in `fw_device_op_release`; PipeWire remains
+  in `stop-sigkill` and cannot start the replacement. Do not repeat the earlier
+  controller reset sequence, which failed to restore enumeration. Reboot the
+  host with headphones at zero, then validate that 256/2 and both GUIDs return.
+- **2026-08-12:** Reject both 128/3 and 128/2 for production. Restore 256/2 as
+  the current configuration; the allowed single Ardour-startup xrun does not
+  cover a second delayed xrun.
+- The recovery reboot restored system generation 167 and Home Manager
+  generation `k3m4pq1hqx7alyab0137f6y5hlivhdaz`. Both FireWire GUIDs returned,
+  PipeWire runs at 48 kHz/256 frames, realtime ordering remains correct, all
+  four audio services and the managed Saffire routes are active, and AudioFire
+  has zero links. The user confirmed normal playback and microphone capture.
+- Ardour startup nevertheless caused three xruns between 11:32:28 and
+  11:32:35. Starting normal playback caused a fourth at 11:34:23; each had the
+  same 544-frame write into a 511-frame ringbuffer. No further transport errors
+  appeared after 11:34:24. Keep 256/2 active, but do not call the rollback fully
+  requalified until longer normal use is clean.
+
 ## Current state and remaining work
 
-Saffire duplex at 48 kHz/256/2 passes direct isolated load testing on its tested
-controller, including two minutes with eight CPU workers. The ordered
-external-host generation is installed and validated. Saffire production audio
-runs at 48 kHz/256/2; normal Ardour and the full managed graph pass the bounded
-CPU load; AudioFire is present from its independent host with zero links.
-
-No implementation work remains for the requested steady-state configuration.
-Avoid restarting WirePlumber or stopping Ardour during critical audio because
-those bulk lifecycle transitions can produce one recoverable FFADO xrun. A
-future task may address transition sequencing if seamless graph teardown is
-required; it is not needed for stable running audio.
+The repository and active Home Manager generation use 48 kHz/256/2 with
+`ffado.rtprio = 92`. PipeWire, WirePlumber, Ardour, and the AudioFire exporter
+are active; playback and capture work, Saffire routes are present, and
+AudioFire has zero links. Both 128-frame configurations are rejected. Continue
+normal use at 256/2 and treat any further xrun, stuck tone, or capture failure
+as a transport regression; the reboot recovery produced more transition xruns
+than the single accepted Ardour-startup event.
 
 The recovery reboot is safe to perform: `/nix/var/nix/profiles/system` and the
 systemd-boot default both point to generation 167, the verified final patched
