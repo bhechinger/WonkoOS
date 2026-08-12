@@ -1,8 +1,12 @@
 {
   pkgs,
+  unstable-pkgs,
   ...
 }:
 
+let
+  ffadoPipewire = import ../../common/pipewire-ffado { pkgs = unstable-pkgs; };
+in
 {
   security.rtkit.enable = true;
 
@@ -14,14 +18,16 @@
     rtirq = {
       resetAll = 1;
       prioLow = 0;
+      prioHigh = 95;
       enable = true;
-      nameList = "rtc0 firewire_ohci";
+      nameList = "firewire_ohci rtc0";
     };
   };
 
   services = {
     pipewire = {
       enable = true;
+      package = ffadoPipewire;
       audio.enable = true;
       wireplumber.enable = true;
       alsa = {

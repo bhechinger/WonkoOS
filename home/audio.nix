@@ -1,12 +1,57 @@
-{ pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  unstable-pkgs,
+  ...
+}:
 let
+  ffadoPipewire = import ../common/pipewire-ffado { pkgs = unstable-pkgs; };
+
+  audiofirePipewireConfig = pkgs.runCommand "audiofire-pipewire-config" { } ''
+    mkdir -p "$out/pipewire.conf.d"
+    ln -s ${ffadoPipewire}/share/pipewire/pipewire.conf "$out/pipewire.conf"
+    ln -s ${./pipewire/audiofire-ffado.conf} "$out/pipewire.conf.d/20-audiofire-ffado.conf"
+  '';
+
+  audiofireFfadoHost = pkgs.writeShellApplication {
+    name = "audiofire-ffado-host";
+    runtimeInputs = [
+      ffadoPipewire
+      pkgs.coreutils
+      pkgs.jq
+    ];
+    text = ''
+      for _ in $(seq 1 90); do
+        if timeout 3 pw-dump 2>/dev/null |
+          jq -e '
+            any(.[]; .type == "PipeWire:Interface:Node" and
+              .info.props["node.name"] == "saffire_ffado_output" and
+              .info.state == "running") and
+            any(.[]; .type == "PipeWire:Interface:Node" and
+              .info.props["node.name"] == "saffire_ffado_input" and
+              .info.state == "running")
+          ' >/dev/null
+        then
+          sleep 5
+          export PIPEWIRE_CONFIG_DIR=${audiofirePipewireConfig}
+          exec pipewire
+        fi
+        sleep 1
+      done
+
+      echo "audiofire-ffado-host: production PipeWire did not become ready" >&2
+      exit 1
+    '';
+  };
+
   ardourPipewire = pkgs.symlinkJoin {
     name = "ardour-pipewire";
     paths = [ pkgs.ardour ];
     buildInputs = [ pkgs.makeWrapper ];
     postBuild = ''
       wrapProgram $out/bin/ardour9 \
-        --prefix LD_LIBRARY_PATH : ${pkgs.pipewire.jack}/lib
+        --prefix LD_LIBRARY_PATH : ${ffadoPipewire.jack}/lib
     '';
   };
 
@@ -16,13 +61,13 @@ let
       coreutils
       gnugrep
       jq
-      pipewire
+      ffadoPipewire
     ];
     text = ''
       set -euo pipefail
 
-      saffire_sink="alsa_output.firewire-0x00130e0401c04de0.multichannel-output"
-      saffire_source="alsa_input.firewire-0x00130e0401c04de0.multichannel-input"
+      saffire_sink="saffire_ffado_output"
+      saffire_source="saffire_ffado_input"
       max_wait_seconds=90
       poll_interval_seconds=2
       required_consecutive_ready_checks=2
@@ -42,32 +87,29 @@ let
       node_ready() {
         local node_name="$1"
         local media_class="$2"
-        local pcm_stream="$3"
 
         timeout 3 pw-dump |
           jq -e \
             --arg node_name "$node_name" \
-            --arg media_class "$media_class" \
-            --arg pcm_stream "$pcm_stream" '
+            --arg media_class "$media_class" '
             any(.[]; .type == "PipeWire:Interface:Node" and
               .info.props["node.name"] == $node_name and
               .info.props["media.class"] == $media_class and
-              .info.props["device.bus"] == "firewire" and
-              .info.props["api.alsa.pcm.stream"] == $pcm_stream)
+              .info.props["node.group"] == "saffire-ffado-group")
           ' >/dev/null
       }
 
       saffire_nodes_ready() {
-        node_ready "$saffire_sink" "Audio/Sink" "playback" &&
-          node_ready "$saffire_source" "Audio/Source" "capture"
+        node_ready "$saffire_sink" "Audio/Sink" &&
+          node_ready "$saffire_source" "Audio/Source"
       }
 
       saffire_ports_exist() {
-        has_port "$saffire_source:capture_AUX0" &&
-          has_port "$saffire_source:capture_AUX4" &&
-          has_port "$saffire_source:capture_AUX5" &&
-          has_port "alsa_output.firewire-0x00130e0401c04de0.multichannel-output:playback_FL" &&
-          has_port "alsa_output.firewire-0x00130e0401c04de0.multichannel-output:playback_FR"
+        has_port "$saffire_source:00130e0401c04de0_1394/Out:01 (Anlg/In:03)_out" &&
+          has_port "$saffire_source:00130e0401c04de0_1394/Out:05 (SPDIF/In:01)_out" &&
+          has_port "$saffire_source:00130e0401c04de0_1394/Out:06 (SPDIF/In:02)_out" &&
+          has_port "$saffire_sink:00130e0401c04de0_1394/In:01 (Mixer/In:17)_in" &&
+          has_port "$saffire_sink:00130e0401c04de0_1394/In:02 (Mixer/In:18)_in"
       }
 
       midi_ports_exist() {
@@ -147,11 +189,21 @@ let
 
 in
 {
+  home.activation.disableArdourJackNoCopyWorkaround = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    ARDOUR_CONFIG=${lib.escapeShellArg "${config.xdg.configHome}/ardour9/config"}
+    if test -f "$ARDOUR_CONFIG"; then
+      ${pkgs.gnused}/bin/sed -i \
+        -e '/<Option name="work-around-jack-no-copy-optimization"/d' \
+        -e '/<Config>/a\    <Option name="work-around-jack-no-copy-optimization" value="0"/>' \
+        "$ARDOUR_CONFIG"
+    fi
+  '';
+
   home.packages = with pkgs; [
     carla
     qpwgraph
     ardourPipewire
-    pipewire.jack
+    ffadoPipewire.jack
     rnnoise-plugin.lv2
     lmms
     lsp-plugins
@@ -179,6 +231,7 @@ in
         force = true;
         text = builtins.readFile ./pipewire/11-null-source.conf;
       };
+      "pipewire/pipewire.conf.d/20-firewire-ffado.conf".source = ./pipewire/firewire-ffado.conf;
       "wireplumber/wireplumber.conf.d/50-audio-routes.conf".text = audioRoutesRule;
       "pipewire/client.conf.d/52-battletech-games.conf".text = battletechGamesRule;
       "pipewire/pipewire-pulse.conf.d/52-battletech-games.conf".text = battletechGamesRule;
@@ -210,6 +263,26 @@ in
   };
 
   systemd.user.services = {
+    audiofire-ffado-export = {
+      Unit = {
+        Description = "Export AudioFire4 FFADO nodes into production PipeWire";
+        Requires = [ "pipewire.service" ];
+        After = [ "pipewire.service" ];
+        PartOf = [ "pipewire.service" ];
+      };
+
+      Service = {
+        ExecStart = "${audiofireFfadoHost}/bin/audiofire-ffado-host";
+        Restart = "on-failure";
+        RestartSec = 5;
+        LimitMEMLOCK = "infinity";
+        LimitRTPRIO = 95;
+        LimitNICE = "-11";
+      };
+
+      Install.WantedBy = [ "pipewire.service" ];
+    };
+
     ardour-default = {
       Unit = {
         Description = "Ardour Default session";
@@ -229,6 +302,7 @@ in
       Service = {
         ExecStartPre = "${ardourPipewireReady}/bin/ardour-pipewire-ready";
         ExecStart = "${ardourPipewire}/bin/ardour9 /home/wonko/Default";
+        Environment = "PIPEWIRE_LATENCY=256/48000";
         KillSignal = "SIGINT";
         Restart = "on-failure";
         RestartSec = 5;

@@ -55,6 +55,7 @@ in
       "firewire-ohci"
     ];
     blacklistedKernelModules = [
+      "snd_dice"
       "snd_fireworks"
     ];
     extraModprobeConfig = ''

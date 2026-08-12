@@ -1,0 +1,110 @@
+diff --git a/src/modules/module-ffado-driver.c b/src/modules/module-ffado-driver.c
+--- a/src/modules/module-ffado-driver.c
++++ b/src/modules/module-ffado-driver.c
+@@ -575,6 +575,16 @@
+ 	}
+ }
+ 
++static void complete_period(struct impl *impl, uint64_t nsec)
++{
++	if (!impl->source.rt.transfered || !impl->sink.rt.transfered)
++		return;
++
++	pw_log_trace_fp("done %u", impl->frame_time);
++	impl->rt.done = true;
++	set_timeout(impl, nsec);
++}
++
+ static void sink_process(void *d, struct spa_io_position *position)
+ {
+ 	struct stream *s = d;
+@@ -608,12 +618,7 @@
+ 	}
+ 	ffado_streaming_transfer_playback_buffers(impl->dev);
+ 	s->rt.transfered = true;
+-
+-	if (impl->mode == MODE_SINK) {
+-		pw_log_trace_fp("done %u", impl->frame_time);
+-		impl->rt.done = true;
+-		set_timeout(impl, position->clock.nsec);
+-	}
++	complete_period(impl, position->clock.nsec);
+ }
+ 
+ static void silence_playback(struct impl *impl)
+@@ -638,7 +643,7 @@
+ 
+ 	pw_log_trace_fp("process %d", impl->rt.triggered);
+ 
+-	if (SPA_FLAG_IS_SET(impl->position->clock.flags, SPA_IO_CLOCK_FLAG_XRUN_RECOVER))
++	if (SPA_FLAG_IS_SET(position->clock.flags, SPA_IO_CLOCK_FLAG_XRUN_RECOVER))
+ 		return;
+ 
+ 	if (!impl->rt.triggered) {
+@@ -671,6 +676,7 @@
+ 		else
+ 			do_volume(dst, p->buffer, &s->volume, i, n_samples);
+ 	}
++	complete_period(impl, position->clock.nsec);
+ }
+ 
+ static void stream_io_changed(void *data, void *port_data, uint32_t id, void *area, uint32_t size)
+@@ -727,6 +733,7 @@
+ {
+ 	struct impl *impl = s->impl;
+ 	struct pw_properties *props;
++	const char *port_physical;
+ 	uint8_t buffer[1024];
+ 	struct spa_pod_builder b;
+ 	struct spa_latency_info latency;
+@@ -734,6 +741,10 @@
+ 	uint32_t i, n_params = 0, n_channels = 0;
+ 	bool is_midi;
+ 
++	port_physical = pw_properties_get(s->props, PW_KEY_PORT_PHYSICAL);
++	if (port_physical == NULL)
++		port_physical = "true";
++
+ 	for (i = 0; i < s->n_ports; i++) {
+ 		struct port *port = s->ports[i];
+ 		if (port->data != NULL) {
+@@ -752,7 +763,7 @@
+ 		case ffado_stream_type_audio:
+ 			props = pw_properties_new(
+ 					PW_KEY_FORMAT_DSP, "32 bit float mono audio",
+-					PW_KEY_PORT_PHYSICAL, "true",
++					PW_KEY_PORT_PHYSICAL, port_physical,
+ 					PW_KEY_PORT_TERMINAL, "true",
+ 					PW_KEY_PORT_NAME, port->name,
+ 					PW_KEY_AUDIO_CHANNEL, channel,
+@@ -764,7 +775,7 @@
+ 			props = pw_properties_new(
+ 					PW_KEY_FORMAT_DSP, "8 bit raw midi",
+ 					PW_KEY_PORT_NAME, port->name,
+-					PW_KEY_PORT_PHYSICAL, "true",
++					PW_KEY_PORT_PHYSICAL, port_physical,
+ 					PW_KEY_PORT_TERMINAL, "true",
+ 					PW_KEY_PORT_CONTROL, "true",
+ 					NULL);
+@@ -1032,8 +1043,10 @@
+ 		pw_log_error("FFADO error");
+ 		return;
+ 	}
+-	source_running = impl->source.running && impl->sink.ready;
+-	sink_running = impl->sink.running && impl->source.ready;
++	source_running = impl->source.running &&
++		(!(impl->mode & MODE_SINK) || impl->sink.ready);
++	sink_running = impl->sink.running &&
++		(!(impl->mode & MODE_SOURCE) || impl->source.ready);
+ 
+ 	impl->source.rt.transfered = false;
+ 	impl->sink.rt.transfered = false;
+@@ -1305,8 +1318,6 @@
+ 	else
+ 		pw_log_info("FFADO stopped streaming");
+ 
+-	close_ffado_device(impl);
+-
+ 	return 0;
+ }
+ 
