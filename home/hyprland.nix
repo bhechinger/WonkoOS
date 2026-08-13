@@ -19,6 +19,9 @@ in
   systemd.user.targets.hyprland-session.Unit.Wants = [
     "xdg-desktop-autostart.target"
   ];
+  systemd.user.targets.hyprland-session.Unit.Before = [
+    "xdg-desktop-autostart.target"
+  ];
 
   xdg = {
     configFile."mimeapps.list".force = true;
@@ -98,7 +101,7 @@ in
 
         "[workspace special:chat silent] slack"
         "[workspace special:chat silent] discord"
-        "[workspace special:chat silent] whatsie"
+        "[workspace special:chat silent] sed -i 's/^windowTheme=.*/windowTheme=dark/' \"$HOME/.config/org.keshavnrj.ubuntu/WhatSie.conf\"; exec whatsie"
         "[workspace special:chat silent] irccloud"
         #"[workspace special:chat silent] kitty --class irssi -T irssi irssi"
 
