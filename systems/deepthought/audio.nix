@@ -1,11 +1,15 @@
 {
+  inputs,
   pkgs,
   unstable-pkgs,
   ...
 }:
 
 let
-  ffadoPipewire = import ../../common/pipewire-ffado { pkgs = unstable-pkgs; };
+  ffadoPipewire = import ../../common/pipewire-ffado {
+    pkgs = unstable-pkgs;
+    pipewire-src = inputs.pipewire-src;
+  };
 in
 {
   security.rtkit.enable = true;
@@ -20,7 +24,8 @@ in
       prioLow = 0;
       prioHigh = 95;
       enable = true;
-      nameList = "firewire_ohci rtc0";
+      highList = "firewire_ohci s-firewi";
+      nameList = "rtc0";
     };
   };
 

@@ -4,6 +4,10 @@
   inputs = {
     nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.2605"; # Stable Nixpkgs
     unstable-nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1"; # Unstable Nixpkgs
+    pipewire-src = {
+      url = "path:/home/wonko/src/pipewire";
+      flake = false;
+    };
     linux_7_0.url = "github:NixOS/nixpkgs/709592197675b569aeaf6a68eb66365226a7c718";
     determinate = {
       url = "https://flakehub.com/f/DeterminateSystems/determinate/3"; # Determinate 3.*
@@ -115,7 +119,7 @@
           inherit system;
 
           specialArgs = {
-            inherit inputs;
+            inherit inputs unstable-pkgs;
           };
 
           modules = [
@@ -128,7 +132,7 @@
         inherit pkgs;
         extraSpecialArgs = {
           inherit unstable-pkgs;
-          inherit (inputs) auto-splice spotify-midi-control;
+          inherit (inputs) auto-splice pipewire-src spotify-midi-control;
         };
         modules = [
           inputs.determinate.homeManagerModules.default

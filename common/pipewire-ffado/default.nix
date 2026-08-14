@@ -1,4 +1,4 @@
-{ pkgs }:
+{ pkgs, pipewire-src }:
 
 let
   ffado = pkgs.ffado.overrideAttrs (_old: rec {
@@ -10,5 +10,10 @@ let
   });
 in
 (pkgs.pipewire.override { inherit ffado; }).overrideAttrs (old: {
-  patches = (old.patches or [ ]) ++ [ ./ffado-driver.patch ];
+  version = "1.7.0-unstable-2026-08-06";
+  src = pipewire-src;
+  patches = builtins.filter (patch: !pkgs.lib.hasSuffix "musl.patch" (toString patch)) (
+    old.patches or [ ]
+  );
+  mesonFlags = (old.mesonFlags or [ ]) ++ [ "-Dbluez5-codec-lhdc=disabled" ];
 })

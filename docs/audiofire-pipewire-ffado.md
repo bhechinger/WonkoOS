@@ -1,12 +1,15 @@
 # PipeWire/FFADO FireWire audio
 
-- **Status:** The recovery reboot restored 48 kHz/256/2, both FireWire devices,
-  all services and routes, and normal playback and capture. Both 128/3 and
-  128/2 are rejected after delayed xruns. The restored 256/2 transport produced
-  three Ardour-startup xruns and one first-playback xrun, then remained clean;
-  it is usable but has not regained its earlier clean qualification.
+- **Status:** AudioFire work is deferred and the interface is physically
+  disconnected. The first PipeWire-master hardware candidate failed after
+  Ardour activated the Saffire: its pause path closed and then recreated the
+  FFADO device, after which both DICE ISO handlers died and the graph stopped.
+  A corrected master candidate now retains the proven 48 kHz/256/2 lifecycle:
+  pause stops streaming but only final teardown closes the FFADO device. That
+  candidate is staged as NixOS generation 184 with its matching Home Manager
+  generation active; Ardour is stopped pending reboot.
 - **Host:** `deepthought`
-- **Last updated:** 2026-08-12
+- **Last updated:** 2026-08-13
 
 This is the source of truth for the experiment. Update the status, checklist,
 decision log, and test log as work proceeds. Preserve earlier results; when a
@@ -14,15 +17,13 @@ decision changes, append a dated replacement instead of deleting history.
 
 ## Current production objective
 
-Run the Saffire Pro24 as the production 48 kHz/256-frame/two-period FFADO
-duplex interface. Expose the AudioFire4 in the same PipeWire graph from a
-separate FFADO host process, but keep every AudioFire port disconnected until
-its routing is designed explicitly.
+Run only the Saffire Pro24 as the production 48 kHz/256-frame/two-period FFADO
+duplex interface. Keep the AudioFire physically disconnected and its exporter
+disabled.
 
-Success requires the Saffire capture and playback ports to retain the existing
-Ardour routes, the PipeWire graph to run at 48 kHz/256 frames, and both
-AudioFire FFADO nodes to exist with zero links. The AudioFire must not become a
-default device or an automatic Ardour physical-port connection.
+Success requires the existing Saffire playback/capture routes to return after
+reboot, normal physical stereo playback and microphone capture, and no
+steady-state xruns beyond the accepted single Ardour-startup event.
 
 ## Original isolated experiment objective
 
@@ -86,6 +87,30 @@ drop-in and binds the AudioFire by GUID.
   `close_ffado_device()` calls `stop_ffado_device()`, which called
   `close_ffado_device()` again and consequently finished the same FFADO handle
   twice. Stopping now stops streaming; the outer close owns the single finish.
+- **2026-08-13:** Preserve the FFADO device across a PipeWire PAUSED state.
+  The first master candidate moved the PAUSED path from
+  `stop_ffado_device()` to `close_ffado_device()`. On hardware this recreated
+  the DICE streams when Ardour started and wedged the transport. The corrected
+  patch keeps stop and close ownership separate while PAUSED performs only a
+  stop, exactly matching the stable patched PipeWire 1.6.8 behavior.
+- **2026-08-13:** Target the upstream merge request at `master`. PipeWire's
+  official GitLab reports `master` as its protected default branch; the other
+  active numbered branches are maintenance lines (`1.0`, `1.2`, `1.4`, and
+  `1.6`), with no separate development branch. All 54 open merge requests in
+  the checked API sample target `master`, as did the two prior FFADO merge
+  requests found (#1633 and #1635). Do not target `1.6` directly; upstream can
+  decide whether any accepted fix should be backported.
+- **2026-08-13:** Push the submission as one signed commit rather than the
+  seven incremental hardware-test commits. Branch `fix/ffado-duplex-master` in
+  `bhechinger/pipewire` points to `3a2ae07d642e48ad556a38bf246841a00e3fee29`;
+  its tree and diff are identical to the tested generation-184 patch.
+- **2026-08-14:** Add explanatory mode-comparison comments as a second signed
+  commit, `81eeba1f63ed72249e94ee06354acea014546efe`, without changing driver
+  behavior. This supersedes only the one-commit branch shape above.
+- **2026-08-14:** Use the clean `/home/wonko/src/pipewire` checkout of
+  `fix/ffado-duplex-master` as the Nix source through a locked non-flake path
+  input. Remove the duplicated local patch files so the merge-request branch
+  is the single source of PipeWire driver code.
 - **2026-08-11:** Mark AudioFire ports non-physical in the local FFADO module
   patch. Together with disabled autoconnection and the WirePlumber link guard,
   this keeps Ardour and policy clients from plumbing the idle interface.
@@ -804,20 +829,996 @@ installed.
   appeared after 11:34:24. Keep 256/2 active, but do not call the rollback fully
   requalified until longer normal use is clean.
 
+### 2026-08-12 — AudioFire master-output route rejected
+
+- The requested persistent route used the previously validated physical stereo
+  mapping: Ardour Master 1 to AudioFire AUX0 (`Unknown_in`, left) and Master 2
+  to AUX1 (`Unknown0_in`, right). The AudioFire capture node remained guarded
+  against all links. The Home Manager check built successfully as
+  `/nix/store/z95pdjjlrr8ml3c8pi362118bswsf91z-home-manager-generation`.
+- Reloading WirePlumber created exactly those two AudioFire playback links and
+  no capture links. AudioFire attempted to start at 11:42:00, reported a rate
+  more than 10% off nominal, and released both isochronous channels by 11:42:03.
+  At the same time, production Saffire playback overflowed its 511-frame
+  ringbuffer and entered repeated timeouts, dead transmit handlers, alignment
+  failures, and xruns every few seconds.
+- WirePlumber was stopped before both AudioFire links were removed, preventing
+  policy recreation. The route-policy source was returned to guarding both
+  AudioFire nodes, the validated
+  `/nix/store/k3m4pq1hqx7alyab0137f6y5hlivhdaz-home-manager-generation` rebuilt
+  and activated, and WirePlumber restarted with zero AudioFire links.
+- The Saffire transport did not recover after rollback. Its receive and
+  transmit handlers remained dead or timed out, its managed routes could not
+  be recreated, and stopping the damaged process risks the already-observed
+  uninterruptible FireWire release hang. Reboot with both interfaces' output
+  levels at zero; do not retain or automatically recreate this route.
+- **2026-08-12:** Reject direct Ardour-master playback to the independently
+  exported AudioFire in the current shared graph. Keep AudioFire present but
+  unlinked until its failed concurrent-start behavior is diagnosed in a clean,
+  isolated test.
+
+### 2026-08-12 — Recovery after rejected AudioFire route
+
+- A reboot with both automatic Ardour and AudioFire units disabled returned
+  both FireWire GUIDs and a clean idle PipeWire/WirePlumber graph. Ardour was
+  then started alone as transient unit `ardour-recovery.service`; all managed
+  Saffire routes returned and AudioFire had zero links.
+- Saffire startup produced one recoverable xrun at 12:06:34. The first physical
+  playback test produced one more at 12:08:30, after which playback remained
+  clean and the user confirmed normal stereo Firefox playback and microphone
+  capture in Ardour.
+- Restore the declarative Ardour and AudioFire services only with hardware
+  output levels at zero. Keep the existing policy that exports AudioFire but
+  prevents every automatic link to it.
+- Reactivating the known-good Home Manager generation restored both declarative
+  unit links. Replacing transient Ardour with managed Ardour caused four
+  recoverable transition xruns from 12:10:10 through 12:10:32; all expected
+  routes returned and no further transport error appeared after 12:10:33.
+- Starting the managed AudioFire exporter at 12:11:04 published
+  `audiofire_ffado_output` and `audiofire_ffado_input` in suspended state. Both
+  have exactly zero links, and neither FFADO process logged an error after the
+  exporter started.
+- The final managed playback/capture check sounded correct, but first playback
+  wrote 544 frames into FFADO's 511-frame ringbuffer and caused one recoverable
+  xrun at 12:15:00. No audible fault remained. This repeats the bounded
+  first-playback transition and is not a clean steady-state qualification.
+- A later xrun appeared at 12:22:50 with no AudioFire links. FFADO timed out at
+  12:23:20, both Saffire handlers died, and recovery reached fatal
+  `Could not syncStartAll` at 12:23:26. This began before a temporary PipeWire
+  loopback load was requested; no loopback nodes were created.
+- **2026-08-12:** Reject 256/2 as a production setting. Prepare 512/2 for the
+  next clean boot because AudioFire previously passed that setting for 30
+  seconds with zero xruns; Saffire and the combined managed graph still require
+  validation at 512/2.
+- The focused Home Manager build for 512/2 passed as
+  `/nix/store/bm91z47chm0l1lz06vcjrxnrq1mcz19i-home-manager-generation`.
+  It is deliberately not activated against the failed live transport.
+- After the recovery boot, both GUIDs returned and idle FFADO discovery was
+  clean. A second 512/2 generation,
+  `/nix/store/bas2qpmlqvk1r7vky9di9nfwjxh1j6xy-home-manager-generation`, was
+  activated with AudioFire autostart removed for isolation. Home Manager did
+  not restart the existing 256/2 PipeWire process.
+- Managed Ardour briefly started that old process. It xrunned at 12:42:38 and
+  hung while stopping at 12:42:41, before PipeWire could reload 512/2. Do not
+  force the blocked teardown. Reboot once more: the active Home generation will
+  then start directly at 512/2 with Ardour enabled and AudioFire stopped.
+
+### 2026-08-12 — 512/2 and adaptive AudioFire bridge
+
+- PipeWire started at 48 kHz/512/2 with AudioFire stopped. Managed Ardour
+  created all expected Saffire routes and caused one recoverable startup xrun.
+  First Firefox playback caused one more recoverable xrun after writing 544
+  frames with 479 frames free. The user confirmed normal stereo playback and
+  microphone capture; no later Saffire error appeared.
+- AudioFire exported cleanly as two suspended nodes at 512/2. A temporary
+  native PipeWire loopback connected Ardour Master L/R to the tested AudioFire
+  AUX0/AUX1 outputs, placing a stream resampler between the independent device
+  clocks. The Saffire remained running throughout.
+- AudioFire crashed at the first playback start. Coredump PID 17794 shows its
+  data thread in `ffado_streaming_transfer_playback_buffers` while the main
+  thread was still reopening the device in `ffado_streaming_init`. Systemd
+  restarted the exporter suspended; it was then stopped and every temporary
+  bridge/link removed.
+- Source inspection found that both FFADO filters can become streaming and
+  schedule their process callbacks before synchronous `start_ffado_device()`
+  finishes. Guard both playback and capture callbacks with `impl->started` so
+  they cannot access the FFADO handle until prepare/start completes. The patch
+  dry-applies to the exact PipeWire 1.6.8 source.
+- The guarded PipeWire passed the full `deepthought` system build as
+  `/nix/store/7q5syglb0dr5gci1yz62scwar81r3jz7-nixos-system-deepthought-26.05.20260809.fcb8fcd`.
+  The matching Home generation, including the independent AudioFire host,
+  built as `/nix/store/g554vpzc3nw9p9z47yqgmw5hlcl90cn5-home-manager-generation`.
+- The guarded Home generation is active with Ardour and AudioFire stopped.
+  System profile and systemd-boot default generation 168 both point to the
+  guarded system; `/run/current-system` intentionally remains generation 167
+  until reboot.
+- After booting generation 168, the callback guard prevented the prior
+  AudioFire crash. The adaptive bridge still could not start AudioFire
+  playback: FFADO reported a measured rate of `626.52869`, more than 10% from
+  the nominal 512-frame period, released its ISO channels, and left both
+  AudioFire nodes idle. The Saffire remained alive.
+- `ffado-test -p 0 BusReset` could not acquire the AudioFire while the
+  production PipeWire process held FFADO discovery handles. Resetting only PCI
+  function `0000:06:00.0` while that process was live is rejected: despite the
+  separate controllers, the one FFADO process also held the Saffire controller
+  and entered an unbounded sequence of negative cycle-timer corrections.
+- A complete userspace audio-stack restart required systemd to kill the stuck
+  PipeWire process after its stop timeout. The replacement initialized, but
+  starting Ardour reactivated the negative cycle-timer sequence. Stop Ardour,
+  PipeWire, PipeWire Pulse, WirePlumber, and both activation sockets before
+  recovering the kernel FireWire state. With no FFADO process remaining,
+  unbind and rebind both `firewire_ohci` PCI functions (`0000:06:00.0` and
+  `0000:07:00.0`) before restarting the stack. The user explicitly approved a
+  complete audio-stack restart for this work.
+- Rebinding both idle controllers cleared the corrupted kernel clock. The
+  production stack returned at 512/2, Ardour restored every managed Saffire
+  route, and FFADO had one bounded startup xrun. The first subsequent playback
+  transition had one more bounded xrun; no later Saffire error appeared.
+- Retrying the guarded adaptive bridge after that reset again failed AudioFire
+  playback, this time at a measured rate of `627.47986`. FFADO released its ISO
+  channels, the AudioFire nodes returned idle, the callback guard prevented a
+  crash, and the Saffire remained running. The bridge was removed and the
+  AudioFire exporter stopped.
+- The first isolated control test was contaminated by launching the normal
+  WirePlumber profile, which also enumerated ALSA, Bluetooth, and video
+  hardware. Silent playback entered FFADO startup but did not complete, and
+  teardown deadlocked until the test process was killed. A transient USB wait
+  from the unwanted ALSA devices initially obscured the FFADO threads. Do not
+  treat this run as a clean shared-graph discriminator; repeat it with the
+  previously validated policy-only WirePlumber profile.
+- The policy-only retry was clean: AudioFire playback started in a fully
+  isolated 512/2 graph, then simultaneous capture joined it. Both FFADO nodes
+  remained running with the expected direct stereo links and no AudioFire
+  error. This proves the exported shared graph, not baseline AudioFire duplex,
+  causes the initial bridge failure.
+- AudioFire did not survive an idle-to-running lifecycle transition. After the
+  direct test clients disconnected, the next client start measured `626.57025`
+  frames against nominal 512 and released both ISO channels. Production
+  Saffire had one bounded xrun during that failed transition and then remained
+  stable. The isolated process deadlocked during teardown and was killed.
+- Keep AudioFire in its independent graph and use a local Pulse tunnel for the
+  stereo cross-clock boundary. While the AudioFire service is enabled, keep
+  its playback stream continuously active instead of repeatedly stopping and
+  reopening FFADO. Test this only after an AudioFire-only power cycle gives the
+  tunnel a fresh first start.
+- The first fresh Pulse-tunnel attempt activated Ardour Master left before its
+  right link existed. AudioFire immediately reproduced the invalid-rate abort
+  at `627.32825`, then a retry could not prepare its already-enabled ports.
+  This repeats the known incremental-link failure mode; the isolated process
+  subsequently exited cleanly. On the next fresh start, create the left link
+  passive and use the right link as the single activation event.
+- A fresh retry showed the Pulse tunnel activates its remote stream when the
+  module loads, before either local Ardour link; making the first local link
+  passive therefore cannot affect AudioFire startup. Its remote node correctly
+  requested 48 kHz and `512/48000` latency, but negotiated `s16le`, while the
+  successful isolated `pw-cat` client used float32. Force `audio.format =
+  F32LE` on the next fresh tunnel before rejecting this transport.
+- Forcing `F32LE` did not help; AudioFire aborted at `625.73590`. Inspection
+  then showed the actual behavioral difference: the tunnel's remote Pulse
+  stream was uncorked and running before the local tunnel sink had any Ardour
+  links, whereas the successful direct client continuously supplied zeros.
+  Configure the local tunnel with `node.pause-on-idle = true`, create its left
+  link passive, and use the right link to activate the complete stereo path.
+  This should prevent the remote stream from starting without a producer.
+
+### 2026-08-12 — Pulse tunnel validated, permanent two-graph design rejected
+
+- PipeWire's Pulse tunnel created its remote playback stream before the local
+  sink had a producer. A one-line test patch added `PA_STREAM_START_CORKED` so
+  the remote stream remained corked until the local stream became active.
+- With the patched tunnel, the first Ardour link was created passively and the
+  second link activated the complete stereo route. The AudioFire started once,
+  remained active, and the adaptive rate control converged. The user confirmed
+  normal physical playback from the AudioFire. This proves that the two
+  independent hardware clocks can be bridged reliably when startup supplies a
+  complete stream before FFADO begins.
+- The user rejected an isolated AudioFire graph plus Pulse tunnel as the
+  permanent architecture. Keep the working processes alive only as a temporary
+  reference until a single-graph replacement is ready to test.
+
+### 2026-08-12 — Single-graph architecture correction
+
+- PipeWire supports multiple driver nodes in one core. The FFADO module marks
+  every source and sink as a driver with `PW_FILTER_FLAG_DRIVER`; driver
+  priority therefore cannot turn the AudioFire into an ordinary follower.
+- FFADO accepts multiple device specifications and can expose them as one
+  pseudo-device, but its API explicitly requires those devices to be linked in
+  one synchronization domain. The Saffire and AudioFire currently use
+  independent internal clocks, so one FFADO instance containing both GUIDs is
+  rejected unless a physical digital-clock connection is added and validated.
+- PipeWire's stream nodes contain adaptive resamplers and its combine/loopback
+  modules use asynchronous streams on the hardware-facing side. This permits
+  the Saffire and AudioFire to remain separate graph drivers while a stream
+  absorbs their clock drift inside one production graph.
+- The earlier native loopback experiment did not establish that this design is
+  invalid. `libpipewire-module-loopback` sets `resample.disable = true` when no
+  `audio.rate` is supplied, and that experiment also activated the AudioFire
+  during an incomplete startup. Both conditions conflict with what the
+  successful Pulse test proved is required.
+- **Decision:** replace the Pulse tunnel with a production-core native combine
+  sink at 48 kHz, explicitly set `resample.disable = false`, and dynamically
+  create its passive playback stream only when `audiofire_ffado_output`
+  appears. Keep Ardour's direct Saffire route unchanged. Run the combine sink
+  continuously so it is already producing silence before the AudioFire starts
+  and so an Ardour restart cannot cycle the known-fragile FFADO transport.
+- The separate `audiofire-ffado-host` process may remain as a crash-isolation
+  boundary, but its FFADO filters use `remote.name = pipewire-0`; therefore the
+  AudioFire processing nodes and adaptive stream belong to the production
+  graph, not to the host process's otherwise empty local core.
+- The first implementation uses stock `libpipewire-module-combine-stream`,
+  matches only `audiofire_ffado_output`, maps FL/FR to AUX0/AUX1, and explicitly
+  enables its 48 kHz stream resampler. The focused Home Manager build passed as
+  `/nix/store/b8cv7yg53v4d55lsxvfyxky1hgf3c7ad-home-manager-generation`; it is
+  not active yet.
+- A separate-runtime configuration parse and four-second PipeWire startup
+  passed. A follow-up port-alias probe mistakenly launched WirePlumber's normal
+  hardware profile instead of the intended policy-only profile. That probe was
+  stopped, but immediately afterward the production Saffire began repeated
+  FFADO xruns and `syncStartAll` failures. Treat the timing as correlated, not
+  proven causation. Do not activate or test the new graph until the complete
+  audio stack and both FireWire controllers have been reset.
+
+### 2026-08-12 — AudioFire deferred; return to Saffire-only 256/2
+
+- The user decided the AudioFire is not important enough to justify further
+  multi-clock work now and physically disconnected it. Supersede the pending
+  combine-stream cutover with a Saffire-only production graph.
+- Remove the unactivated AudioFire combine module and Ardour-to-combine routes.
+  Restore the routing guard for both AudioFire nodes and keep the exporter
+  disabled by leaving it without an install target.
+- Restore PipeWire, the Saffire FFADO period, the dormant AudioFire test config,
+  and Ardour's requested latency to 48 kHz/256/2.
+- The failed controller-unbind shell remains stuck in the current kernel after
+  both physical devices were removed. Do not attempt more recovery in this
+  boot. Reboot only after the Saffire-only Home Manager generation is built and
+  linked; reconnect only the Saffire for post-boot validation.
+- The focused Saffire-only Home Manager build passed as
+  `/nix/store/0qh5rjalw8833iz9scbnl6a58ab4k0n7-home-manager-generation` and is
+  the current Home Manager profile. Its installed PipeWire drop-in requests
+  256 frames at 48 kHz with two FFADO periods, Ardour requests `256/48000`, and
+  no AudioFire combine drop-in exists. The exporter is linked but not enabled;
+  Ardour remains enabled for the desktop session.
+- Home Manager linked every file before its service switch encountered the
+  intentionally unavailable audio stack. The residual Ardour readiness job
+  was stopped. Audio units are runtime-masked only for this broken boot; those
+  masks live under `/run/user/1000` and disappear on reboot.
+
+### 2026-08-12 — post-reboot Saffire hang diagnosis
+
+- The clean boot started PipeWire at 48 kHz/256/2 with only the Saffire
+  physically connected. FFADO overflowed its 511-frame receive ring nine times
+  in eight minutes. The ninth recovery killed first the receive and then the
+  transmit handler before failing fatally with `Could not syncStartAll` and
+  `ffado_streaming_wait: Error condition while waiting (Unhandled XRUN)`.
+- PipeWire's control plane remained responsive and all clients and links stayed
+  registered, but both FFADO nodes stopped producing periods. No FireWire bus
+  reset or other kernel event accompanied the failure.
+- The hardware and scheduler state matched the validated setup: the Saffire is
+  on controller `07:00.0`, its IRQ 39 runs FIFO 94, FFADO transmit/ARM/receive
+  run FIFO 93/92/91, PipeWire's data loop runs FIFO 88, and all CPU governors
+  report `performance`.
+- The reboot was not actually a clean Saffire-only configuration. An orphaned
+  `~/.config/pipewire/pipewire.conf.d/21-audiofire-combine.conf` symlink from an
+  older Home Manager generation remained alongside the new generation's three
+  drop-ins. PipeWire consequently loaded `libpipewire-module-combine-stream`;
+  its `audiofire_master` node is running with `node.always-process = true` and
+  is driven by `saffire_ffado_input`, though it has no AudioFire stream or
+  links. Remove this stale managed-file link before the next qualification.
+- The immediate hang mechanism is established: PipeWire stopped draining the
+  FFADO receive path long enough to fill its ringbuffer, after which libffado's
+  xrun recovery repeatedly attempted to enable an already-enabled receive
+  stream and could not restart the synchronization domain. The initial reason
+  for the missed graph periods is not yet isolated. The stale combine node
+  invalidates this run but is not proven causal because the same delayed
+  `544,511` overflow occurred before the combine module was introduced.
+
+### 2026-08-12 — 1024/3 recovery deployment
+
+- Supersede 256/2 as the recovery setting. Production PipeWire and the Saffire
+  FFADO module now request 48 kHz/1024 frames/three periods, and Ardour requests
+  the matching `PIPEWIRE_LATENCY=1024/48000`. The dormant AudioFire test
+  configuration remains unchanged.
+- The focused Home Manager activation package built successfully as
+  `/nix/store/39w71va6hdbh2b6vcy9gzfx80jkjfxjl-home-manager-generation` and is
+  the active Home Manager profile. Inspection of the built generation confirms
+  it contains only `10-null-sink.conf`, `11-null-source.conf`, and
+  `20-firewire-ffado.conf` under PipeWire's drop-in directory.
+- Home Manager did not remove the old
+  `21-audiofire-combine.conf` link because it was left outside the current
+  generation's managed link set. The exact orphaned link was removed manually;
+  the installed PipeWire drop-in directory now matches the built generation.
+- Ardour, WirePlumber, and PipeWire Pulse stopped cleanly. The failed PipeWire
+  process timed out while stopping FFADO and systemd sent SIGKILL after 90
+  seconds. Its main thread became a zombie while FFADO bus-reset thread 7504
+  remained uninterruptibly blocked in `fw_device_op_release`, leaving
+  `pipewire.service` in `stop-sigkill`. Do not attempt a controller reset or
+  driver unbind in this kernel; reboot is the recovery boundary.
+- After reboot, first verify that no combine module or AudioFire node exists,
+  then confirm 1024-frame PipeWire timing, physical playback, microphone
+  capture, and a clean xrun baseline before beginning the one-hour normal-use
+  soak.
+
+### 2026-08-12 — 1024/3 rejected; restore Saffire 512/2
+
+- The reboot produced the intended clean graph: one GUID-bound Saffire FFADO
+  module, no AudioFire or combine module, and a live PipeWire clock fixed at
+  48 kHz/1024 frames. Realtime scheduling was also correct: FireWire IRQs ran
+  FIFO 95/94, FFADO transmit/ARM/receive ran FIFO 93/92/91, and PipeWire's data
+  loop ran FIFO 88.
+- Despite that clean state, FFADO recorded 11 xruns in roughly the
+  first four minutes of streaming. Receive and transmit handlers repeatedly
+  exceeded libffado's 49.152 ms death threshold, entered timeout and
+  `syncStartAll` recovery, and produced multi-second audio interruptions. The
+  stream sometimes recovered, including after a YouTube ad boundary, but did
+  not meet the no-steady-state-xrun criterion.
+- **Decision:** reject 1024/3 for the Saffire. Buffer size is not monotonic for
+  this FFADO path, and 1024/3 is substantially worse than the previously tested
+  512/2 configuration. Restore PipeWire, Saffire FFADO, and Ardour latency to
+  48 kHz/512/2. Do not add an automatic restart watchdog: a failed FFADO close
+  can block uninterruptibly in the kernel, so a watchdog would hide the fault
+  without reliably recovering it.
+- The current 1024/3 process is already damaged. Build and activate the 512/2
+  Home Manager generation, but use a reboot as the transport recovery boundary
+  rather than forcing another FFADO teardown or PCIe controller reset.
+- The focused 512/2 Home Manager generation built successfully as
+  `/nix/store/3qhw5l6qaxdn2f7hsfb10hixiiv8w4gw-home-manager-generation` and is
+  the active profile. It was activated with the user systemd bus deliberately
+  unavailable, so Home Manager installed the 512/2 PipeWire drop-in and
+  Ardour's `PIPEWIRE_LATENCY=512/48000` without restarting the live 1024/3
+  process. Reboot remains the next and only recovery action.
+
+### 2026-08-12 — PipeWire xrun-recovery root-cause test
+
+- The clean 512/2 boot streamed normally through the ad-to-video transition,
+  then stopped during sustained video playback. PipeWire logged four graph
+  xruns, both FFADO handlers died, and libffado failed recovery with
+  `requestEnable: Enable requested on enabled stream 'Receive'` followed by
+  fatal `Could not syncStartAll`. The FFADO process retained only its main and
+  non-streaming threads afterward.
+- JACK2's FFADO driver is the behavioral control. It waits for a period,
+  transfers capture, runs the graph, transfers playback, and treats
+  `ffado_wait_xrun` as a recoverable skipped cycle. PipeWire follows the same
+  broad sequence, and libffado 2.5.0's `ffado_streaming_reset()` is a no-op, so
+  neither the retry loop nor that reset explains the divergence.
+- PipeWire's FFADO source callback is the only hardware-driver path in the
+  tree that returns immediately when `SPA_IO_CLOCK_FLAG_XRUN_RECOVER` is set.
+  The flag means the node missed its previous graph deadline and is being
+  called so it can resynchronize. Returning performs no capture transfer, no
+  fallback playback transfer, and no period completion; the module leaves its
+  one-second watchdog armed while FFADO's receive buffer continues filling.
+  The observed `PipeWire` xrun counter increments before each FFADO recovery
+  cascade, matching this control flow.
+- **Decision:** keep FFADO and test the minimal root-mechanism change: remove
+  the `XRUN_RECOVER` early return so the callback drains and completes the
+  current FFADO period. Carry it as a separate one-hunk patch during
+  qualification so the independently prepared upstream lifecycle patch is
+  unchanged. Test at the JACK-equivalent target of 48 kHz/128/3; 256/2 remains
+  an acceptable fallback only if 128/3 produces excessive but recoverable
+  xruns.
+- The focused PipeWire package, complete deepthought NixOS system, and Home
+  Manager generation all build successfully. The resulting system is
+  `/nix/store/nmi9z2a7j3bfb05wk4fqinpac6d46cvk-nixos-system-deepthought-26.05.20260809.fcb8fcd`;
+  the Home Manager generation is
+  `/nix/store/bh7b8r57fjlqhq0jvxm7g18jajy7dxjr-home-manager-generation`.
+  Home Manager was activated with its systemd bus deliberately unavailable,
+  installing the 128/3 configuration without restarting the failed live
+  transport.
+- NixOS generation 169 is staged as the system profile and systemd-boot entry;
+  its kernel command line points to the expected patched system store path.
+  The live generation was not switched. A clean reboot is the remaining
+  deployment boundary.
+- Generation 169 booted with the patched PipeWire store path and the graph at
+  48 kHz/128 frames. Ardour initially paused at its crash-recovery prompt, so
+  its partial graph was not a transport failure. After recovery, Ardour
+  restored its master outputs to both Saffire playback channels, Saffire input
+  1 to the microphone track, and the normal application buses. No xrun or
+  fatal FFADO message was logged before playback qualification began.
+- The first boot transport nevertheless had a zero-rate graph: FFADO's
+  transmit and receive threads existed, but `pw-top` reported quantum and rate
+  zero for every node, so neither Firefox playback nor microphone capture
+  advanced. Stopping Ardour then exposed continuous FFADO event-buffer
+  overruns; PipeWire wedged in a realtime mutex and required `SIGKILL`. This is
+  a failed recovery/teardown case, not a routing failure.
+- A controlled full PipeWire/FFADO restart with the same 128/3 configuration
+  started a live 128-frame, 48 kHz graph. Under temporary debug logging it
+  reported two FFADO xruns with zero PipeWire xruns; both were recoverable and
+  the graph continued advancing. Broad debug logging was then disabled before
+  playback qualification because its journal load would distort the latency
+  test.
+- After Ardour restored the complete graph, a third FFADO xrun recovered but a
+  fourth reached fatal `Could not syncStartAll`; all FFADO streaming threads
+  exited and `pw-top` returned to a zero-rate graph. The first recovery patch
+  therefore fixed the immediate PipeWire deadlock but was incomplete.
+- JACK's FFADO driver skips all buffer transfers after a handled xrun and
+  immediately retries `ffado_streaming_wait()`. PipeWire's original
+  `XRUN_RECOVER` guard skipped the transfers but failed to complete/re-arm its
+  cycle; deleting the guard instead allowed transfers from a recovery cycle.
+  **Decision:** retain the guard, mark that skipped cycle done, and re-arm the
+  FFADO timer immediately. This is the smallest behavior that matches JACK
+  without transferring stale recovery buffers.
+- The rejected process again left its main thread a zombie and one libffado
+  watchdog thread uninterruptibly blocked in `fw_device_op_release` on the
+  Saffire's `07:00.0` controller. Signals cannot clear a D-state thread, and
+  the earlier controller-reset sequence was already rejected as unreliable;
+  reboot remains the recovery boundary. The refined patch passed the focused
+  PipeWire build and the complete deepthought build as
+  `/nix/store/gfv0wr5r9gcbdrh1s8x69xsdd3nh8cmp-nixos-system-deepthought-26.05.20260809.fcb8fcd`.
+  That store path is staged as NixOS generation 170 and its systemd-boot entry
+  points to the expected init path.
+
+### 2026-08-13 — Secondary FireWire IRQ priority experiment
+
+- Generation 170 booted with the refined recovery patch and a live 48 kHz,
+  128-frame graph. During Ardour startup, FFADO's transmit ISO handler first
+  timed out and died at 00:03:22. Four more transmit deaths and one receive
+  death followed before fatal `Could not syncStartAll` at 00:03:43. The
+  recovery path again tried to enable the already-enabled receive stream and
+  left the graph unable to carry playback or capture.
+- Every reported recovery retained `PipeWire:0`; the first failure happened in
+  FFADO's ISO handling rather than after a PipeWire graph deadline. The
+  `XRUN_RECOVER` source callback therefore did not participate. Remove the
+  separate `xrun-recovery.patch` rather than carrying a disproven behavioral
+  change. PipeWire master has no existing FFADO lifecycle or transfer fix that
+  addresses this sequence.
+- The live thread hierarchy exposed an untested priority inversion. rtirq
+  raised only the primary FireWire threads to FIFO 95 and 94. On this
+  PREEMPT_RT kernel each controller also has a forced secondary IRQ thread,
+  `irq/*-s-firewi`, still at FIFO 50. FFADO's transmit, ARM, and receive threads
+  run at FIFO 93, 92, and 91, so they can preempt the secondary kernel handler
+  that runs the driver's original threaded interrupt function. JACK's default
+  graph/FFADO priorities of 10 and 15 (workers 16/15/14) remain below that
+  secondary IRQ thread.
+- **Decision:** keep PipeWire/FFADO at 48 kHz/128/3 and make one scheduling-only
+  experiment. Set musnix rtirq `highList = "s-firewi"` so both secondary
+  FireWire IRQ threads are raised above FFADO. Do not simultaneously
+  change PipeWire or FFADO priority; this isolates whether missed secondary
+  IRQ service caused the ISO inactivity. A valid post-boot test must first
+  confirm both secondary threads outrank FFADO, then exercise playback,
+  microphone capture, Ardour graph startup, application stop/start, and
+  sustained playback. Recovered xruns are informational; only a wedged graph,
+  dead FFADO handler, unrecovered audio failure, or stuck teardown rejects the
+  setting.
+- The complete deepthought build passed as
+  `/nix/store/c2rdgmqffls46cbhlzi6awapnjp0slfi-nixos-system-deepthought-26.05.20260809.fcb8fcd`.
+  Its generated `rtirq.conf` contains `RTIRQ_HIGH_LIST="s-firewi"`, and its
+  PipeWire derivation carries only `ffado-driver.patch`; the rejected recovery
+  patch is absent. Stage this generation with `nixos-rebuild boot`, not
+  `switch`, because the live FFADO transport is already damaged.
+- NixOS generation 171 is staged as the system profile and systemd-boot
+  default. Its boot entry points to the verified `c2rdgm...` system path. The
+  live generation was not switched; reboot is the remaining deployment
+  boundary.
+- Generation 171 booted successfully. rtirq raised both forced secondary
+  FireWire IRQ threads to FIFO 99; the primary controller IRQs are FIFO 95 and
+  94, FFADO transmit/ARM/receive are FIFO 93/92/91, and PipeWire's data loop is
+  FIFO 88. Both secondaries therefore outrank the FFADO packetizer threads as
+  intended.
+- Ardour paused at its crash-recovery dialog while loading the Default session.
+  After the user selected recovery, every managed Saffire route appeared and
+  the graph ran at 48 kHz/128 frames. Completing recovery caused one bounded
+  ringbuffer overflow and one FFADO/PipeWire xrun at 09:32:34; the graph
+  continued afterward. A second ringbuffer overflow and recovered xrun occurred
+  at 09:34:37, roughly two minutes later, and a third recovered at 09:40:09.
+  None killed a handler or stopped the graph. The user subsequently relaxed the
+  acceptance rule: remain at 128/3 and treat xruns as informational unless they
+  wedge the graph or lead to another catastrophic transport failure.
+- Ardour 9.7 has no command-line option, preference, or environment variable to
+  always accept pending session state. Its GUI directly connects the pending
+  state query to the crash-recovery dialog. A local one-line package patch was
+  considered and its build started, then cancelled and removed because carrying
+  an Ardour fork solely for this policy is not presently acceptable. Do not
+  replace it with GUI input automation or pre-launch session-file mutation; if
+  automation becomes necessary, propose a supported `--recover` option
+  upstream.
+
+### 2026-08-13 — Graph-xrun recovery failure under generation 171
+
+- Before the transport failure, the Saffire hardware path was independently
+  verified. A temporary direct Firefox-to-Ardour-Master connection was audible,
+  while a capture probe showed real signal at the Ardour Firefox strip output
+  and digital silence at the Master output. This isolates the earlier silence
+  to Ardour's recovered internal strip-to-Master routing, not FFADO playback or
+  capture. The direct connection disappeared when Firefox recreated its stream.
+- A temporary native PipeWire loopback was then used to test an external bridge
+  around Ardour's same-client feedback links. Activating it caused an ordinary
+  graph xrun; the loopback and all of its links were removed, but the FFADO
+  transport did not recover. Do not retain this workaround.
+- The fatal sequence began at 09:52:55 with a 544/511 receive-ring overflow and
+  a handled FFADO xrun. PipeWire then reported `FFADO:4 PipeWire:4`; exactly one
+  second later it counted another PipeWire xrun, libffado reconstructed invalid
+  cycle timers and calculated a rate near 967 instead of its nominal 512, and
+  both ISO handlers subsequently died. Recovery ended in repeated
+  `requestEnable` errors and fatal `Could not syncStartAll`. There was no kernel
+  FireWire bus reset or controller error in this interval. The live graph now
+  reports zero quantum/rate for every running node.
+- This is distinct from generation 170's scheduling failure. That boot died
+  below the graph with `PipeWire:0`, so it did not exercise the refined
+  `XRUN_RECOVER` callback at all. Generation 171 proves the IRQ change does not
+  solve graph-xrun recovery, but does not disprove that callback fix.
+- JACK's FFADO driver handles `ffado_wait_xrun` by returning zero frames and
+  immediately retrying `ffado_streaming_wait()`, without capture, graph, or
+  playback transfer for the bad period. PipeWire's source callback likewise
+  skips transfers when `SPA_IO_CLOCK_FLAG_XRUN_RECOVER` is set, but originally
+  returns without setting `impl->rt.done` or re-arming its timer. Its existing
+  one-second watchdog therefore expires while the FFADO receive ring continues
+  to fill. The observed one-second delay and simultaneous PipeWire/FFADO xrun
+  counters match this path exactly; `ffado_streaming_reset()` cannot help
+  because it is a no-op in libffado 2.5.0.
+- **Decision:** do not change the sample rate, quantum, or period count. Retain
+  48 kHz/128/3 and the secondary IRQ boost, and restore the minimal refined
+  patch that marks a skipped recovery cycle done and immediately re-arms the
+  FFADO timer. This combines fixes for the two independent failure modes. Build
+  and stage it for a clean reboot; do not force teardown of the damaged live
+  FFADO process.
+- The complete combined system built successfully as
+  `/nix/store/gddafcgn3c64qgmpqpzpmkm172x08qps-nixos-system-deepthought-26.05.20260809.fcb8fcd`.
+  Its PipeWire derivation contains both `ffado-driver.patch` and
+  `xrun-recovery.patch`, and its generated rtirq configuration retains
+  `RTIRQ_HIGH_LIST="s-firewi"`. NixOS generation 172 is the system profile and
+  systemd-boot default; its boot entry points to the verified system init.
+- Generation 172 booted the intended combined build, but failed below the
+  PipeWire graph during Ardour startup. From 10:18:13 through 10:19:00 the
+  transmit handler repeatedly died, the receive handler followed, and all
+  reported recoveries remained `PipeWire:0`. Recovery ended in fatal
+  `Could not syncStartAll`; the graph returned to zero quantum/rate and the
+  microphone meter stopped. The `XRUN_RECOVER` patch did not participate.
+- Correct the earlier interpretation of FFADO's handler deadline: its
+  `49152000` counter is in 24.576 MHz FireWire ticks and represents two seconds,
+  not 49.152 ms. Linux RT bandwidth throttling is therefore not indicated by
+  this timing; the live kernel also retained its default 950000/1000000 quota.
+- The known JACK/FFADO control used JACK priority 88, FFADO base priority 93
+  (transmit/ARM/receive 94/93/92), and both primary FireWire IRQ threads at 99.
+  The failed PipeWire boot instead used graph 88, FFADO base 92
+  (93/92/91), primary IRQs 95/94, and secondary IRQs 99. PCI runtime power was
+  forced on, the Saffire remained on its tested `07:00.0` controller, and no
+  kernel bus reset or PCI error accompanied the failure.
+- **Decision:** keep 48 kHz/128/3 and reproduce the known-good JACK scheduling
+  hierarchy exactly. Set `ffado.rtprio = 93` and put both `firewire_ohci` and
+  `s-firewi` in rtirq's high list so all primary and forced-secondary FireWire
+  IRQ threads precede FFADO. This is the next scheduling experiment; do not
+  change buffer or period settings.
+- The focused Home Manager generation built and was activated with user systemd
+  deliberately unavailable, so it installed `ffado.rtprio = 93` without
+  restarting the failed live transport. The complete NixOS system built as
+  `/nix/store/yg18810siad6phnazhq8w3x16vn9kp2h-nixos-system-deepthought-26.05.20260809.fcb8fcd`.
+  It is staged as generation 173 and is the systemd-boot default. Reboot is the
+  remaining deployment boundary.
+- Generation 173 booted with the intended JACK-like priority hierarchy: the
+  primary FireWire IRQ threads ran at FIFO 99, the secondary FireWire IRQ
+  threads at 98, FFADO transmit/ARM/receive at 94/93/92, and the PipeWire graph
+  at 88. Ardour startup still killed the transmit handler within seconds; the
+  receive handler followed and FFADO ended in fatal `Could not syncStartAll`.
+  The graph returned to zero quantum/rate and microphone capture stopped.
+- **Correction:** the `PipeWire:0` counter on generations 170, 172, and 173 did
+  not prove that the refined recovery callback was unused. That patch marked
+  the cycle done before the one-second watchdog could increment the counter,
+  while still skipping both FFADO transfers. Repeated recovery callbacks could
+  therefore starve the hardware queues invisibly until the ISO handlers hit
+  their two-second inactivity threshold. The exact JACK-like priority test
+  rules out the three tested IRQ/FFADO priority layouts as the primary cause.
+- The callback before the 2024 `XRUN_RECOVER` early return already distinguishes
+  real FFADO wakeups from synthetic callbacks with `impl->rt.triggered`. On a
+  real wakeup it clears the trigger and transfers capture; on a synthetic call
+  it completes/re-arms the period and supplies fallback playback silence when
+  needed. **Decision:** remove only the unconditional `XRUN_RECOVER` return so
+  this established state machine runs. Keep the generation 173 priorities and
+  48 kHz/128/3, producing a single-variable recovery experiment. This revisits
+  the generation 169 patch under the subsequently corrected scheduling layout.
+- The revised patch applies cleanly to current PipeWire master. The complete
+  deepthought system built successfully as
+  `/nix/store/rzczcz03qifnbcpzcdb38hmrzavin6pb-nixos-system-deepthought-26.05.20260809.fcb8fcd`,
+  and the matching Home Manager generation built as
+  `/nix/store/5ibmr4w9dj6vhqlsan9b81npnkpwgcqw-home-manager-generation`.
+  Home Manager was activated with its systemd bus deliberately unavailable, so
+  it installed the new PipeWire package and verified 48 kHz/128/3 with
+  `ffado.rtprio = 93` without restarting the dead live transport. The system
+  build is staged as NixOS generation 174 and is the systemd-boot default; its
+  boot entry points to the verified `rzczcz03...` init path. Reboot is the
+  remaining deployment boundary.
+- Generation 174 booted the verified system and started the Saffire at
+  48 kHz/128 frames. The live hierarchy matches the intended control: primary
+  and secondary FireWire IRQs at FIFO 99/98, FFADO transmit/ARM/receive at
+  94/93/92, and PipeWire at 88. Ardour restored its Saffire playback and
+  microphone links. One startup ring overflow produced `FFADO:1 PipeWire:1`;
+  it recovered, both ISO handlers remained alive, and the driver continued
+  advancing at 48 kHz/128. Physical playback and capture qualification remain.
+- Physical qualification rejected that recovery behavior. Ardour's microphone
+  meter was silent, and direct ten-second recordings first from the routed
+  input and then from all 16 FFADO capture channels contained only zero samples.
+  Both recorders also needed roughly 20 seconds to accumulate ten seconds of
+  nominal 48 kHz samples. The ISO threads remained alive and no later xrun was
+  reported: this was a false-running, desynchronized transport rather than a
+  routing error.
+- Ardour's missing strip-to-Master routes were independently traced to the
+  stale `Default.pending` crash-recovery file. It contained duplicated
+  `ardour:ardour:` port prefixes and omitted the internal connections, while
+  the saved `Default.ardour` retained all correct routes. The pending file was
+  preserved as `backup/Default.pending.gen174-silent-capture`; relaunching the
+  saved session restored every internal route without a recovery prompt.
+- A controlled stack restart reproduced the known teardown defect: after
+  Ardour stopped, FFADO's capture event buffer overran continuously and
+  PipeWire waited on an RT mutex until systemd's 90-second timeout sent
+  `SIGKILL`. No old thread survived, and the replacement daemon reopened the
+  Saffire. Ardour then reproduced the same 544/511 startup overflow and
+  `FFADO:1 PipeWire:1` recovery on the clean stack.
+- **Decision:** the deleted `XRUN_RECOVER` guard is wrong because it can consume
+  a stale hardware trigger and transfer buffers during PipeWire's synthetic
+  recovery callback. The refined skip-and-rearm version was also incomplete:
+  it left `impl->rt.triggered` set, so a later normal callback could still
+  consume the stale period. Match JACK's skipped-cycle behavior by clearing
+  `rt.triggered`, marking the period done, and rearming the FFADO wait without
+  transferring either buffer. This is one additional state assignment over
+  the refined patch; retain 48 kHz/128/3 and the generation 174 priorities.
+- The clear-trigger patch applies cleanly to current PipeWire master. The full
+  system built successfully as
+  `/nix/store/i28r0mm3pg39ghyc556bgj71h0av41m4-nixos-system-deepthought-26.05.20260809.fcb8fcd`,
+  and Home Manager built as
+  `/nix/store/9q77r1axig8i12csbg5iaailwhiar2ma-home-manager-generation`.
+  Home Manager was activated with its systemd bus deliberately unavailable,
+  installing the matching package without reloading the live audio services.
+  The system build is staged as NixOS generation 175 and is the systemd-boot
+  default; its boot entry points to the verified `i28r0mm...` init path. Reboot
+  is the remaining deployment boundary; do not test through another live
+  teardown.
+- Generation 175 rejected the clear-trigger recovery immediately. After the
+  first `FFADO:1 PipeWire:1` event, the transmit handler died about every four
+  seconds; FFADO reached 13 xruns, the receive handler then died, and recovery
+  ended in fatal `Could not syncStartAll`. The graph is at zero rate. Clearing
+  the trigger while transferring neither direction therefore starves the
+  outstanding FFADO hardware period; do not retain this variant.
+- The earlier delete-guard variant transferred capture but could let the graph
+  submit stale playback. The refined skip variant transferred neither direction
+  and produced a false-running silent graph. **Decision:** service the recovery
+  period explicitly: clear the stale trigger, drain capture into FFADO's port
+  buffers, submit silence only if the sink has not already transferred, and use
+  the existing `complete_period()` helper. This keeps both hardware queues
+  moving without publishing stale capture or stale graph playback. It is the
+  final minimal combination of the module's existing recovery primitives.
+- The drain-and-silence patch applies cleanly to current PipeWire master. The
+  full system built successfully as
+  `/nix/store/k9kj586jffqmgqz6l890xq861ipa9f8a-nixos-system-deepthought-26.05.20260809.fcb8fcd`,
+  and Home Manager built as
+  `/nix/store/gvraz2q0isa4lskw8ah1b0rmy4yvf1mk-home-manager-generation`.
+  Home Manager was activated with its systemd bus deliberately unavailable,
+  installing the matching package without reloading the dead live transport.
+  The system build is staged as NixOS generation 176 and is the systemd-boot
+  default; its entry points to the verified `k9kj586...` init path. Reboot is
+  the remaining deployment boundary.
+- Generation 176 rejected the unconditional drain-and-silence variant. It
+  entered an xrun roughly once per second after the first recovery; the receive
+  handler died first, the transmit handler followed, and FFADO ended in fatal
+  `Could not syncStartAll` with a zero-rate graph. This is consistent with
+  transferring capture twice when the source callback had already run before
+  PipeWire forced the recovery callback.
+- PipeWire 1.6's scheduler already includes all active nodes sharing
+  `node.group`, so the later upstream group-scheduling change is not missing
+  from this build. **Decision:** condition the recovery capture drain on
+  `impl->rt.triggered`. A true value means the source callback never serviced
+  the outstanding hardware period; false means capture was already transferred
+  and only a missing playback transfer may need silence. In both cases use the
+  existing transfer flags and `complete_period()` to finish exactly once.
+- The state-aware patch applies cleanly to current PipeWire master. The full
+  system built successfully as
+  `/nix/store/2r2q2yzzdw40513c1448gv3kpmx83ip6-nixos-system-deepthought-26.05.20260809.fcb8fcd`,
+  and Home Manager built as
+  `/nix/store/cp71p3k6md55w2ddbhck3086m6rayb86-home-manager-generation`.
+  Home Manager was activated with its systemd bus deliberately unavailable,
+  installing the matching package without reloading the dead transport. System
+  staging is complete as NixOS generation 177; it is the systemd-boot default
+  and points to the verified `2r2q2yz...` init path. Reboot remains.
+- Generation 177 rejected the state-aware recovery variant. The first recovery
+  occurred about 7.3 seconds after FFADO streaming started. Both ISO handlers
+  remained alive and the source driver continued at 48 kHz/128 frames, but the
+  downstream PipeWire error counters then increased on every cycle and FFADO
+  emitted continuous reconstructed-CTR discrepancies. A direct 10-second,
+  16-channel `pw-record` completed in real time with exactly 480,000 frames,
+  but every sample on every channel was bit-for-bit zero. The recovery branch
+  therefore completes PipeWire periods without publishing capture and leaves
+  the graph permanently in synthetic recovery; a live thread and advancing
+  clock are not sufficient qualification.
+- **Decision:** retry normal source callback processing during
+  `SPA_IO_CLOCK_FLAG_XRUN_RECOVER` by removing the upstream early return. This
+  is the only variant that previously returned the graph to real capture data.
+  Its earlier generation-169 failure predates the corrected IRQ/FFADO/graph
+  priority hierarchy, so that result does not distinguish callback behavior
+  from priority inversion. Keep 48 kHz/128/3 and all corrected priorities
+  unchanged; this experiment changes only the recovery guard. If it still
+  kills an ISO handler, stop trying recovery-policy permutations and add
+  narrowly scoped state tracing around the first recovery.
+- The normal-callback variant is byte-for-byte identical to the earlier
+  generation-174 build. Nix reused
+  `/nix/store/rzczcz03qifnbcpzcdb38hmrzavin6pb-nixos-system-deepthought-26.05.20260809.fcb8fcd`
+  and
+  `/nix/store/5ibmr4w9dj6vhqlsan9b81npnkpwgcqw-home-manager-generation`.
+  The Home Manager generation is active. Its activation script discovered the
+  real user bus despite an invalid `DBUS_SESSION_BUS_ADDRESS` and restarted
+  Ardour; PipeWire itself remained the failed generation-177 process. Ardour's
+  readiness helper is consequently waiting on unresponsive `pw-link` probes.
+  Do not interpret this mixed live state as a test of the new package. Stage
+  the reused system output and reboot for qualification.
+- NixOS generation 178 is staged and is the systemd-boot default. Both the
+  system profile and boot entry point to the verified `rzczcz03...` system
+  output. A clean reboot is the remaining deployment boundary.
+- Generation 178 reproduced generation 174 under the corrected priorities.
+  Ardour startup caused one `FFADO:1 PipeWire:1` recovery, followed by 264
+  reconstructed-CTR discrepancies. Both ISO handlers survived and the source
+  driver continued at 48 kHz/128 frames, but downstream error counters rose on
+  every graph cycle. A direct 10-second, 16-channel recording again completed
+  in real time with exactly 480,000 frames and every sample was zero. This
+  disproves realtime priority inversion as the cause of generation 174's
+  failure and rejects normal callback processing as a recovery fix.
+- **Decision:** stop changing recovery semantics without observing the callback
+  order. Keep normal callback behavior and add a one-shot, 32-event trace armed
+  by the first `SPA_IO_CLOCK_FLAG_XRUN_RECOVER` callback. Record only callback
+  identity, recovery flag, `done`, `triggered`, and the capture/playback
+  transfer flags. This bounded diagnostic deliberately avoids permanent RT log
+  spam and changes no audio state.
+- The bounded trace patch dry-applies to the exact post-`ffado-driver.patch`
+  source without fuzz. The complete system built successfully as
+  `/nix/store/wcn1axp0vk2n5ynyhccfc90dzy55zm5h-nixos-system-deepthought-26.05.20260809.fcb8fcd`,
+  and the matching Home Manager generation built and activated as
+  `/nix/store/yrf6k44pp3a001rm2pk32g4lihwqwzgh-home-manager-generation`.
+  Activation restarted Ardour but did not restart the failed generation-178
+  PipeWire process. Stage the system output and reboot to collect the trace.
+- NixOS generation 179 is staged as the system profile and systemd-boot
+  default; its boot entry points to the verified `wcn1axp...` trace build.
+  Reboot is the remaining deployment boundary.
+- Generation 179 captured the first recovery sequence. The source callback
+  entered with `recover:1 done:0 triggered:0 capture:1 playback:0`, then took
+  its synthetic path and supplied playback silence. Every subsequent hardware
+  wakeup ran one normal source callback (`triggered:1`, capture transferred),
+  followed by another recovery source callback because playback was still not
+  transferred. No sink callback appeared anywhere in the 32-event trace. This
+  proves the recovery loop is caused by the duplex playback node never being
+  evaluated, not by FFADO capture transfer or recovery timing.
+- PipeWire's working JACK duplex tunnel establishes the intended topology: its
+  sink has the higher driver priority and duplex hardware wakeups trigger that
+  sink; the source is then evaluated as a graph follower. FFADO currently gives
+  the source higher priority and explicitly triggers it first. **Decision:**
+  mirror the JACK tunnel: make the FFADO sink the higher-priority driver and
+  trigger it whenever sink mode is present, falling back to source only in
+  source-only mode. Remove the temporary trace, retain the normal recovery
+  callback behavior for qualification, and keep 48 kHz/128/3 unchanged.
+- The resulting two-line scheduling fix and priority reversal apply cleanly to
+  the exact PipeWire 1.6.8 source. The post-patch source confirms duplex selects
+  `impl->sink.filter`, pure source selects `impl->source.filter`, and sink/source
+  default priorities are 35001/35000. The local Saffire overrides likewise use
+  4001/4000.
+- The sink-driven build completed successfully as
+  `/nix/store/paf6z5jjf1xm4g7iql0hxy2a0lwzzvny-nixos-system-deepthought-26.05.20260809.fcb8fcd`.
+  Its matching Home Manager generation is
+  `/nix/store/63zysigrpya5b88lh2370m27snkbamj4-home-manager-generation`
+  and is active. The activation reached its Ardour service reload, but the
+  readiness helper could not query the already-failed generation-179 PipeWire
+  graph. The pending Ardour start was stopped so activation could finish; this
+  is expected to recover normally after booting the new PipeWire build.
+- NixOS generation 180 is staged as both the system profile and systemd-boot
+  default. Its boot entry points to the verified `paf6z5...` system output.
+- Generation 180 booted with the sink as graph driver and the source correctly
+  assigned as its follower. Capture no longer remained zero: a minimal direct
+  duplex test wrote exactly 480,000 16-channel frames in 10.1 seconds, with
+  real microphone data on channel 1 (peak 0.0227). However, FFADO's playback
+  event buffer was continuously overrun. The graph trace showed the sink
+  driver completing while another sink endpoint remained pending.
+- Comparison with the JACK duplex callback found the remaining scheduling
+  error. A triggered sink driver is invoked once to start the graph and again
+  after its upstream nodes have produced playback. JACK returns from the first
+  invocation for every mode containing `MODE_SINK`; FFADO only returned in
+  sink-only mode. Sink-driven duplex therefore transferred playback twice per
+  hardware period. **Decision:** change the existing guard from
+  `impl->mode == MODE_SINK` to `impl->mode & MODE_SINK`. This is the only new
+  behavior change; retain sink-first triggering, priorities, 48 kHz/128/3,
+  and normal recovery callback processing. The complete patch dry-applies to
+  the exact PipeWire 1.6.8 source.
+- The corrected system built successfully as
+  `/nix/store/2vf1w8prqnm8bkigbpmlv6d0krb2snkm-nixos-system-deepthought-26.05.20260809.fcb8fcd`.
+  Its matching Home Manager generation is
+  `/nix/store/599f4l1inmbzn64y0h0ic5alqa67dfzr-home-manager-generation`
+  and is active. Activation started Ardour as configured; it was stopped again
+  immediately so the old live PipeWire/FFADO process cannot affect the reboot
+  qualification.
+- NixOS generation 181 is staged as both the system profile and systemd-boot
+  default. Its boot entry points to the verified `2vf1w8...` output.
+- Generation 181 booted the intended sink-driven topology, but Ardour startup
+  produced three FFADO xruns, then a capture event-buffer overrun storm and an
+  unrecoverable receive-stream restart failure. The graph stopped advancing.
+  This disproved the sink guard as a complete fix but exposed its symmetric
+  source-side bug: after the triggered sink clears `impl->rt.triggered`, the
+  duplex source callback enters FFADO's unconditional `!triggered` completion
+  branch and never transfers capture. The working JACK tunnel restricts that
+  branch to `MODE_SOURCE`. **Decision:** make the same one-line qualification
+  in FFADO. Together, the two callback guards now exactly mirror JACK's duplex
+  scheduling: first sink pass starts the graph, duplex source transfers
+  capture, and the final sink pass transfers playback. Both patches apply to
+  PipeWire 1.6.8, and the post-patch source confirms this callback sequence.
+- The paired-guard system built successfully as
+  `/nix/store/zd5cz772fmlkjmq5g7nynswah04jy26g-nixos-system-deepthought-26.05.20260809.fcb8fcd`.
+  Its matching Home Manager generation is
+  `/nix/store/02my3kl101fbj55ivg53wlw1j2axi88g-home-manager-generation`
+  and is active. Activation restarted Ardour as configured; Ardour was stopped
+  immediately because generation 181's FFADO transport is already failed.
+- NixOS generation 182 is staged as both the system profile and systemd-boot
+  default. Its boot entry was verified to reference the exact `zd5cz7...`
+  system output above.
+- Generation 182 booted successfully into the exact staged output. The FFADO
+  sink is the active 48 kHz/128-frame graph driver and the duplex source follows
+  it via `node.driver-id`; both remain running. The intended FIFO priorities are
+  live (FireWire IRQ 99, transmit 94, ARM 93, receive 92, PipeWire graph 88).
+  Ardour recovered with its microphone, application-strip-to-master, and
+  master-to-Saffire links intact. Startup logged one recovered FFADO/PipeWire
+  xrun and a bounded burst of one-cycle CTR discrepancies, but no event-buffer
+  overrun storm, fatal FFADO error, or transport failure.
+- A direct 16-channel capture from `saffire_ffado_input` completed exactly
+  480,000 frames (10.000 seconds) while duplex playback remained active.
+  Physical microphone channel 1 measured peak 0.067795 and RMS 0.011371;
+  other analog channels contained only their noise floor and unused channels
+  were zero. The graph remained at 48 kHz/128 frames afterward with no new
+  FFADO journal errors or physical-driver error count.
+- Physical duplex through Ardour passed: Firefox played correctly in both
+  headphone channels while the microphone and Ardour master meters remained
+  live. Five Firefox video switches/reloads also preserved playback, capture,
+  and master routing. Post-transition inspection showed both FFADO nodes still
+  running, the physical driver at zero errors, and no new FFADO journal entry.
+  Ardour recorded several recoverable graph xruns during stream transitions;
+  none wedged or interrupted the FFADO transport.
+- Ten minutes of continuous Firefox playback completed without an audible,
+  microphone, or Ardour-master interruption. The final snapshot retained the
+  48 kHz/128-frame FFADO sink driver with zero errors, its running capture
+  follower, every required Ardour route, and the intended realtime priorities.
+  The FFADO journal remained clean throughout sustained playback. **Decision:**
+  generation 182 passed the no-wedge qualification for the Saffire at 48
+  kHz/128 frames/3 periods.
+- Extended listening exposed frequent audible xruns despite the transport
+  remaining live. **Decision:** reject 128/3 for production audio quality and
+  return to 48 kHz/256 frames/2 periods. Retain the paired duplex scheduling
+  fix and realtime priority hierarchy; quantum/period count and Ardour's
+  requested PipeWire latency are the only configuration changes.
+- The 256/2 Home Manager configuration built successfully as
+  `/nix/store/npavipjyiqq52q1n86a90y2m7nhsjapf-home-manager-generation`.
+  The NixOS build remains the already-staged generation-182 output
+  `/nix/store/zd5cz772fmlkjmq5g7nynswah04jy26g-nixos-system-deepthought-26.05.20260809.fcb8fcd`
+  because the quantum, FFADO period count, and Ardour latency are all managed
+  in the user configuration; the patched PipeWire package and system priority
+  configuration did not change.
+- Home Manager generation `npavip...` is active. Its installed PipeWire fragment
+  was verified at 48 kHz/256/2 and the running Ardour unit now exports
+  `PIPEWIRE_LATENCY=256/48000`. The live FFADO process intentionally remains at
+  128/3 until reboot. The system profile, systemd-boot default, and generation
+  182 boot entry all still reference the verified `zd5cz7...` system output.
+- The mixed live state subsequently failed and must not be treated as a 256/2
+  test. Home Manager restarted Ardour at 14:08 with its new 256-frame request
+  while the existing FFADO graph remained fixed at 128/3. That immediately
+  caused two playback-ringbuffer overflows (`544, 511`) and FFADO xruns. About
+  four minutes later the receive and transmit ISO handlers timed out and died;
+  FFADO recovery ended in `Could not syncStartAll`, `Unhandled XRUN`, and a
+  zero-rate graph. **Decision:** do not attempt a live teardown/reopen. Preserve
+  this failure evidence and reboot when convenient so PipeWire and every client
+  start together at 256/2.
+- The subsequent clean reboot started the verified generation-182 system and
+  active Home Manager files at 48 kHz/256 frames/2 periods; Ardour also requests
+  `256/48000`. The sink is the graph driver with zero errors, the duplex source
+  follows it, all required Ardour routes are intact, and the intended realtime
+  priorities remain live. Ardour startup caused one playback-ringbuffer
+  overflow and one recovered FFADO/PipeWire xrun, followed by bounded CTR
+  warning bursts. No relevant warning appeared after 14:41:53 and the graph
+  continued advancing normally. This matches the accepted single-startup-xrun
+  behavior; physical duplex qualification remains.
+- Physical 256/2 duplex passed: Firefox playback was correct, microphone and
+  Ardour master paths were live, and no audible fault was reported during the
+  initial listening period. The post-test snapshot retained a zero-error FFADO
+  driver, zero Ardour xruns since startup, all required routes, and no FFADO
+  journal warning after the bounded startup burst. **Decision:** accept 256/2
+  for normal use and use that normal workload as the remaining soak test.
+- Official PipeWire `master` was fetched at
+  `30ff8da174121567c06a576bf2a83e71779ee991` (reported version 1.7.0). This is
+  the base of the tested FFADO work. Submission branch
+  `fix/ffado-duplex-master` squashes the hardware-proven duplex scheduling,
+  paired process guards, normal recovery callback processing, priority order,
+  and lifecycle correction into signed commit `3a2ae07d6`. Its diff changes
+  only `src/modules/module-ffado-driver.c`.
+- A native Meson build explicitly enabled libffado and tests. The complete
+  1,161-target tree compiled, including
+  `libpipewire-module-ffado-driver.so`, and all 53 enabled tests passed. The
+  isolated build linked against the development environment's libffado 2.4.9;
+  this establishes source and test compatibility but is not the intended
+  runtime package.
+- The reproducible Nix override pins the same master commit, applies
+  `ffado-master.patch`, retains libffado 2.5.0, omits the obsolete downstream
+  `musl.patch` already incorporated upstream, and disables only the unavailable
+  optional LHDC codec. The Nix package built successfully and reports PipeWire
+  1.7.0 linked to libffado 2.5.0. The older 1.6.8 patch files remain in the
+  repository but are unused by this master test, preserving the rollback
+  record.
+- The complete master-test system built as
+  `/nix/store/rj0ff1yp0zypxz3fm8isnny1bismxh9z-nixos-system-deepthought-26.05.20260809.fcb8fcd`
+  and Home Manager as
+  `/nix/store/w13wnv7kyv57757qa98cjjb48yql7md1-home-manager-generation`.
+  The system PipeWire unit explicitly launches the pinned 1.7.0 package, the
+  Ardour wrapper uses its matching 1.7.0 JACK library, and the generated FFADO
+  configuration remains 48 kHz/256/2. Neither closure has been staged or
+  activated, so the working 1.6.8 audio process is unchanged.
+- The master-test NixOS output is staged as generation 183. The system profile,
+  systemd-boot default, and generation-183 boot entry all point to the verified
+  `rj0ff1...` output. The matching Home Manager output is deliberately not yet
+  active; activate it only immediately before reboot to avoid an extended
+  mixed 1.6.8-server/1.7.0-client session.
+- The matching Home Manager generation `w13wnv...` is now active. Activation
+  briefly restarted Ardour, which was immediately stopped; the unit is inactive
+  and no Ardour process remains. Its wrapper selects the matching PipeWire
+  1.7.0 JACK library and retains `PIPEWIRE_LATENCY=256/48000`. Generation 183
+  remains the verified system profile and boot default. Reboot is now the only
+  remaining deployment boundary; do not restart Ardour against the old live
+  PipeWire server.
+
+### 2026-08-13 — First PipeWire-master hardware failure and lifecycle correction
+
+- Generation 183 booted the pinned PipeWire 1.7.0 master candidate with the
+  matching Home Manager/JACK closure. Ardour's saved links were present, but
+  microphone capture did not move and `pw-top` showed a zero-rate graph.
+- The journal showed two FFADO initializations: one with PipeWire startup and
+  another when Ardour activated the filters. The recreated DICE stream warned
+  that its ARX ISO channel was still assigned, then produced full playback
+  ringbuffers, a recovered-xrun burst, dead receive and transmit handlers,
+  `Could not syncStartAll`, `Unhandled XRUN`, and a permanently stopped graph.
+  This establishes a transport lifecycle failure rather than missing routing.
+- Comparing the effective master driver to the hardware-proven 1.6.8 driver
+  isolated the relevant difference: the master fix series closed the FFADO
+  device when both filters entered PAUSED, whereas 1.6.8 only stopped
+  streaming and retained the open device. Submission commit `3a2ae07d6`
+  restores the proven behavior without reintroducing recursive close
+  ownership.
+- `ffado-master.patch` is the exact diff of submission commit `3a2ae07d6`
+  against upstream master. All 53 enabled upstream tests pass after the
+  correction. A
+  fresh Nix build compiles the corrected FFADO module as PipeWire 1.7.0 against
+  libffado 2.5.0. The complete corrected outputs are
+  `/nix/store/zms36g9dmpj4mcpq6whjdcgigc166750-nixos-system-deepthought-26.05.20260809.fcb8fcd`
+  and
+  `/nix/store/69jrb9g4f5b4prcr37w9b2x4invvydzi-home-manager-generation`.
+  Do not try to recover the currently dead graph in place.
+- The corrected system is staged as generation 184 and is the systemd-boot
+  default. Its matching Home Manager generation is active, the Ardour service
+  requests `256/48000` through the matching PipeWire 1.7.0 JACK library, and
+  Ardour is stopped. Reboot is the next deployment boundary.
+- Generation 184 booted consistently. PipeWire 1.7.0 drives the Saffire at
+  48 kHz/256, the duplex source follows it, every microphone, strip-to-master,
+  and master-to-Saffire link is active, and physical microphone and playback
+  initially work normally. One accepted startup xrun occurred at 16:07:29;
+  no subsequent FFADO warning or transport failure appeared during the initial
+  check.
+- Extended generation-184 use exposed a separate fatal-wait recovery defect.
+  The graph recovered isolated FFADO xruns at 17:39:19 and 17:52:55, then an
+  xrun at 18:47:47 left the receive handler without activity. FFADO's
+  two-second watchdog reported the receive handler dead at 18:48:34 and the
+  transmit handler dead at 18:48:36. Its internal restart failed with
+  `Enable requested on enabled stream 'Receive'`, `Could not syncStartAll`,
+  and `Unhandled XRUN` at 18:48:39. There was no kernel bus reset or FireWire
+  controller error, and the Saffire remained enumerated on `07:00.0`.
+- PipeWire's FFADO timeout callback handles `ffado_wait_error` only by logging
+  `FFADO error` and returning. It leaves both nodes and every client in
+  `running` state while the driver clock remains permanently at zero; 8,591
+  ISO inactivity warnings accumulated before the failure was inspected. This
+  is not the first master candidate's PAUSED close/reopen failure and does not
+  invalidate that lifecycle correction. It is a missing fatal-transport reset
+  path that must be addressed separately before the upstream patch can claim
+  long-term no-wedge behavior.
+- A normal full-stack stop could not terminate the dead FFADO process. After
+  stopping its socket-activated services, killing that PipeWire process, and
+  starting a fresh stack, the same boot recovered without a FireWire reset or
+  reboot. PipeWire returned to 48 kHz/256/2, Ardour restored all expected
+  routes, and physical microphone and Firefox playback both work again. This
+  is a recovery procedure, not a fix for the fatal-wait defect.
+
 ## Current state and remaining work
 
-The repository and active Home Manager generation use 48 kHz/256/2 with
-`ffado.rtprio = 92`. PipeWire, WirePlumber, Ardour, and the AudioFire exporter
-are active; playback and capture work, Saffire routes are present, and
-AudioFire has zero links. Both 128-frame configurations are rejected. Continue
-normal use at 256/2 and treat any further xrun, stuck tone, or capture failure
-as a transport regression; the reboot recovery produced more transition xruns
-than the single accepted Ardour-startup event.
-
-The recovery reboot is safe to perform: `/nix/var/nix/profiles/system` and the
-systemd-boot default both point to generation 167, the verified final patched
-PipeWire 1.6.8 system. Generation 166 records an earlier validation state;
-generation 165 still uses PipeWire 1.6.6.
+Generation 184 is live at 48 kHz/256/2 with the AudioFire physically
+disconnected. A fresh PipeWire process recovered the Saffire and both physical
+capture and playback currently work. Do not change quantum or periods. The
+remaining defect is that a fatal FFADO wait error leaves the graph falsely
+running at zero rate and normal teardown can hang. Design and qualify the
+smallest fatal-wait recovery before updating the upstream branch. Future Nix
+builds consume the locked `/home/wonko/src/pipewire` checkout at `81eeba1f6`
+directly rather than applying repository-local patch files.
 
 FireWire port numbers are dynamic and changed during controller resets. Use
 GUIDs for configuration and re-check the live device-to-controller mapping

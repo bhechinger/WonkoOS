@@ -1,12 +1,16 @@
 {
   config,
   lib,
+  pipewire-src,
   pkgs,
   unstable-pkgs,
   ...
 }:
 let
-  ffadoPipewire = import ../common/pipewire-ffado { pkgs = unstable-pkgs; };
+  ffadoPipewire = import ../common/pipewire-ffado {
+    pkgs = unstable-pkgs;
+    inherit pipewire-src;
+  };
 
   audiofirePipewireConfig = pkgs.runCommand "audiofire-pipewire-config" { } ''
     mkdir -p "$out/pipewire.conf.d"
@@ -295,7 +299,6 @@ in
         LimitNICE = "-11";
       };
 
-      Install.WantedBy = [ "pipewire.service" ];
     };
 
     ardour-default = {
