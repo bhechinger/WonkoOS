@@ -12,7 +12,9 @@
     mindustry
     r2modman
     heroic
-    prismlauncher
+    (prismlauncher.override {
+      additionalLibs = [ libXi ];
+    })
     javaPackages.compiler.temurin-bin.jdk-25
     mcpelauncher-ui-qt
     unigine-superposition

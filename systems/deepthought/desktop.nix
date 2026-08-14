@@ -1,8 +1,10 @@
-{ pkgs, ... }:
+{ unstable-pkgs, ... }:
 {
   programs = {
     hyprland = {
       enable = true;
+      package = unstable-pkgs.hyprland;
+      portalPackage = unstable-pkgs.xdg-desktop-portal-hyprland;
       withUWSM = true;
       xwayland.enable = true;
     };
@@ -10,10 +12,5 @@
     # firewall ranges when enabled.
     kdeconnect.enable = true;
     evince.enable = true;
-  };
-
-  xdg.portal = {
-    enable = true;
-    extraPortals = with pkgs; [ xdg-desktop-portal-hyprland ];
   };
 }

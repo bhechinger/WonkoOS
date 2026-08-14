@@ -260,6 +260,7 @@ in
 
           "custom/media" = {
             format = " {}";
+            escape = true;
             exec = "${pkgs.playerctl}/bin/playerctl --player=spotify metadata --format '{{artist}} - {{title}}'";
             exec-if = "${pkgs.playerctl}/bin/playerctl --player=spotify status";
             interval = 5;

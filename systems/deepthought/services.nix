@@ -89,4 +89,23 @@
       forward_to = [loki.write.bob.receiver]
     }
   '';
+
+  systemd.services.attic-watch-store = {
+    description = "Upload new Nix store paths to Attic";
+    wantedBy = [ "multi-user.target" ];
+    after = [ "network-online.target" ];
+    wants = [ "network-online.target" ];
+    script = ''
+      ${pkgs.coreutils}/bin/install -D -m 0400 "$CREDENTIALS_DIRECTORY/attic-config" "$RUNTIME_DIRECTORY/attic/config.toml"
+      export XDG_CONFIG_HOME="$RUNTIME_DIRECTORY"
+      exec ${lib.getExe pkgs.attic-client} watch-store internal
+    '';
+    serviceConfig = {
+      DynamicUser = true;
+      LoadCredential = "attic-config:/home/wonko/.config/attic/config.toml";
+      Restart = "always";
+      RestartSec = "30s";
+      RuntimeDirectory = "attic-watch-store";
+    };
+  };
 }
