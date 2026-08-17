@@ -6,6 +6,10 @@ local unlinked_nodes = {
 }
 
 local desired_links = {
+  -- Connect Ardour and the nanoKONTROL2 in both directions for Mackie feedback.
+  { output = "nanoKONTROL2:nanoKONTROL2 _ CTRL", input = "ardour:mackie control in" },
+  { output = "ardour:mackie control out", input = "nanoKONTROL2:nanoKONTROL2 _ CTRL" },
+
   -- Route selected app streams directly into Ardour and remove their default sink links.
   { output = "spotify:output_FL",             input = "ardour:Music/audio_in 1",   exclusive = true },
   { output = "spotify:output_FR",             input = "ardour:Music/audio_in 2",   exclusive = true },

@@ -149,7 +149,8 @@ let
       }
 
       midi_ports_exist() {
-        has_port "Midi-Bridge:nanoKONTROL2: _ CTRL (capture)"
+        has_port "Midi-Bridge:nanoKONTROL2: _ CTRL (capture)" &&
+          has_port "Midi-Bridge:nanoKONTROL2: _ CTRL (playback)"
       }
 
       readiness_failures() {
@@ -166,7 +167,7 @@ let
         fi
 
         if ! midi_ports_exist; then
-          printf '%s\n' "nanoKONTROL PipeWire MIDI port is missing"
+          printf '%s\n' "nanoKONTROL PipeWire MIDI ports are missing"
         fi
 
         return 0
