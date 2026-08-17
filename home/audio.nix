@@ -4,6 +4,7 @@
   pipewire-src,
   pkgs,
   unstable-pkgs,
+  useSaffireFfado,
   ...
 }:
 let
@@ -11,6 +12,39 @@ let
     pkgs = unstable-pkgs;
     inherit pipewire-src;
   };
+  audioPipewire = if useSaffireFfado then ffadoPipewire else pkgs.pipewire;
+  saffireSink =
+    if useSaffireFfado then
+      "saffire_ffado_output"
+    else
+      "alsa_output.firewire-0x00130e0401c04de0.multichannel-output";
+  saffireSource =
+    if useSaffireFfado then
+      "saffire_ffado_input"
+    else
+      "alsa_input.firewire-0x00130e0401c04de0.multichannel-input";
+  saffireNodeProperties =
+    if useSaffireFfado then
+      ''.info.props["node.group"] == "saffire-ffado-group"''
+    else
+      ''.info.props["device.bus"] == "firewire" and .info.props["api.alsa.pcm.stream"] == $pcm_stream'';
+  saffirePortChecks =
+    if useSaffireFfado then
+      ''
+        has_port "$saffire_source:00130e0401c04de0_1394/Out:01 (Anlg/In:03)_out" &&
+          has_port "$saffire_source:00130e0401c04de0_1394/Out:05 (SPDIF/In:01)_out" &&
+          has_port "$saffire_source:00130e0401c04de0_1394/Out:06 (SPDIF/In:02)_out" &&
+          has_port "$saffire_sink:00130e0401c04de0_1394/In:01 (Mixer/In:17)_in" &&
+          has_port "$saffire_sink:00130e0401c04de0_1394/In:02 (Mixer/In:18)_in"
+      ''
+    else
+      ''
+        has_port "$saffire_source:capture_AUX0" &&
+          has_port "$saffire_source:capture_AUX4" &&
+          has_port "$saffire_source:capture_AUX5" &&
+          has_port "$saffire_sink:playback_FL" &&
+          has_port "$saffire_sink:playback_FR"
+      '';
 
   audiofirePipewireConfig = pkgs.runCommand "audiofire-pipewire-config" { } ''
     mkdir -p "$out/pipewire.conf.d"
@@ -55,7 +89,7 @@ let
     buildInputs = [ pkgs.makeWrapper ];
     postBuild = ''
       wrapProgram $out/bin/ardour9 \
-        --prefix LD_LIBRARY_PATH : ${ffadoPipewire.jack}/lib
+        --prefix LD_LIBRARY_PATH : ${audioPipewire.jack}/lib
     '';
   };
 
@@ -65,13 +99,13 @@ let
       coreutils
       gnugrep
       jq
-      ffadoPipewire
+      audioPipewire
     ];
     text = ''
       set -euo pipefail
 
-      saffire_sink="saffire_ffado_output"
-      saffire_source="saffire_ffado_input"
+      saffire_sink=${lib.escapeShellArg saffireSink}
+      saffire_source=${lib.escapeShellArg saffireSource}
       max_wait_seconds=90
       poll_interval_seconds=2
       required_consecutive_ready_checks=2
@@ -91,29 +125,27 @@ let
       node_ready() {
         local node_name="$1"
         local media_class="$2"
+        local pcm_stream="$3"
 
         timeout 3 pw-dump |
           jq -e \
             --arg node_name "$node_name" \
-            --arg media_class "$media_class" '
+            --arg media_class "$media_class" \
+            --arg pcm_stream "$pcm_stream" '
             any(.[]; .type == "PipeWire:Interface:Node" and
               .info.props["node.name"] == $node_name and
               .info.props["media.class"] == $media_class and
-              .info.props["node.group"] == "saffire-ffado-group")
+              ${saffireNodeProperties})
           ' >/dev/null
       }
 
       saffire_nodes_ready() {
-        node_ready "$saffire_sink" "Audio/Sink" &&
-          node_ready "$saffire_source" "Audio/Source"
+        node_ready "$saffire_sink" "Audio/Sink" "playback" &&
+          node_ready "$saffire_source" "Audio/Source" "capture"
       }
 
       saffire_ports_exist() {
-        has_port "$saffire_source:00130e0401c04de0_1394/Out:01 (Anlg/In:03)_out" &&
-          has_port "$saffire_source:00130e0401c04de0_1394/Out:05 (SPDIF/In:01)_out" &&
-          has_port "$saffire_source:00130e0401c04de0_1394/Out:06 (SPDIF/In:02)_out" &&
-          has_port "$saffire_sink:00130e0401c04de0_1394/In:01 (Mixer/In:17)_in" &&
-          has_port "$saffire_sink:00130e0401c04de0_1394/In:02 (Mixer/In:18)_in"
+        ${saffirePortChecks}
       }
 
       midi_ports_exist() {
@@ -200,6 +232,164 @@ let
     '';
   };
 
+  ffadoFailureMonitor = pkgs.writeShellApplication {
+    name = "ffado-failure-monitor";
+    runtimeInputs = with pkgs; [
+      coreutils
+      gawk
+      gnugrep
+      systemd
+    ];
+    text = ''
+      set -u
+
+      runtime_dir="''${XDG_RUNTIME_DIR:?}/ffado-failure-monitor"
+      state_dir="''${XDG_STATE_HOME:-$HOME/.local/state}/ffado-diagnostics"
+      sample_file="$runtime_dir/samples.log"
+      previous_sample_file="$runtime_dir/samples.previous.log"
+      saffire_guid="0x00130e0401c04de0"
+      saffire_irq=""
+      pipewire_pid=""
+
+      mkdir -p "$runtime_dir" "$state_dir"
+      : >"$sample_file"
+
+      find_saffire_irq() {
+        local controller_dir
+        local guid_file
+
+        for guid_file in /sys/bus/firewire/devices/fw*/guid; do
+          if grep -Fqx "$saffire_guid" "$guid_file" 2>/dev/null; then
+            controller_dir="$(dirname "$(readlink -f "$guid_file")")"
+            while test "$controller_dir" != /sys; do
+              if test -r "$controller_dir/irq"; then
+                cat "$controller_dir/irq"
+                return 0
+              fi
+              controller_dir="$(dirname "$controller_dir")"
+            done
+          fi
+        done
+        return 1
+      }
+
+      sample_state() {
+        local comm
+        local irq_total
+        local runtime
+        local scheduler_wait
+        local stat_fields
+        local state
+        local switches
+        local task_dir
+        local uptime
+
+        if test -z "$saffire_irq"; then
+          saffire_irq="$(find_saffire_irq || true)"
+        fi
+        irq_total=unavailable
+        if test -n "$saffire_irq"; then
+          irq_total="$(
+            awk -v irq="$saffire_irq:" '
+              $1 == irq {
+                total = 0
+                for (field = 2; field <= NF && $field ~ /^[0-9]+$/; field++)
+                  total += $field
+                print total
+              }
+            ' /proc/interrupts
+          )"
+          irq_total="''${irq_total:-unavailable}"
+        fi
+
+        if test -z "$pipewire_pid" || test "$pipewire_pid" = 0 ||
+          ! test -d "/proc/$pipewire_pid/task"
+        then
+          pipewire_pid="$(
+            systemctl --user show pipewire.service --property=MainPID --value 2>/dev/null ||
+              true
+          )"
+        fi
+        read -r uptime _ </proc/uptime
+        printf 'monotonic=%s irq=%s irq-total=%s pipewire-pid=%s' \
+          "$uptime" "''${saffire_irq:-unavailable}" "$irq_total" \
+          "''${pipewire_pid:-unavailable}"
+
+        if test -n "$pipewire_pid" && test "$pipewire_pid" != 0 &&
+          test -d "/proc/$pipewire_pid/task"
+        then
+          for task_dir in "/proc/$pipewire_pid"/task/*; do
+            read -r comm <"$task_dir/comm" || continue
+            case "$comm" in
+              FW_ISORCV | FW_ISOXMT | data-loop.*)
+                read -r runtime scheduler_wait switches <"$task_dir/schedstat" || continue
+                read -r stat_fields <"$task_dir/stat" || continue
+                stat_fields="''${stat_fields#*) }"
+                state="''${stat_fields%% *}"
+                printf ' thread=%s,%s,%s,%s,%s,%s' \
+                  "''${task_dir##*/}" "$comm" "$state" "$runtime" "$scheduler_wait" "$switches"
+                ;;
+            esac
+          done
+        fi
+        printf '\n'
+      }
+
+      sample_loop() {
+        local samples=0
+
+        while true; do
+          sample_state >>"$sample_file"
+          samples="$((samples + 1))"
+          if test "$samples" -ge 4096; then
+            mv -f "$sample_file" "$previous_sample_file"
+            : >"$sample_file"
+            samples=0
+          fi
+          sleep 0.25
+        done
+      }
+
+      save_snapshot() {
+        local output
+        local stamp
+
+        stamp="$(date --utc +%Y%m%dT%H%M%SZ)"
+        output="$state_dir/ffado-failure-$stamp.log"
+        sleep 2
+        {
+          printf 'FFADO transport failure snapshot %s\n\n' "$stamp"
+          printf '%s\n' '=== FireWire IRQ and realtime-thread samples ==='
+          tail -n 80 "$previous_sample_file" "$sample_file" 2>/dev/null || true
+          printf '\n%s\n' '=== PipeWire journal (last 20 seconds) ==='
+          journalctl --user --unit=pipewire.service --since='-20 seconds' \
+            --no-pager --output=short-monotonic
+        } >"$output"
+        printf 'saved FFADO failure evidence to %s\n' "$output"
+      }
+
+      sample_loop &
+      sampler_pid="$!"
+      trap 'kill "$sampler_pid" 2>/dev/null || true' EXIT INT TERM
+
+      last_snapshot=0
+      while IFS= read -r line; do
+        case "$line" in
+          *"FFADO error"*)
+            now="$(date +%s)"
+            if test "$((now - last_snapshot))" -ge 10; then
+              last_snapshot="$now"
+              save_snapshot
+            fi
+            ;;
+        esac
+      done < <(
+        journalctl --user --unit=pipewire.service --follow --lines=0 \
+          --output=short-monotonic
+      )
+    '';
+  };
+
   battletechGamesRule = builtins.readFile ./wireplumber/battletech-games.conf;
   audioRoutesRule = builtins.readFile ./wireplumber/audio-routes.conf;
   audioRoutesScript = builtins.readFile ./wireplumber/audio-routes.lua;
@@ -222,7 +412,7 @@ in
     qpwgraph
     ardourPipewire
     cleanupGoogleMeetPipewireClients
-    ffadoPipewire.jack
+    audioPipewire.jack
     rnnoise-plugin.lv2
     lmms
     lsp-plugins
@@ -250,12 +440,14 @@ in
         force = true;
         text = builtins.readFile ./pipewire/11-null-source.conf;
       };
-      "pipewire/pipewire.conf.d/20-firewire-ffado.conf".source = ./pipewire/firewire-ffado.conf;
       "wireplumber/wireplumber.conf.d/50-audio-routes.conf".text = audioRoutesRule;
       "pipewire/client.conf.d/52-battletech-games.conf".text = battletechGamesRule;
       "pipewire/pipewire-pulse.conf.d/52-battletech-games.conf".text = battletechGamesRule;
       "wireplumber/wireplumber.conf.d/52-battletech-games.conf".text = battletechGamesRule;
       "wireplumber/wireplumber.conf.d/51-saffire-clock.conf".text = saffireClockRule;
+    }
+    // lib.optionalAttrs useSaffireFfado {
+      "pipewire/pipewire.conf.d/20-firewire-ffado.conf".source = ./pipewire/firewire-ffado.conf;
     };
 
     dataFile."wireplumber/scripts/audio-routes.lua".text = audioRoutesScript;
@@ -282,25 +474,6 @@ in
   };
 
   systemd.user.services = {
-    audiofire-ffado-export = {
-      Unit = {
-        Description = "Export AudioFire4 FFADO nodes into production PipeWire";
-        Requires = [ "pipewire.service" ];
-        After = [ "pipewire.service" ];
-        PartOf = [ "pipewire.service" ];
-      };
-
-      Service = {
-        ExecStart = "${audiofireFfadoHost}/bin/audiofire-ffado-host";
-        Restart = "on-failure";
-        RestartSec = 5;
-        LimitMEMLOCK = "infinity";
-        LimitRTPRIO = 95;
-        LimitNICE = "-11";
-      };
-
-    };
-
     ardour-default = {
       Unit = {
         Description = "Ardour Default session";
@@ -320,17 +493,56 @@ in
       Service = {
         ExecStartPre = "${ardourPipewireReady}/bin/ardour-pipewire-ready";
         ExecStart = "${ardourPipewire}/bin/ardour9 /home/wonko/Default";
-        Environment = "PIPEWIRE_LATENCY=256/48000";
         KillSignal = "SIGINT";
         Restart = "on-failure";
         RestartSec = 5;
         SuccessExitStatus = "SIGINT";
         TimeoutStartSec = 600;
         TimeoutStopSec = 120;
+      }
+      // lib.optionalAttrs useSaffireFfado {
+        Environment = "PIPEWIRE_LATENCY=256/48000";
       };
 
       Install.WantedBy = [ "hyprland-session.target" ];
     };
+  }
+  // lib.optionalAttrs useSaffireFfado {
+    ffado-failure-monitor = {
+      Unit = {
+        Description = "Capture evidence around fatal PipeWire/FFADO transport failures";
+        Wants = [ "pipewire.service" ];
+        After = [ "pipewire.service" ];
+      };
+
+      Service = {
+        ExecStart = "${ffadoFailureMonitor}/bin/ffado-failure-monitor";
+        Restart = "always";
+        RestartSec = 2;
+      };
+
+      Install.WantedBy = [ "default.target" ];
+    };
+
+    audiofire-ffado-export = {
+      Unit = {
+        Description = "Export AudioFire4 FFADO nodes into production PipeWire";
+        Requires = [ "pipewire.service" ];
+        After = [ "pipewire.service" ];
+        PartOf = [ "pipewire.service" ];
+      };
+
+      Service = {
+        ExecStart = "${audiofireFfadoHost}/bin/audiofire-ffado-host";
+        Restart = "on-failure";
+        RestartSec = 5;
+        LimitMEMLOCK = "infinity";
+        LimitRTPRIO = 95;
+        LimitNICE = "-11";
+      };
+
+    };
+
   };
 
   services = {

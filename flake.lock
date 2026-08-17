@@ -478,7 +478,7 @@
     "pipewire-src": {
       "flake": false,
       "locked": {
-        "narHash": "sha256-2LYw95NmLCpyrAGs4TXozQ3qn+ZFVZhLf/I1N5ekN08=",
+        "narHash": "sha256-oZLgKnyYe5+HBCtZBZ3QhWGIF4CE5tHYA4LfFw1KkVM=",
         "path": "/home/wonko/src/pipewire",
         "type": "path"
       },

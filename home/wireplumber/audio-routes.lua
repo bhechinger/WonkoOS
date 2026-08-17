@@ -25,6 +25,12 @@ local desired_links = {
   { output = "ardour:Mic/audio_out 2",        input = "Ardour:input_FR" },
 
   -- Feed Ardour's outputs into the Saffire
+  { output = "ardour:Master/audio_out 1",     input = "Pro24-004de0:playback_FL" },
+  { output = "ardour:Master/audio_out 2",     input = "Pro24-004de0:playback_FR" },
+  { output = "ardour:auditioner/audio_out 1", input = "Pro24-004de0:playback_FL" },
+  { output = "ardour:auditioner/audio_out 2", input = "Pro24-004de0:playback_FR" },
+  { output = "ardour:Click/audio_out 1",      input = "Pro24-004de0:playback_FL" },
+  { output = "ardour:Click/audio_out 2",      input = "Pro24-004de0:playback_FR" },
   { output = "ardour:Master/audio_out 1",     input = "Saffire Pro 24 FFADO Output:00130e0401c04de0_1394/In:01 (Mixer/In:17)_in" },
   { output = "ardour:Master/audio_out 2",     input = "Saffire Pro 24 FFADO Output:00130e0401c04de0_1394/In:02 (Mixer/In:18)_in" },
   { output = "ardour:auditioner/audio_out 1", input = "Saffire Pro 24 FFADO Output:00130e0401c04de0_1394/In:01 (Mixer/In:17)_in" },
@@ -33,6 +39,9 @@ local desired_links = {
   { output = "ardour:Click/audio_out 2",      input = "Saffire Pro 24 FFADO Output:00130e0401c04de0_1394/In:02 (Mixer/In:18)_in" },
 
   -- Feed the Saffire inputs into Ardour
+  { output = "Pro24-004de0:capture_AUX0",     input = "ardour:Mic/audio_in 1" },
+  { output = "Pro24-004de0:capture_AUX4",     input = "ardour:Mac/audio_in 1" },
+  { output = "Pro24-004de0:capture_AUX5",     input = "ardour:Mac/audio_in 2" },
   { output = "Saffire Pro 24 FFADO Input:00130e0401c04de0_1394/Out:01 (Anlg/In:03)_out",  input = "ardour:Mic/audio_in 1" },
   { output = "Saffire Pro 24 FFADO Input:00130e0401c04de0_1394/Out:05 (SPDIF/In:01)_out", input = "ardour:Mac/audio_in 1" },
   { output = "Saffire Pro 24 FFADO Input:00130e0401c04de0_1394/Out:06 (SPDIF/In:02)_out", input = "ardour:Mac/audio_in 2" },

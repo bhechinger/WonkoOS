@@ -1,15 +1,11 @@
 # PipeWire/FFADO FireWire audio
 
-- **Status:** AudioFire work is deferred and the interface is physically
-  disconnected. The first PipeWire-master hardware candidate failed after
-  Ardour activated the Saffire: its pause path closed and then recreated the
-  FFADO device, after which both DICE ISO handlers died and the graph stopped.
-  A corrected master candidate now retains the proven 48 kHz/256/2 lifecycle:
-  pause stops streaming but only final teardown closes the FFADO device. That
-  candidate is staged as NixOS generation 184 with its matching Home Manager
-  generation active; Ardour is stopped pending reboot.
+- **Status:** FFADO work is paused after another instrumented fatal transport
+  failure. The configuration, patched source, and two captured failure logs are
+  preserved. `useSaffireFfado = false` selects the known PipeWire/ALSA Saffire
+  configuration until this investigation resumes.
 - **Host:** `deepthought`
-- **Last updated:** 2026-08-13
+- **Last updated:** 2026-08-14
 
 This is the source of truth for the experiment. Update the status, checklist,
 decision log, and test log as work proceeds. Preserve earlier results; when a
@@ -111,6 +107,18 @@ drop-in and binds the AudioFire by GUID.
   `fix/ffado-duplex-master` as the Nix source through a locked non-flake path
   input. Remove the duplicated local patch files so the merge-request branch
   is the single source of PipeWire driver code.
+- **2026-08-14:** Diagnose the fatal transport before adding recovery behavior.
+  Keep the merge-request branch unchanged and put temporary tracing on local
+  branch `diagnostic/ffado-fatal-trace`. A 4,096-entry allocation-free ring
+  records only FFADO wait results, capture/playback transfer results, monotonic
+  time, and existing driver state. Dump it once on `ffado_wait_error`; emit no
+  steady-state trace logging.
+- **2026-08-14:** Pair the module trace with a user watchdog that discovers the
+  Saffire controller by GUID and samples its IRQ count plus the PipeWire data
+  loop and FFADO ISO thread scheduler counters every 250 ms. Keep samples
+  bounded in `$XDG_RUNTIME_DIR` and persist evidence only after the module
+  logs `FFADO error`. Do not patch libffado unless this first capture locates
+  the fault inside its packet-handler path.
 - **2026-08-11:** Mark AudioFire ports non-physical in the local FFADO module
   patch. Together with disabled autoconnection and the WirePlumber link guard,
   this keeps Ardour and policy clients from plumbing the idle interface.
@@ -1808,17 +1816,165 @@ installed.
   reboot. PipeWire returned to 48 kHz/256/2, Ardour restored all expected
   routes, and physical microphone and Firefox playback both work again. This
   is a recovery procedure, not a fix for the fatal-wait defect.
+- On 2026-08-14, after about 15.5 hours of operation, the same failure recurred.
+  The receive handler exceeded FFADO's two-second activity threshold at
+  12:56:24, the transmit handler died two seconds later, and `syncStartAll`
+  again failed because the receive stream was already enabled. The graph clock
+  fell to zero with no kernel bus reset or controller error.
+- This occurrence did not permit the earlier process-only recovery. `SIGKILL`
+  left an FFADO bus-reset thread uninterruptibly blocked in
+  `fw_device_op_release`. Physically cycling the bus-powered Saffire, a
+  controller-local bus-reset attempt, and a PCI function reset did not release
+  it. Hot-removing the dedicated `05:03.0` PCIe branch did release the process.
+  After rescanning, a fresh PipeWire process initialized FFADO threads but
+  never published a usable graph or completed client connections; stopping it
+  produced the same kernel wait through the FFADO watchdog thread. A second
+  hot-remove released that process. Do not repeat hot rescan/start recovery in
+  this boot; reboot with the controller absent as the clean recovery boundary.
+- The subsequent reboot restored controller `07:00.0`, the Saffire GUID, and
+  the complete graph. Ardour started normally with the saved capture,
+  strip-to-master, and master-to-Saffire routes. Physical playback was
+  confirmed at 48 kHz/256/2. Recoverable CTR-discrepancy/xrun bursts occurred
+  at 13:31, 14:36, and 14:57 without stopping the graph; no new handler death,
+  fatal wait error, or `syncStartAll` failure followed them.
+
+### 2026-08-14 — Fatal-transport instrumentation
+
+- Created local PipeWire branch `diagnostic/ffado-fatal-trace` from
+  `fix/ffado-duplex-master` without changing or pushing the merge-request
+  branch. Its uncommitted diagnostic change is confined to
+  `src/modules/module-ffado-driver.c`.
+- The module now retains 4,096 wait, source/sink callback, and
+  capture/playback events in memory. At 48 kHz/256 this covers approximately
+  the final 3.6 seconds, including FFADO's two-second no-activity interval.
+  Each record contains monotonic time, callback order and clock flags, FFADO
+  response or transfer result, frame time, `done`, `triggered`,
+  capture/playback completion, node-running state, and device-started state.
+  The RT path performs only fixed-size memory writes. Nothing is logged until
+  the first fatal wait, when the ring is dumped once as `FFADO_TRACE` lines.
+- Added Home Manager user service `ffado-failure-monitor.service`. It finds
+  the Saffire's current controller IRQ from GUID `0x00130e0401c04de0`, then
+  samples the aggregate IRQ count and `schedstat` for `data-loop.0`,
+  `FW_ISOXMT`, and `FW_ISORCV` every 250 ms. It rotates after 4,096 samples
+  in `$XDG_RUNTIME_DIR/ffado-failure-monitor`. When PipeWire logs
+  `FFADO error`, it saves the final 20 seconds of samples and journal context
+  under
+  `$XDG_STATE_HOME/ffado-diagnostics/ffado-failure-<UTC timestamp>.log`.
+- The local `pipewire-src` lock was refreshed to diagnostic source hash
+  `sha256-oZLgKnyYe5+HBCtZBZ3QhWGIF4CE5tHYA4LfFw1KkVM=`. Nix compiled the
+  instrumented module successfully as
+  `/nix/store/6awj0w7a853qs0ggyy09vy785cpgvbrj-pipewire-1.7.0-unstable-2026-08-06`.
+  The binary contains both the bounded-trace header and event format.
+- The Home Manager output built successfully as
+  `/nix/store/i48q2l6n2sjhhj5cfnvpkrrafsa0wxgq-home-manager-generation`.
+  The complete NixOS output built successfully as
+  `/nix/store/94dyll5csjmkvagfcs3lil18dliq3m8a-nixos-system-deepthought-26.05.20260809.fcb8fcd`.
+- A non-activating two-second watchdog smoke test found the live Saffire on IRQ
+  39 and correctly sampled PipeWire PID 2238 plus all three target realtime
+  threads. IRQ totals and every thread's runtime/switch counters advanced
+  between samples. The test process and sampler child exited cleanly, and
+  `wpctl status` still reported the live Saffire graph and Firefox-to-Ardour
+  stream. Neither the new PipeWire binary nor the persistent service is active
+  yet.
+- `nixos-rebuild switch` activated the verified system without a reboot and
+  restarted PipeWire as PID 260774 from the final diagnostic package. Home
+  Manager generation `i48q2l6...` is active and
+  `ffado-failure-monitor.service` is sampling IRQ 39 plus all three intended
+  realtime threads.
+- The live graph runs at 48 kHz/256 with zero Saffire driver errors. All saved
+  links are restored: Saffire capture to the Ardour Mic strip, Firefox to its
+  Ardour strip, every program strip to Master, and both Master outputs to the
+  Saffire. Two FFADO/PipeWire xruns accompanied stack and Ardour startup; both
+  recovered, and there is no handler death, fatal wait, `syncStartAll`
+  failure, or fatal trace dump.
+- Physical post-activation duplex qualification passed: Firefox playback
+  reaches the Saffire normally and the microphone is active in Ardour.
+  **Decision:** leave the diagnostic 256/2 stack running under normal workload
+  until the long-duration failure recurs or the soak period is sufficient.
+- The instrumented stack reproduced the fatal failure at 17:49 after
+  approximately two hours of normal use. The monitor automatically saved
+  `~/.local/state/ffado-diagnostics/ffado-failure-20260814T164951Z.log`;
+  a second copy of its live ring was preserved under
+  `/tmp/ffado-hang.TRde2E` before rotation.
+- The 4,096-event module trace contains 682 normal hardware waits and 683
+  complete duplex periods. Every period followed the intended sink trigger,
+  playback, source, and capture order; every transfer succeeded. There was no
+  callback omission, transfer failure, or PipeWire-side xrun in the retained
+  interval. The only pre-failure timing anomaly was a 14.2 ms wait gap during
+  the final reconstructed-CTR burst. The next wait remained inside libffado
+  for 10.43 seconds and returned `ffado_wait_error`.
+- The host trace isolates the initiating boundary below PipeWire scheduling.
+  IRQ 39 advanced normally through monotonic 16356.60, then stopped permanently
+  at 12,366,499 during the CTR-discrepancy burst. PipeWire's data loop and both
+  FFADO ISO threads were scheduled normally before that point; the data loop
+  continued executing libffado's failed recovery after IRQ activity ceased.
+  FFADO declared both handlers dead approximately two seconds later, then
+  failed `syncStartAll` because its transmit processor could not enter dry
+  running. No kernel FireWire, PCIe, AER, bus-reset, or IRQ error was logged.
+  The controller remained enumerated, runtime-active, forced to power
+  `control=on`, and linked at PCIe 2.5 GT/s x1.
+- **Finding:** no PipeWire callback or transfer anomaly immediately preceded
+  this occurrence. The first directly observed failure is cessation of all
+  Saffire-controller interrupt activity during FFADO receive timestamp
+  reconstruction. This does not exclude a longer-term interaction between
+  PipeWire's transfer cadence and libffado state. The evidence also does not
+  yet distinguish the Saffire ceasing isochronous transmission from the OHCI
+  controller ceasing to deliver it. Instrumenting libffado packet reception or
+  comparing the same controller and device under JACK/FFADO is the next
+  diagnostic boundary.
+- A coordinated post-capture stop reached the known FFADO teardown failure:
+  `StreamProcessorManager::stop` timed out waiting for its stream processors.
+  PipeWire remained in systemd `stop-sigterm` pending the normal 90-second
+  service timeout; no manual kill or PCIe manipulation was used.
+- At the 90-second timeout, systemd sent `SIGKILL`. The PipeWire leader became
+  a zombie, but `FW_ARMSTD` survived in uninterruptible `D` state at
+  `fw_device_op_release`. The service is consequently stuck in
+  `final-sigterm` and cannot be restarted normally. This exactly reproduces
+  the kernel teardown boundary from the prior occurrence. A reboot is the
+  preferred recovery; hot-removing the upstream PCIe branch is rejected unless
+  explicitly requested because its previous rescan did not restore a usable
+  controller.
+- Reboot cleared the blocked `FW_ARMSTD` thread without PCIe manipulation.
+  The final diagnostic NixOS generation returned with PipeWire PID 2242,
+  `ffado-failure-monitor.service`, WirePlumber, Pulse, and Ardour active. IRQ
+  39 and all three monitored realtime-thread counters advance normally. The
+  Saffire drives the graph at 48 kHz/256 with zero driver errors, and all saved
+  capture, strip-to-master, and master-to-Saffire routes are restored. One
+  accepted startup xrun occurred; no fatal FFADO event followed it.
+- The same instrumented process failed again at 20:28, approximately 2 hours
+  17 minutes after boot. The monitor saved
+  `~/.local/state/ffado-diagnostics/ffado-failure-20260814T192815Z.log`. IRQ 39
+  stopped at 6,257,673 during another reconstructed-CTR burst, followed by the
+  same 10.26-second blocked wait, dead ISO handlers, failed `syncStartAll`, and
+  `ffado_wait_error`. The retained PipeWire trace again shows complete,
+  successful duplex callback cycles immediately before the blocked wait.
+- **Decision:** pause the FFADO investigation and return production audio to
+  the previously working PipeWire/ALSA Saffire path. The flake-level
+  `useSaffireFfado` switch is `false`; it selects stock PipeWire, allows
+  `snd_dice`, restores ALSA node readiness/routing, and omits the FFADO module
+  and failure monitor. Keep the FFADO configuration, diagnostic source branch,
+  lock entry, and both failure snapshots for the next investigation session.
+- The ALSA Home Manager generation is active: the FFADO module link and failure
+  monitor are absent, the Ardour readiness check targets the Saffire ALSA
+  nodes, and its JACK wrapper uses stock PipeWire. NixOS generation 186 is the
+  boot default and its system profile selects stock PipeWire while omitting
+  `snd_dice` from the kernel-module blacklist. Reboot is the remaining recovery
+  step because the failed live FFADO process must not be torn down in place.
+- Rebooted successfully into generation 186. `snd_dice` owns the Saffire and
+  publishes its 8-channel playback and 16-channel capture devices through stock
+  PipeWire 1.6.6. Ardour passed the ALSA readiness check; Firefox-to-Ardour,
+  every strip-to-master, master-to-Saffire, and Saffire-to-input route is
+  active. The graph runs at 48 kHz/1024 with zero errors. Physical Firefox
+  playback through the Saffire and microphone input in Ardour both passed.
 
 ## Current state and remaining work
 
-Generation 184 is live at 48 kHz/256/2 with the AudioFire physically
-disconnected. A fresh PipeWire process recovered the Saffire and both physical
-capture and playback currently work. Do not change quantum or periods. The
-remaining defect is that a fatal FFADO wait error leaves the graph falsely
-running at zero rate and normal teardown can hang. Design and qualify the
-smallest fatal-wait recovery before updating the upstream branch. Future Nix
-builds consume the locked `/home/wonko/src/pipewire` checkout at `81eeba1f6`
-directly rather than applying repository-local patch files.
+The AudioFire remains physically disconnected. FFADO is paused after two
+instrumented failures showed the controller IRQ stopping during FFADO receive
+timestamp reconstruction. PipeWire/ALSA is active for the Saffire on generation
+186 and passes the technical graph, routing, playback, and microphone checks.
+The upstream branch remains at `81eeba1f6`; do not push the temporary
+instrumentation.
 
 FireWire port numbers are dynamic and changed during controller resets. Use
 GUIDs for configuration and re-check the live device-to-controller mapping

@@ -1,7 +1,9 @@
 {
   inputs,
+  lib,
   pkgs,
   unstable-pkgs,
+  useSaffireFfado,
   ...
 }:
 
@@ -22,17 +24,19 @@ in
     rtirq = {
       resetAll = 1;
       prioLow = 0;
-      prioHigh = 95;
       enable = true;
+      nameList = if useSaffireFfado then "rtc0" else "rtc0 firewire_ohci";
+    }
+    // lib.optionalAttrs useSaffireFfado {
+      prioHigh = 95;
       highList = "firewire_ohci s-firewi";
-      nameList = "rtc0";
     };
   };
 
   services = {
     pipewire = {
       enable = true;
-      package = ffadoPipewire;
+      package = if useSaffireFfado then ffadoPipewire else pkgs.pipewire;
       audio.enable = true;
       wireplumber.enable = true;
       alsa = {

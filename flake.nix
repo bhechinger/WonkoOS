@@ -60,6 +60,7 @@
     { self, nixpkgs, ... }@inputs:
     let
       system = "x86_64-linux";
+      useSaffireFfado = false;
       pkgs = import nixpkgs {
         inherit system;
         config.allowUnfree = true;
@@ -119,7 +120,7 @@
           inherit system;
 
           specialArgs = {
-            inherit inputs unstable-pkgs;
+            inherit inputs unstable-pkgs useSaffireFfado;
           };
 
           modules = [
@@ -131,7 +132,7 @@
       homeConfigurations.wonko = inputs.home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
         extraSpecialArgs = {
-          inherit unstable-pkgs;
+          inherit unstable-pkgs useSaffireFfado;
           inherit (inputs) auto-splice pipewire-src spotify-midi-control;
         };
         modules = [

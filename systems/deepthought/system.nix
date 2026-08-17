@@ -1,6 +1,8 @@
 {
+  lib,
   pkgs,
   inputs,
+  useSaffireFfado,
   ...
 }:
 
@@ -54,8 +56,7 @@ in
       "kvm-amd"
       "firewire-ohci"
     ];
-    blacklistedKernelModules = [
-      "snd_dice"
+    blacklistedKernelModules = lib.optional useSaffireFfado "snd_dice" ++ [
       "snd_fireworks"
     ];
     extraModprobeConfig = ''
