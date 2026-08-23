@@ -1,13 +1,13 @@
 name = "Endless Biomes"
-filename = "EndlessBiomes 1.6.0 - 1.20.1.jar"
+filename = "EndlessBiomes 1.6.1 - 1.20.1.jar"
 side = "both"
 
 [download]
 hash-format = "sha1"
-hash = "a3bddf42bf51bc65e44ad750071b5652803904b9"
+hash = "2bc2db84b3236c2eaa0befa6896f4e79e8ec1499"
 mode = "metadata:curseforge"
 
 [update]
 [update.curseforge]
-file-id = 5679839
+file-id = 8493142
 project-id = 667688

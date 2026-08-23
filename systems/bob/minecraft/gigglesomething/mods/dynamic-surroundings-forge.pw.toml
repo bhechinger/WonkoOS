@@ -1,0 +1,13 @@
+name = "Dynamic Surroundings (Forge)"
+filename = "dynamicsurroundingsforge-1.20.1-1.2.0.jar"
+side = "client"
+
+[download]
+hash-format = "sha1"
+hash = "91cfa7782dd73e47ca19ea8969043a55471973d4"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 8151835
+project-id = 1542641

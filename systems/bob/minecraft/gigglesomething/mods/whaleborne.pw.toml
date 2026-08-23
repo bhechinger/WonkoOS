@@ -1,13 +1,13 @@
 name = "Whaleborne"
-filename = "whaleborne-1.20.1-1.2.3.jar"
+filename = "whaleborne-1.20.1-1.2.4b.jar"
 side = "both"
 
 [download]
 hash-format = "sha1"
-hash = "a9f1776afb6c1819b1bf0bcaccb67ea5df7e1de0"
+hash = "9213bfac5891a3826d13d0ddfe383a366022674c"
 mode = "metadata:curseforge"
 
 [update]
 [update.curseforge]
-file-id = 7809002
+file-id = 8634121
 project-id = 1272075

@@ -1,13 +1,13 @@
 name = "Jaam's Weaponry"
-filename = "jaams_weaponry-1.1.0-forge-1.20.1.jar"
+filename = "jaams_weaponry-1.1.1-forge-1.20.1.jar"
 side = "both"
 
 [download]
 hash-format = "sha1"
-hash = "f45e1882dac6e29a0b15e62d0cbc22ba68eb7669"
+hash = "741c390120da727d2a55f55b6bbc460f54df6d5f"
 mode = "metadata:curseforge"
 
 [update]
 [update.curseforge]
-file-id = 8349882
+file-id = 8451042
 project-id = 1361012

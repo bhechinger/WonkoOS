@@ -17,6 +17,13 @@
 		"Gun Inventory Key" = "SHIFT"
 		#Enable or disable the default aiming pose for guns
 		"Gun Default Aiming Pose" = true
+		#Enable or disable the gun aiming arm animation in third person
+		"Gun Aiming Arm Animation" = true
+		#Enable or disable the cooldown animation for guns
+		"Gun Cooldown Animation" = true
+		#How far guns drop down during cooldown animation
+		#Range: 0.0 ~ 2.0
+		"Gun Cooldown Drop" = 0.15
 
 	["Gun System Client Handler"."Gun Bar Settings"]
 		#Enable or disable the gun color bar
@@ -250,6 +257,18 @@
 		["Tooltips System Handler"."Item Features Tooltips"."Smoke Bomb"]
 			#Show advanced smoke bomb properties
 			"Show Smoke Bomb Properties" = true
+
+		["Tooltips System Handler"."Item Features Tooltips".Guns]
+			#Show the gun inventory key hint in the tooltip
+			"Show Gun Inventory Hint" = true
+			#Show the base ammo line in gun tooltips
+			"Show Gun Base Ammo" = true
+			#Show the attachments line in gun tooltips
+			"Show Gun Attachments" = true
+
+		["Tooltips System Handler"."Item Features Tooltips".Slingshots]
+			#Show the base ammo line in slingshot tooltips
+			"Show Slingshot Base Ammo" = true
 
 	["Tooltips System Handler"."Weapon Traits Tooltips"]
 
@@ -506,3 +525,13 @@
 			["Tooltips System Handler"."Weapon Traits Tooltips"."Projectile Traits Tooltips".Collector]
 				#Show advanced collector properties
 				"Show Collector Properties" = true
+
+["Assorted Client Handler"]
+
+	["Assorted Client Handler"."Weapon Traits"]
+
+		["Assorted Client Handler"."Weapon Traits"."Item Traits Settings"]
+
+			["Assorted Client Handler"."Weapon Traits"."Item Traits Settings"."Whirling Strike"]
+				#Enable or disable the whirling strike arm animation in third person
+				"Whirling Strike Arm Animation" = true

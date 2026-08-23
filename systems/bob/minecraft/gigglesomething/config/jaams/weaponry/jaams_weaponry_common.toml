@@ -471,51 +471,6 @@
 		#List of item registry names that slingshots can place in the world. If empty, defaults to the ammo list.
 		"Default Placeable Items" = ["minecraft:anvil", "minecraft:chipped_anvil", "minecraft:damaged_anvil"]
 
-["Custom Loot Tables Handler"]
-	#Master switch for ALL Jaam's Weaponry-related loot modifications
-	"Weaponry Loot Modifiers" = true
-	#Global multiplier for all Jaam's Weaponry loot chances (0.0 = disable, 1.0 = default, 2.0 = double chance, etc.)
-	#Range: 0.0 ~ 5.0
-	"Global Loot Chance Multiplier" = 1.0
-
-	["Custom Loot Tables Handler"."Piglin Bartering"]
-		#Enable Stake in Piglin Bartering loot
-		Stake = true
-		#Chance for Stake in Piglin Bartering (0.0-1.0)
-		#Range: 0.0 ~ 1.0
-		"Stake Chance" = 0.35
-		#Enable Rager's Bottle in Piglin Bartering loot
-		"Rager's Bottle" = true
-		#Chance for Rager's Bottle in Piglin Bartering (0.0-1.0)
-		#Range: 0.0 ~ 1.0
-		"Rager's Bottle Chance" = 0.35
-
-	["Custom Loot Tables Handler"."Simple Dungeon"]
-		#Enable Archer's Bottle in Simple Dungeon loot
-		"Archer's Bottle" = true
-		#Chance for Archer's Bottle in Simple Dungeon (0.0-1.0)
-		#Range: 0.0 ~ 1.0
-		"Archer's Bottle Chance" = 0.05
-		#Enable Warrior's Bottle in Simple Dungeon loot
-		"Warrior's Bottle" = true
-		#Chance for Warrior's Bottle in Simple Dungeon (0.0-1.0)
-		#Range: 0.0 ~ 1.0
-		"Warrior's Bottle Chance" = 0.05
-
-	["Custom Loot Tables Handler"."Village Houses"]
-		#Enable Broom in Village Houses loot
-		Broom = true
-		#Chance for Broom in Village Houses (0.0-1.0)
-		#Range: 0.0 ~ 1.0
-		"Broom Chance" = 0.05
-
-	["Custom Loot Tables Handler"."Village Weaponsmith"]
-		#Enable Flint Hammer in Village Weaponsmith loot
-		"Flint Hammer" = true
-		#Chance for Flint Hammer in Village Weaponsmith (0.0-1.0)
-		#Range: 0.0 ~ 1.0
-		"Flint Hammer Chance" = 0.15
-
 ["Custom Enchantments Handler"]
 
 	["Custom Enchantments Handler"."Secure Grip"]
@@ -985,7 +940,7 @@
 		#Whether the Shuriken projectile drops as an item when it despawns
 		"Despawn As Item" = true
 		#Despawn time in ticks for the Shuriken projectile
-		#Range: 0 ~ 72000
+		#Range: 0 ~ 1200
 		"Despawn Time" = 600
 		#Damage weapon durability when hitting an entity
 		"Break On Entity Hit" = true
@@ -1028,7 +983,7 @@
 		#Whether the Kunai projectile drops as an item when it despawns
 		"Despawn As Item" = true
 		#Despawn time in ticks for the Kunai projectile
-		#Range: 0 ~ 72000
+		#Range: 0 ~ 1200
 		"Despawn Time" = 500
 		#Damage weapon durability when hitting an entity
 		"Break On Entity Hit" = false
@@ -1114,7 +1069,7 @@
 		#Whether the Sharp Stone projectile drops as an item when it despawns
 		"Despawn As Item" = true
 		#Despawn time in ticks for the Sharp Stone projectile
-		#Range: 0 ~ 72000
+		#Range: 0 ~ 1200
 		"Despawn Time" = 800
 		#Damage weapon durability when hitting an entity
 		"Break On Entity Hit" = true
@@ -1386,7 +1341,7 @@
 		#Whether the Stake projectile drops as an item when it despawns
 		"Despawn As Item" = true
 		#Despawn time in ticks for the Stake projectile
-		#Range: 0 ~ 72000
+		#Range: 0 ~ 1200
 		"Despawn Time" = 900
 		#Damage weapon durability when hitting an entity
 		"Break On Entity Hit" = true
@@ -1443,7 +1398,7 @@
 		#Range: 0 ~ 1200
 		"Max Ticks In Air" = 400
 		#Maximum ticks the Item Projectile stays stuck in ground (0 = no limit)
-		#Range: 0 ~ 600
+		#Range: 0 ~ 1200
 		"Max Ticks In Ground" = 100
 		#Color of the Item Projectile in hexadecimal (examples: 0xFFFFD700, #FFFFD700 or FFFFD700)
 		Color = "0xFFFFD700"
@@ -1493,10 +1448,10 @@
 			#Whether the weapon breaks after the Bullet projectile reaches max block breaks
 			"Break After Max Block Breaks" = true
 			#Maximum ticks the Bullet projectile can exist while flying in air (0 = no limit)
-			#Range: 0 ~ 1200
+			#Range: 0 ~ 800
 			"Max Ticks In Air" = 400
 			#Maximum ticks the Bullet projectile stays stuck in ground (0 = no limit)
-			#Range: 0 ~ 600
+			#Range: 0 ~ 800
 			"Max Ticks In Ground" = 100
 			#Color of the Bullet projectile in hexadecimal (examples: 0xFFFFD700, #FFFFD700 or FFFFD700)
 			Color = "0xFFFFD700"
@@ -1544,10 +1499,10 @@
 			#Whether the weapon breaks after the Fire Bullet projectile reaches max block breaks
 			"Break After Max Block Breaks" = true
 			#Maximum ticks the Fire Bullet projectile can exist while flying in air (0 = no limit)
-			#Range: 0 ~ 1200
+			#Range: 0 ~ 800
 			"Max Ticks In Air" = 300
 			#Maximum ticks the Fire Bullet projectile stays stuck in ground (0 = no limit)
-			#Range: 0 ~ 600
+			#Range: 0 ~ 800
 			"Max Ticks In Ground" = 80
 			#Color of the Fire Bullet projectile in hexadecimal (examples: 0xFFFF4500, #FFFF4500 or FFFF4500)
 			Color = "0xFFFF4500"
@@ -1609,10 +1564,10 @@
 			#Whether the weapon breaks after the Heavy Bullet projectile reaches max block breaks
 			"Break After Max Block Breaks" = true
 			#Maximum ticks the Heavy Bullet projectile can exist while flying in air (0 = no limit)
-			#Range: 0 ~ 1200
-			"Max Ticks In Air" = 1200
+			#Range: 0 ~ 800
+			"Max Ticks In Air" = 800
 			#Maximum ticks the Heavy Bullet projectile stays stuck in ground (0 = no limit)
-			#Range: 0 ~ 600
+			#Range: 0 ~ 800
 			"Max Ticks In Ground" = 120
 			#Color of the Heavy Bullet projectile in hexadecimal (examples: 0x696969, #696969 or 696969)
 			Color = "0x696969"
@@ -1668,10 +1623,10 @@
 			#Whether the weapon breaks after the Glowing Bullet projectile reaches max block breaks
 			"Break After Max Block Breaks" = true
 			#Maximum ticks the Glowing Bullet projectile can exist while flying in air (0 = no limit)
-			#Range: 0 ~ 1200
+			#Range: 0 ~ 800
 			"Max Ticks In Air" = 400
 			#Maximum ticks the Glowing Bullet projectile stays stuck in ground (0 = no limit)
-			#Range: 0 ~ 600
+			#Range: 0 ~ 800
 			"Max Ticks In Ground" = 100
 			#Color of the Glowing Bullet projectile in hexadecimal (examples: 0xDA70D6, #DA70D6 or DA70D6)
 			Color = "0xDA70D6"
@@ -1732,10 +1687,10 @@
 			#Whether the weapon breaks after the Sharp Bullet projectile reaches max block breaks
 			"Break After Max Block Breaks" = true
 			#Maximum ticks the Sharp Bullet projectile can exist while flying in air (0 = no limit)
-			#Range: 0 ~ 1200
+			#Range: 0 ~ 800
 			"Max Ticks In Air" = 450
 			#Maximum ticks the Sharp Bullet projectile stays stuck in ground (0 = no limit)
-			#Range: 0 ~ 600
+			#Range: 0 ~ 800
 			"Max Ticks In Ground" = 90
 			#Color of the Sharp Bullet projectile in hexadecimal (examples: 0xFF00FFFF, #FF00FFFF or FF00FFFF)
 			Color = "0xFF00FFFF"
@@ -1791,10 +1746,10 @@
 			#Whether the weapon breaks after the Echo Bullet projectile reaches max block breaks
 			"Break After Max Block Breaks" = true
 			#Maximum ticks the Echo Bullet projectile can exist while flying in air (0 = no limit)
-			#Range: 0 ~ 1200
+			#Range: 0 ~ 800
 			"Max Ticks In Air" = 420
 			#Maximum ticks the Echo Bullet projectile stays stuck in ground (0 = no limit)
-			#Range: 0 ~ 600
+			#Range: 0 ~ 800
 			"Max Ticks In Ground" = 100
 			#Color of the Echo Bullet projectile in hexadecimal (examples: 0xFF008B8B, #FF008B8B or FF008B8B)
 			Color = "0xFF008B8B"
@@ -1960,6 +1915,8 @@
 			"Unstable Edge" = true
 			#Enable or disable the Detonating trait globally
 			Detonating = true
+			#Enable or disable the Decapitation trait globally
+			Decapitation = true
 
 	["Weapon Traits Handler"."Projectile Traits Settings"]
 
@@ -3013,6 +2970,8 @@
 			#Chance for items without durability to break when blocking an attack (0.0 = disabled, 1.0 = always breaks)
 			#Range: 0.0 ~ 1.0
 			"No Durability Break Chance" = 0.0
+			#Apply cooldown to all items with the guard_stance trait in the inventory when the cooldown triggers, preventing abuse by switching between multiple guard stance weapons
+			"Global Cooldown" = true
 
 		["Weapon Traits Handler"."Item Traits Settings"."Parry Guard"]
 			#Cooldown in ticks after a successful parry guard
@@ -3027,11 +2986,11 @@
 			#Durability damage on parry guard end (when no attack is blocked)
 			#Range: 0 ~ 100
 			"Damage On Stop" = 1
-			#Custom parry guard sound event ID (leave empty for default)
-			"Block Sound" = ""
 			#Chance for items without durability to break when parry guarding an attack (0.0 = disabled, 1.0 = always breaks)
 			#Range: 0.0 ~ 1.0
 			"No Durability Break Chance" = 0.0
+			#Apply cooldown to all items with the parry_guard trait in the inventory when a successful parry triggers, preventing abuse by switching between multiple parry guard weapons
+			"Global Cooldown" = true
 
 		["Weapon Traits Handler"."Item Traits Settings"."Piercer Strike"]
 			#Bonus damage dealt to armored targets
@@ -3142,6 +3101,8 @@
 			#Cooldown in ticks between uses
 			#Range: 0 ~ 1200
 			"Cooldown Ticks" = 20
+			#Apply cooldown to all items with the quick_crafting trait in the inventory when the cooldown triggers, preventing abuse by switching between multiple quick crafting weapons
+			"Global Cooldown" = true
 
 		["Weapon Traits Handler"."Item Traits Settings"."Aquatic Grudge"]
 			#Bonus damage vs aquatic mobs
@@ -3284,7 +3245,7 @@
 
 		["Weapon Traits Handler"."Item Traits Settings".Disengage]
 			#Rebound strength away from target
-			#Range: 0.0 ~ 5.0
+			#Range: 0.0 ~ 20.0
 			"Rebound Strength" = 0.35
 			#Range: 1.0 ~ 100.0
 			"Max Push Distance" = 20.0
@@ -3430,6 +3391,8 @@
 			#Minimum charge ticks required before the shock impact activates in charge modes
 			#Range: 0 ~ 100
 			"Minimum Charge Ticks" = 5
+			#Require the player to be crouching (holding shift) to activate the shock impact
+			"Require Crouching" = true
 
 		["Weapon Traits Handler"."Item Traits Settings"."Slash Assault"]
 			#Dash distance in blocks
@@ -3447,8 +3410,6 @@
 			#Durability cost per use
 			#Range: 0 ~ 100
 			"Durability Cost" = 2
-			#Allow dashing in the air (not just on ground). Affects SPRINT_CLICK mode.
-			"Allow Air Dash" = false
 			#Activation mode: SPRINT_CLICK (sprint + right-click), INSTANT_ON_RIGHT_CLICK (right-click), CHARGE_AND_RELEASE (hold right-click, release to dash), CHARGE_AND_FINISH_USING (hold until fully charged), CHARGE_RELEASE_AND_FINISH (dash on release or when fully charged)
 			#Allowed Values: SPRINT_CLICK, INSTANT_ON_RIGHT_CLICK, CHARGE_AND_RELEASE, CHARGE_AND_FINISH_USING, CHARGE_RELEASE_AND_FINISH
 			"Activation Mode" = "SPRINT_CLICK"
@@ -3468,6 +3429,25 @@
 			"Dash Swing" = true
 			#Enable hand swing animation when attacking enemies
 			"Attack Swing" = true
+			#Apply cooldown to all items with the slash_assault trait in the inventory when the cooldown triggers, preventing abuse by switching between multiple slash assault weapons
+			"Global Cooldown" = true
+			#Enable mining fatigue on use
+			"Enable Depletion" = true
+			#Chance to apply mining fatigue
+			#Range: 0.0 ~ 1.0
+			"Depletion Chance" = 1.0
+			#Depletion effect duration
+			#Range: 0 ~ 72000
+			"Depletion Duration Ticks" = 20
+			#Depletion effect level
+			#Range: 0 ~ 10
+			"Depletion Level" = 4
+			#Depletion max level
+			#Range: 0 ~ 10
+			"Depletion Max Level" = 8
+			#Depletion max duration ticks
+			#Range: 0 ~ 72000
+			"Depletion Max Duration Ticks" = 1000
 
 		["Weapon Traits Handler"."Item Traits Settings"."Piercing Assault"]
 			#Dash distance in blocks
@@ -3485,8 +3465,6 @@
 			#Durability cost per use
 			#Range: 0 ~ 100
 			"Durability Cost" = 2
-			#Allow dashing in the air (not just on ground). Affects SPRINT_CLICK mode.
-			"Allow Air Dash" = false
 			#Activation mode: SPRINT_CLICK (sprint + right-click), INSTANT_ON_RIGHT_CLICK (right-click), CHARGE_AND_RELEASE (hold right-click, release to dash), CHARGE_AND_FINISH_USING (hold until fully charged), CHARGE_RELEASE_AND_FINISH (dash on release or when fully charged)
 			#Allowed Values: SPRINT_CLICK, INSTANT_ON_RIGHT_CLICK, CHARGE_AND_RELEASE, CHARGE_AND_FINISH_USING, CHARGE_RELEASE_AND_FINISH
 			"Activation Mode" = "SPRINT_CLICK"
@@ -3506,6 +3484,25 @@
 			"Dash Swing" = true
 			#Enable hand swing animation when attacking enemies
 			"Attack Swing" = true
+			#Apply cooldown to all items with the piercing_assault trait in the inventory when the cooldown triggers, preventing abuse by switching between multiple piercing assault weapons
+			"Global Cooldown" = true
+			#Enable mining fatigue on use
+			"Enable Depletion" = true
+			#Chance to apply mining fatigue
+			#Range: 0.0 ~ 1.0
+			"Depletion Chance" = 1.0
+			#Depletion effect duration
+			#Range: 0 ~ 72000
+			"Depletion Duration Ticks" = 20
+			#Depletion effect level
+			#Range: 0 ~ 10
+			"Depletion Level" = 4
+			#Depletion max level
+			#Range: 0 ~ 10
+			"Depletion Max Level" = 8
+			#Depletion max duration ticks
+			#Range: 0 ~ 72000
+			"Depletion Max Duration Ticks" = 1000
 
 		["Weapon Traits Handler"."Item Traits Settings"."Harvest Sweep"]
 			#Harvest radius in blocks
@@ -3543,6 +3540,8 @@
 			"Cooldown Ticks" = 15
 			#List of block IDs (or block ID patterns containing these strings) that can be broken by Wild Sweep
 			"Breakable Block Patterns" = ["bamboo", "tatami", "sugar_cane", "tall_grass", "double_plant"]
+			#Apply cooldown to all items with the wild_sweep trait in the inventory when the cooldown triggers, preventing abuse by switching between multiple wild sweep weapons
+			"Global Cooldown" = true
 
 		["Weapon Traits Handler"."Item Traits Settings"."Whirling Strike"]
 			#Base spin damage per hit
@@ -3586,6 +3585,12 @@
 			#Chance to break on use
 			#Range: 0.0 ~ 1.0
 			"Break Chance" = 0.15
+			#Minimum durability threshold (as a fraction of max durability) for fragility to trigger. E.g. 0.5 means the item must be at or below 50% durability. Default 0.0 (no threshold).
+			#Range: 0.0 ~ 1.0
+			"Minimum Durability Threshold" = 0.0
+			#Default chance to drop the configured remaining item when the item breaks from fragility. Only used if no per-item chance is set.
+			#Range: 0.0 ~ 1.0
+			"Remaining Item Drop Chance" = 1.0
 
 		["Weapon Traits Handler"."Item Traits Settings".Slippery]
 			#Chance to disarm self on hit
@@ -3642,14 +3647,12 @@
 			"Damage Owner" = true
 
 		["Weapon Traits Handler"."Item Traits Settings".Decapitation]
-			#Enable decapitation chance
-			Decapitation = true
-			#Chance to decapitate on kill
-			#Range: 0.0 ~ 1.0
-			"General Decapitation Chance" = 0.05
 			#Critical hit multiplier for decapitation
 			#Range: 1.0 ~ 10.0
 			"Critical Multiplier" = 2.0
+			#Chance to decapitate on kill
+			#Range: 0.0 ~ 1.0
+			Chance = 0.05
 
 		["Weapon Traits Handler"."Item Traits Settings"."Smash Strike"]
 			#Damage per block fallen
@@ -3723,6 +3726,8 @@
 			#Use animation played in charge modes
 			#Allowed Values: NONE, EAT, DRINK, BLOCK, BOW, SPEAR, CROSSBOW, SPYGLASS, TOOT_HORN, BRUSH, CUSTOM
 			"Charge Animation" = "BOW"
+			#Apply cooldown to all items with the quick_swap trait in the inventory when the cooldown triggers, preventing abuse by switching between multiple quick swap weapons
+			"Global Cooldown" = true
 
 		["Weapon Traits Handler"."Item Traits Settings".Backstab]
 			#Damage multiplier when attacking from behind
@@ -3776,6 +3781,8 @@
 			#Bonus damage on right-click backstab
 			#Range: 0.0 ~ 100.0
 			"Right Click Damage Bonus" = 2.5
+			#Apply cooldown to all items with the backstab trait in the inventory when the backstab cooldown triggers, preventing abuse by switching between multiple backstab weapons
+			"Global Cooldown" = true
 
 		["Weapon Traits Handler"."Item Traits Settings"."Heavy Handed"]
 			#Base movement speed reduction when dual-wielding. 0.05 = 5%% reduction
@@ -3797,34 +3804,34 @@
 			#Range: 0.0 ~ 0.95
 			"Max Reduction" = 0.5
 
-["Mob Goals Settings Handler"]
+["Mob Behaviors Handler"]
 
-	["Mob Goals Settings Handler"."Mob Gun Shoot Goal"]
+	["Mob Behaviors Handler"."Mob Gun Shoot Behavior"]
 		#Allow mobs to shoot guns when equipped
 		"Mobs Shoot Guns" = true
 		#Require mobs to have ammunition to shoot guns
 		"Mobs Need Ammo" = false
 		#Minimum cooldown (in ticks) between actions. Each shot picks a random value between Min and Max (20 ticks = 1 second).
-		#Range: 5 ~ 200
-		"Gun Cooldown Min Ticks" = 20
+		#Range: 5 ~ 1200
+		"Gun Cooldown Min Ticks" = 40
 		#Maximum cooldown (in ticks) between actions. Each shot picks a random value between Min and Max.
-		#Range: 5 ~ 200
-		"Gun Cooldown Max Ticks" = 40
+		#Range: 5 ~ 1200
+		"Gun Cooldown Max Ticks" = 80
 		#Minimum initial cooldown (in ticks) before first shot after acquiring a target
-		#Range: 0 ~ 100
-		"Gun Initial Cooldown Min Ticks" = 10
+		#Range: 0 ~ 800
+		"Gun Initial Cooldown Min Ticks" = 40
 		#Maximum initial cooldown (in ticks) before first shot after acquiring a target
-		#Range: 0 ~ 100
-		"Gun Initial Cooldown Max Ticks" = 30
+		#Range: 0 ~ 800
+		"Gun Initial Cooldown Max Ticks" = 120
 		#Cooldown multiplier on Easy difficulty (higher = slower shots)
 		#Range: 0.1 ~ 5.0
-		"Gun Cooldown Easy Multiplier" = 1.5
+		"Gun Cooldown Easy Multiplier" = 3.5
 		#Cooldown multiplier on Normal difficulty
 		#Range: 0.1 ~ 5.0
-		"Gun Cooldown Normal Multiplier" = 1.0
+		"Gun Cooldown Normal Multiplier" = 2.5
 		#Cooldown multiplier on Hard difficulty (lower = faster shots)
 		#Range: 0.1 ~ 5.0
-		"Gun Cooldown Hard Multiplier" = 0.6
+		"Gun Cooldown Hard Multiplier" = 1.5
 		#Minimum distance (in blocks) for the mob to shoot. If the target is closer, the mob will prefer melee if within melee range, or wait/advance. Set to 0 to disable.
 		#Range: 0.0 ~ 10.0
 		"Gun Min Shoot Distance" = 3.0
@@ -3833,29 +3840,34 @@
 		"Gun Melee Distance" = 2.5
 		#If true, mobs will raytrace from their eyes to the target's center and only shoot if no solid blocks are in the way. If false, uses the vanilla line-of-sight check.
 		"Gun Check Clear Shot" = true
+		#If true, mobs will use the gun's base cooldown (from Gun System config) instead of the flat mob behavior cooldown. This means pistols fire faster than shotguns, matching each gun's intended fire rate.
+		"Gun Use Base Cooldown" = false
+		#Multiplier applied to the gun's base cooldown when 'Gun Use Base Cooldown' is true. 1.0 = same fire rate as players. Higher = slower for mobs.
+		#Range: 0.1 ~ 10.0
+		"Gun Base Cooldown Multiplier" = 2.0
 
-	["Mob Goals Settings Handler"."Mob Throwable Goal"]
+	["Mob Behaviors Handler"."Mob Throwable Behavior"]
 		#Minimum cooldown (in ticks) between throws. Each throw picks a random value between Min and Max (20 ticks = 1 second).
-		#Range: 5 ~ 200
-		"Throwable Cooldown Min Ticks" = 30
+		#Range: 5 ~ 1200
+		"Throwable Cooldown Min Ticks" = 60
 		#Maximum cooldown (in ticks) between throws. Each throw picks a random value between Min and Max.
-		#Range: 5 ~ 200
-		"Throwable Cooldown Max Ticks" = 60
+		#Range: 5 ~ 1200
+		"Throwable Cooldown Max Ticks" = 120
 		#Minimum initial cooldown (in ticks) before first throw after acquiring a target
-		#Range: 0 ~ 100
-		"Throwable Initial Cooldown Min Ticks" = 10
+		#Range: 0 ~ 800
+		"Throwable Initial Cooldown Min Ticks" = 40
 		#Maximum initial cooldown (in ticks) before first throw after acquiring a target
-		#Range: 0 ~ 100
-		"Throwable Initial Cooldown Max Ticks" = 30
+		#Range: 0 ~ 800
+		"Throwable Initial Cooldown Max Ticks" = 120
 		#Cooldown multiplier on Easy difficulty (higher = slower throws)
 		#Range: 0.1 ~ 5.0
-		"Throwable Cooldown Easy Multiplier" = 1.5
+		"Throwable Cooldown Easy Multiplier" = 3.5
 		#Cooldown multiplier on Normal difficulty
 		#Range: 0.1 ~ 5.0
-		"Throwable Cooldown Normal Multiplier" = 1.0
+		"Throwable Cooldown Normal Multiplier" = 2.5
 		#Cooldown multiplier on Hard difficulty (lower = faster throws)
 		#Range: 0.1 ~ 5.0
-		"Throwable Cooldown Hard Multiplier" = 0.6
+		"Throwable Cooldown Hard Multiplier" = 1.5
 		#Minimum distance (in blocks) for the mob to throw. If the target is closer, the mob will prefer melee if within melee range, or wait/advance. Set to 0 to disable.
 		#Range: 0.0 ~ 10.0
 		"Throwable Min Throw Distance" = 3.0
@@ -3873,10 +3885,88 @@
 		#Allow mobs to throw throwable items when equipped
 		"Mobs Throw Throwables" = true
 
-	["Mob Goals Settings Handler"."Mob Quick Swap Goal"]
+	["Mob Behaviors Handler"."Mob Quick Swap Behavior"]
+		#Allow mobs to use quick swap when equipped
+		"Mobs Use Quick Swap" = true
 		#Minimum initial cooldown (in ticks) before first quick swap after acquiring a target
-		#Range: 0 ~ 100
-		"Quick Swap Initial Cooldown Min Ticks" = 10
+		#Range: 0 ~ 800
+		"Quick Swap Initial Cooldown Min Ticks" = 60
 		#Maximum initial cooldown (in ticks) before first quick swap after acquiring a target
-		#Range: 0 ~ 100
-		"Quick Swap Initial Cooldown Max Ticks" = 30
+		#Range: 0 ~ 800
+		"Quick Swap Initial Cooldown Max Ticks" = 180
+
+	["Mob Behaviors Handler"."Mob Smoke Bomb Behavior"]
+		#Allow mobs to use smoke bombs when equipped
+		"Mobs Use Smoke Bombs" = true
+		#Minimum cooldown (in ticks) between smoke bomb uses. Each use picks a random value between Min and Max (20 ticks = 1 second).
+		#Range: 5 ~ 2400
+		"Smoke Bomb Cooldown Min Ticks" = 200
+		#Maximum cooldown (in ticks) between smoke bomb uses. Each use picks a random value between Min and Max.
+		#Range: 5 ~ 2400
+		"Smoke Bomb Cooldown Max Ticks" = 400
+		#Minimum initial cooldown (in ticks) before first smoke bomb use after acquiring a target
+		#Range: 0 ~ 800
+		"Smoke Bomb Initial Cooldown Min Ticks" = 80
+		#Maximum initial cooldown (in ticks) before first smoke bomb use after acquiring a target
+		#Range: 0 ~ 800
+		"Smoke Bomb Initial Cooldown Max Ticks" = 200
+		#Cooldown multiplier on Easy difficulty (higher = slower uses)
+		#Range: 0.1 ~ 5.0
+		"Smoke Bomb Cooldown Easy Multiplier" = 3.5
+		#Cooldown multiplier on Normal difficulty
+		#Range: 0.1 ~ 5.0
+		"Smoke Bomb Cooldown Normal Multiplier" = 2.5
+		#Cooldown multiplier on Hard difficulty (lower = faster uses)
+		#Range: 0.1 ~ 5.0
+		"Smoke Bomb Cooldown Hard Multiplier" = 1.5
+		#Radius (in blocks) in which the smoke bomb applies effects to entities
+		#Range: 1.0 ~ 10.0
+		"Smoke Bomb Effect Radius" = 3.0
+		#Probability (0.0 to 1.0) that the mob will attempt to use the smoke bomb when all conditions are met. 1.0 = always, 0.75 = 75%.
+		#Range: 0.0 ~ 1.0
+		"Smoke Bomb Use Probability" = 0.85
+
+	["Mob Behaviors Handler"."Mob Slingshot Behavior"]
+		#Allow mobs to use slingshots when equipped
+		"Mobs Use Slingshots" = true
+		#If true, mobs require valid ammo in their offhand to shoot. If false, mobs will use the default ammo from config.
+		"Mobs Need Ammo" = false
+		#Minimum cooldown (in ticks) between shots. Each shot picks a random value between Min and Max (20 ticks = 1 second).
+		#Range: 5 ~ 1200
+		"Slingshot Cooldown Min Ticks" = 60
+		#Maximum cooldown (in ticks) between shots. Each shot picks a random value between Min and Max.
+		#Range: 5 ~ 1200
+		"Slingshot Cooldown Max Ticks" = 120
+		#Minimum initial cooldown (in ticks) before first shot after acquiring a target
+		#Range: 0 ~ 800
+		"Slingshot Initial Cooldown Min Ticks" = 40
+		#Maximum initial cooldown (in ticks) before first shot after acquiring a target
+		#Range: 0 ~ 800
+		"Slingshot Initial Cooldown Max Ticks" = 120
+		#Cooldown multiplier on Easy difficulty (higher = slower shots)
+		#Range: 0.1 ~ 5.0
+		"Slingshot Cooldown Easy Multiplier" = 3.5
+		#Cooldown multiplier on Normal difficulty
+		#Range: 0.1 ~ 5.0
+		"Slingshot Cooldown Normal Multiplier" = 2.5
+		#Cooldown multiplier on Hard difficulty (lower = faster shots)
+		#Range: 0.1 ~ 5.0
+		"Slingshot Cooldown Hard Multiplier" = 1.5
+		#Minimum distance (in blocks) for the mob to shoot. If the target is closer, the mob will prefer melee if within melee range, or wait/advance. Set to 0 to disable.
+		#Range: 0.0 ~ 10.0
+		"Slingshot Min Shoot Distance" = 2.0
+		#Distance (in blocks) at which the mob will perform a melee attack with the slingshot instead of shooting.
+		#Range: 1.0 ~ 5.0
+		"Slingshot Melee Distance" = 2.5
+		#If true, mobs will raytrace from their eyes to the target's center and only shoot if no solid blocks are in the way. If false, uses the vanilla line-of-sight check.
+		"Slingshot Check Clear Shot" = true
+		#Multiplier for the slingshot's inaccuracy when used by a mob. 1.0 = normal accuracy (as defined by the item). Higher values = less accurate (more spread). 0.0 = perfect aim.
+		#Range: 0.0 ~ 10.0
+		"Slingshot Inaccuracy Multiplier" = 1.0
+		#Probability (0.0 to 1.0) that the mob will attempt to shoot when all conditions are met. 1.0 = always, 0.75 = 75%.
+		#Range: 0.0 ~ 1.0
+		"Slingshot Throw Probability" = 0.75
+		#Default ammo item for mobs that don't have ammo in their offhand. Format: 'modid:item'.
+		"Default Ammo" = "minecraft:oak_planks"
+		#List of mob-type=ammo overrides for default slingshot ammo. Format: 'mob_registry_name=item_registry_name'. Examples: 'minecraft:piglin=minecraft:blackstone', 'minecraft:stray=minecraft:blue_ice'.
+		"Mob Ammo Overrides" = ["minecraft:piglin=minecraft:netherrack", "minecraft:piglin_brute=minecraft:blackstone", "minecraft:zombified_piglin=minecraft:blackstone", "minecraft:stray=minecraft:blue_ice"]

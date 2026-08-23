@@ -1,0 +1,13 @@
+name = "Starcatcher"
+filename = "starcatcher-2.3.19-FORGE-1.20.1.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "fa72242e910e6785dba59313c12aacd3800dbe47"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 8561383
+project-id = 1357603

@@ -183,7 +183,7 @@ let
     version = gigglesomethingPackVersion;
     src = gigglesomethingPackSource;
     side = "server";
-    packHash = "sha256-3O0BBO+zydZMGMD7uEtgyoIDeRgbj0IJSmcag7pZQ+Y=";
+    packHash = "sha256-bwFgWdqinTL/6fOLecxo+gihT5ippeSjqFji6ixslKA=";
   };
 
   # Packwiz bundles non-CurseForge entries as JARs. Use matching CurseForge file
