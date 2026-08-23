@@ -641,6 +641,14 @@ file = "datapacks/more mob heads v2.17.3 (MC 1.21-1.21.10).zip"
 hash = "c2162acc3bbcaf1dae9aaf7398438772d3429b7218a25801924c3094158863c2"
 
 [[files]]
+file = "datapacks/pipesnphysics-create-pfi-reservoir/data/pipesnphysics/tags/block/is_reservoir.json"
+hash = "c961b393da339f8713ac578b2635e2fae60fa1f4cd3dd5e5081d510b1abab872"
+
+[[files]]
+file = "datapacks/pipesnphysics-create-pfi-reservoir/pack.mcmeta"
+hash = "f9796f6fb2848dcae11160b8d33e7f2734a927459c391503fe7959ef817603c6"
+
+[[files]]
 file = "emi.json"
 hash = "8da2cc5cda826f8e04e69d2f9b8c9ab6c3e72284387260687008d4aea1fc5883"
 
@@ -850,7 +858,7 @@ metafile = true
 
 [[files]]
 file = "mods/create-pipesn-physics.pw.toml"
-hash = "db41bf4c76204ad4266bd89b4f85b9b8012d2c457bbee5b250a84467699a8398"
+hash = "233b1837a2e568b7875c1e5f614f2d9e679c88fb4fa7a69a6c5885c34f4c9324"
 metafile = true
 
 [[files]]

@@ -176,7 +176,7 @@ let
     version = packVersion;
     src = packSource;
     side = "server";
-    packHash = "sha256-xYHt4UXdJXP1jaXdh2SCDYsW5U/+co7QpcCUqoGw2o8=";
+    packHash = "sha256-c0LgbqF+8TvyOk94BQtW8BHsyZayeiR8hrc+3UtMjdU=";
   };
   gigglesomethingServerPack = pkgs.fetchPackwizModpack {
     pname = "gigglesomething-server";
