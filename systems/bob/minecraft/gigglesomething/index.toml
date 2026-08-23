@@ -544,10 +544,6 @@ file = "config/brewinandchewin-common.toml"
 hash = "2e654bfa30f12bae083be575605ef677237c812dc78ec277d38913bbe2534cf5"
 
 [[files]]
-file = "config/chunky/config.json"
-hash = "c7384a22595488f79f3125b22cc175eb729267267807a084479419349797abc8"
-
-[[files]]
 file = "config/citadel-common.toml"
 hash = "5c2a942c9d6520caa48f0a4829e20ef8f02629d5942e4d5b611c74f63e16d9fc"
 
@@ -1666,11 +1662,6 @@ metafile = true
 [[files]]
 file = "mods/cave-delight.pw.toml"
 hash = "d709a0dfad1b0708636027100a27631709ed8a88c9fbb507fbaa56aa22220f89"
-metafile = true
-
-[[files]]
-file = "mods/chunky-pregenerator-forge.pw.toml"
-hash = "07bcc84f632e4b6479d21477d913db014ca1c452cbca8c0b41e629862277b596"
 metafile = true
 
 [[files]]

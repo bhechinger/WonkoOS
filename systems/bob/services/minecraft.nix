@@ -184,7 +184,7 @@ let
     version = gigglesomethingPackVersion;
     src = gigglesomethingPackSource;
     side = "server";
-    packHash = "sha256-/i6+dYyteI/OhVSeJga4s1ghotJgjHaE9DaI/7MdzrI=";
+    packHash = "sha256-g9Emw0O++7f8+32Joa3+/kAZZC5hvUwFqDO8TEhIe6w=";
   };
   gigglesomethingServerMods =
     pkgs.runCommand "gigglesomething-server-mods"

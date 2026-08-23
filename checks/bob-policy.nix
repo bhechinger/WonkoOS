@@ -414,7 +414,8 @@ assert gigglesomething.serverProperties.server-ip == "127.0.0.12";
 assert gigglesomething.serverProperties.server-port == 25567;
 assert gigglesomething.serverProperties.level-seed == "3172972216244339045";
 assert
-  gigglesomething.serverProperties.motd == "A FORGE server on 1.20.1\\nrunning gigglesomething 1.0.9";
+  gigglesomething.serverProperties.motd
+  == "A FORGE server on 1.20.1\\nrunning gigglesomething 1.0.10";
 assert gigglesomething.serverProperties.online-mode;
 assert gigglesomething.serverProperties.white-list;
 assert gigglesomething.serverProperties.enforce-whitelist;
