@@ -76,6 +76,7 @@ let
   gigglesomethingServerProperties = {
     server-ip = "127.0.0.12";
     server-port = 25567;
+    level-seed = "3172972216244339045";
     motd = "A FORGE server on ${gigglesomethingPack.versions.minecraft}\\nrunning ${gigglesomethingPack.name} ${gigglesomethingPack.version}";
     max-players = 20;
     online-mode = true;
