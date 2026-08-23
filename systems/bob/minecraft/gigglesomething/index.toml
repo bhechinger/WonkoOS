@@ -21,7 +21,7 @@ hash = "9db4b00d6401e9b7c04b4f024f2ce484c477018d78d08224c14fbf38c20303d7"
 
 [[files]]
 file = "config/DistantHorizons.toml"
-hash = "2ef4c7a4e402837b03532920943b12f3efc1ccf3827263c5a5e77a74e2866bda"
+hash = "bb8138fa9db089beaf6df9ec5363bcb082a70804cd14cc2776681bac099b4856"
 
 [[files]]
 file = "config/Dusty Decorations Config.toml"
