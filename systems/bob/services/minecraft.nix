@@ -184,8 +184,29 @@ let
     version = gigglesomethingPackVersion;
     src = gigglesomethingPackSource;
     side = "server";
-    packHash = "sha256-bwFgWdqinTL/6fOLecxo+gihT5ippeSjqFji6ixslKA=";
+    packHash = "sha256-Gh3/sEMN9vdmDSQK7Kl6B3MgSQcLI0ldCvGjTxLnbV8=";
   };
+  gigglesomethingServerMods =
+    pkgs.runCommand "gigglesomething-server-mods"
+      {
+        nativeBuildInputs = [
+          pkgs.gzip
+          pkgs.unzip
+          pkgs.zip
+        ];
+      }
+      ''
+        cp -r ${gigglesomethingServerPack}/mods "$out"
+        chmod -R u+w "$out"
+
+        jar="$out/species-3.5.jar"
+        entry=data/species/structures/paleontology_dig_site/dig_site_extender.nbt
+        mkdir -p "fixed/$(dirname "$entry")"
+        unzip -p "$jar" "$entry" | gzip -n > "fixed/$entry"
+        touch -d @315532800 "fixed/$entry"
+        (cd fixed && zip -qX "$jar" "$entry")
+        unzip -p "$jar" "$entry" | gzip -t
+      '';
 
   # Packwiz bundles non-CurseForge entries as JARs. Use matching CurseForge file
   # IDs in the client artifact while retaining reliable Modrinth downloads for
@@ -220,6 +241,21 @@ let
     file-id = 8156977
     project-id = 923238
   '';
+  gigglesomethingClientOxidizedMetadata = pkgs.writeText "create-oxidized.pw.toml" ''
+    name = "Create: Oxidized"
+    filename = "create_oxidized-0.1.2.jar"
+    side = "both"
+
+    [download]
+    hash-format = "sha1"
+    hash = "cf1aae96a1af67d6ea615060cf8061fc18730ddb"
+    mode = "metadata:curseforge"
+
+    [update]
+    [update.curseforge]
+    file-id = 6261649
+    project-id = 953729
+  '';
 
   clientPack = pkgs.runCommand clientPackFileName { nativeBuildInputs = [ pkgs.packwiz ]; } ''
     export HOME="$TMPDIR"
@@ -241,6 +277,7 @@ let
         cp -r ${gigglesomethingPackSource} pack
         chmod -R u+w pack
         cd pack
+        cp ${gigglesomethingClientOxidizedMetadata} mods/create-oxidized.pw.toml
         cp ${gigglesomethingServerList} servers.dat
         packwiz refresh
         packwiz curseforge export --output "$out"
@@ -270,14 +307,14 @@ let
               <td><code>pwppp.4amlunch.net</code></td>
               <td><!--# include virtual="/packs/pwppp/version.html" --></td>
               <td>Whitelist</td>
-              <td><a href="/packs/pwppp/client.zip">Download</a></td>
+              <td><a href="/packs/pwppp/pwppp.zip">Download</a></td>
             </tr>
             <tr>
               <td>gigglesomething</td>
               <td><code>gigglesomething.4amlunch.net</code></td>
               <td><!--# include virtual="/packs/gigglesomething/version.html" --></td>
               <td>Whitelist</td>
-              <td><a href="/packs/gigglesomething/client.zip">Download</a></td>
+              <td><a href="/packs/gigglesomething/gigglesomething.zip">Download</a></td>
             </tr>
           </tbody>
         </table>
@@ -498,21 +535,30 @@ let
           ${gigglesomethingPackSource} \
           ${gigglesomethingServerPack} \
           ${gigglesomethingClientPack} \
-          ${gigglesomethingServerList} <<'PY'
+          ${gigglesomethingServerList} \
+          ${gigglesomethingClientOxidizedMetadata} <<'PY'
         from collections import Counter
+        import hashlib
         import json
         from pathlib import Path
         import sys
         import tomllib
         import zipfile
 
-        source, server, client, server_list = map(Path, sys.argv[1:])
+        source, server, client, server_list, *override_paths = map(Path, sys.argv[1:])
 
         with (source / "pack.toml").open("rb") as handle:
             pack = tomllib.load(handle)
+        overrides = {}
+        for override_path in override_paths:
+            with override_path.open("rb") as handle:
+                override = tomllib.load(handle)
+            overrides[override["name"]] = override
 
         server_expected = set()
         client_expected = Counter()
+        mapped_server_hashes = {}
+        unused_overrides = set(overrides)
         for metadata_path in source.rglob("*.pw.toml"):
             with metadata_path.open("rb") as handle:
                 metadata = tomllib.load(handle)
@@ -523,8 +569,23 @@ let
                     raise SystemExit(f"server file is not a mod: {destination}")
                 server_expected.add(destination.as_posix())
             if side in {"both", "client"}:
-                curseforge = metadata["update"]["curseforge"]
+                curseforge = metadata.get("update", {}).get("curseforge")
+                if curseforge is None:
+                    override = overrides.get(metadata["name"])
+                    if override is None:
+                        raise SystemExit(f"client file lacks CurseForge metadata: {destination}")
+                    unused_overrides.remove(metadata["name"])
+                    if metadata["filename"] != override["filename"]:
+                        raise SystemExit(f"stale CurseForge mapping: {destination}")
+                    curseforge = override["update"]["curseforge"]
+                    mapped_server_hashes[destination] = (
+                        override["download"]["hash-format"],
+                        override["download"]["hash"],
+                    )
                 client_expected[(curseforge["project-id"], curseforge["file-id"])] += 1
+
+        if unused_overrides:
+            raise SystemExit(f"unused CurseForge mappings: {sorted(unused_overrides)}")
 
         server_actual = {
             path.relative_to(server).as_posix()
@@ -533,6 +594,12 @@ let
         }
         if server_expected != server_actual:
             raise SystemExit("server mod set does not match Packwiz metadata")
+        for destination, (algorithm, expected_hash) in mapped_server_hashes.items():
+            algorithm = algorithm.replace("-", "")
+            with (server / destination).open("rb") as handle:
+                actual_hash = hashlib.file_digest(handle, algorithm).hexdigest()
+            if actual_hash != expected_hash:
+                raise SystemExit(f"stale CurseForge mapping: {destination}")
 
         with zipfile.ZipFile(client) as archive:
             if archive.read("overrides/servers.dat") != server_list.read_bytes():
@@ -564,7 +631,7 @@ let
     cp ${pwpppServerPropertiesFile} "$out/server.properties"
     cp ${pwpppVersionInfo} "$out/site/version.html"
     cp ${clientPack} "$out/site/${clientPackFileName}"
-    ln -s ${clientPackFileName} "$out/site/client.zip"
+    ln -s ${clientPackFileName} "$out/site/pwppp.zip"
     cp -r ${packSource}/. "$out/site/packwiz/"
   '';
 
@@ -573,7 +640,7 @@ let
 
     mkdir -p "$out/config/voicechat" "$out/world/serverconfig" "$out/site/packwiz"
     ln -s ${gigglesomethingServerPackage} "$out/server"
-    ln -s ${gigglesomethingServerPack}/mods "$out/mods"
+    ln -s ${gigglesomethingServerMods} "$out/mods"
     cp -r ${gigglesomethingPackFiles}/config/. "$out/config/"
     chmod -R u+w "$out/config"
     cp ${gigglesomethingVoiceConfig} "$out/config/voicechat/voicechat-server.properties"
@@ -582,7 +649,7 @@ let
     cp ${gigglesomethingServerPropertiesFile} "$out/server.properties"
     cp ${gigglesomethingVersionInfo} "$out/site/version.html"
     cp ${gigglesomethingClientPack} "$out/site/${gigglesomethingClientPackFileName}"
-    ln -s ${gigglesomethingClientPackFileName} "$out/site/client.zip"
+    ln -s ${gigglesomethingClientPackFileName} "$out/site/gigglesomething.zip"
     cp -r ${gigglesomethingPackSource}/. "$out/site/packwiz/"
   '';
 
@@ -908,8 +975,8 @@ in
         restartIfChanged = lib.mkForce false;
         wants = [ "minecraft-whitelist-gigglesomething.service" ];
         serviceConfig = {
-          MemoryHigh = "5G";
-          MemoryMax = "6G";
+          MemoryHigh = "6G";
+          MemoryMax = "7G";
           NoNewPrivileges = true;
           OOMPolicy = "stop";
           ProtectSystem = "strict";

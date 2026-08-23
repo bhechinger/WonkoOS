@@ -1,6 +1,6 @@
 name = "More Hitboxes"
 filename = "morehitboxes-forge-1.20.1-1.9.2.jar"
-side = "client"
+side = "both"
 
 [download]
 hash-format = "sha1"
