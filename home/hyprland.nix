@@ -1,4 +1,5 @@
 {
+  hyprlandFix,
   lib,
   pkgs,
   unstable-pkgs,
@@ -6,7 +7,6 @@
 }:
 let
   browser = "firefox";
-  hyprlandFix = "d8504461f0e9f95a5df9a0cdc0723d0ca6332888";
   hyprlandFixReleaseCheck = pkgs.writeShellApplication {
     name = "hyprland-fix-release-check";
     runtimeInputs = with pkgs; [
@@ -23,7 +23,7 @@ let
         ${lib.getExe pkgs.jq} --exit-status --raw-output .status)"
 
       if [[ "$status" == "ahead" || "$status" == "identical" ]]; then
-        message="Hyprland $release contains ${hyprlandFix}; remove the temporary package override and release check."
+        message="Hyprland $release contains ${hyprlandFix}; update unstable-nixpkgs and verify its unpatched package before removing the temporary override and release check."
         printf '%s\n' "$message"
         notify-send "Hyprland fix released" "$message" || true
       fi

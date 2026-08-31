@@ -61,6 +61,7 @@
     let
       system = "x86_64-linux";
       useSaffireFfado = false;
+      hyprlandFix = "d8504461f0e9f95a5df9a0cdc0723d0ca6332888";
       pkgs = import nixpkgs {
         inherit system;
         config.allowUnfree = true;
@@ -73,7 +74,7 @@
             hyprland = prev.hyprland.overrideAttrs (old: {
               patches = (old.patches or [ ]) ++ [
                 (prev.fetchurl {
-                  url = "https://github.com/hyprwm/Hyprland/commit/d8504461f0e9f95a5df9a0cdc0723d0ca6332888.patch";
+                  url = "https://github.com/hyprwm/Hyprland/commit/${hyprlandFix}.patch";
                   hash = "sha256-cZ8LzzU7fUzV7C2VOqFUOs4IOuqDHFtBQmGGgbTRjhw=";
                 })
               ];
@@ -127,7 +128,7 @@
       homeConfigurations.wonko = inputs.home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
         extraSpecialArgs = {
-          inherit unstable-pkgs useSaffireFfado;
+          inherit hyprlandFix unstable-pkgs useSaffireFfado;
           inherit (inputs) auto-splice pipewire-src spotify-midi-control;
         };
         modules = [
