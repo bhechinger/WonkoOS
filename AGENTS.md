@@ -15,3 +15,38 @@ Treat the host named below as the operational owner of its services.
 | `deepthought` | Workstation and build/deploy host; Atuin and PostgreSQL; Docker, Podman, and libvirt; CUPS and Avahi; on-demand VyprVPN; Alloy plus node and NVIDIA exporters; NFS and iSCSI/ZFS clients for `basket` | `systems/deepthought/`, `home/`, and the root `Makefile`. |
 | `basket` | QNAP/QTS NAS; NFS exports and iSCSI backing storage; QTS HTTPS with local acme.sh renewal | `systems/basket/README.md` and `systems/basket/*.sh`; the appliance itself is administered over SSH. |
 | Cloudflare and Playit | Public HTTP/Minecraft ingress, public DNS, and the Minecraft voice relay | Reconciled from `systems/bob/services/cloudflared.nix` and `systems/bob/services/minecraft.nix`; the control planes are external. |
+
+# Agent workflow
+
+For every code change:
+
+1. Switch to `main`, fetch `origin`, update `main` from `origin/main`, and
+   create a new branch. Prefix bug-fix branches with `fix/` and feature
+   branches with `feat/`.
+2. Implement the change and run the required formatting, Clippy, test, CRD
+   drift, and Helm lint checks.
+3. Commit the change locally before reviewing the diff.
+4. Start parallel fresh agent sessions with no inherited implementation
+   context (`fork_turns: "none"` or equivalent). Give each reviewer only these
+   repository instructions, the original task requirements or acceptance
+   criteria, and the current branch or pull-request diff against its base. Do
+   not include the implementation conversation, plans, rationale, prior
+   findings, or another reviewer's conclusions.
+
+   Have each reviewer independently perform an adversarial review that actively
+   tries to falsify the change's correctness. Assess:
+
+   - bugs;
+   - security;
+   - code quality;
+   - DRY violations; and
+   - removable complexity.
+
+   Synthesize and deduplicate their findings. Report only actionable issues
+   with severity, file/line, and rationale. Address all issues raised by this
+   review, commit the fixes, and repeat the clean-context adversarial review
+   until clean before continuing.
+5. Push the clean branch.
+6. Open a pull request.
+7. Wait for CI to pass and address any failures.
+8. Notify the user only when the pull request is ready for review and merge.
