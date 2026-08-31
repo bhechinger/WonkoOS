@@ -61,6 +61,7 @@
     let
       system = "x86_64-linux";
       useSaffireFfado = false;
+      hyprlandFix = "d8504461f0e9f95a5df9a0cdc0723d0ca6332888";
       pkgs = import nixpkgs {
         inherit system;
         config.allowUnfree = true;
@@ -70,20 +71,15 @@
         config.allowUnfree = true;
         overlays = [
           (_final: prev: {
-            codex = prev.codex.overrideAttrs (old: rec {
-              version = "0.144.1";
-              src = prev.fetchFromGitHub {
-                owner = "openai";
-                repo = "codex";
-                tag = "rust-v0.144.1";
-                hash = "sha256-KHgrqIZyAmLhTZSRYbb7huBO8neOib/B1Vx/oPW2nEU=";
-              };
-              cargoHash = "sha256-S4dsZXfmKvJItL2XYKyxfhqdCMATEG6oPjrtVRwkuYc=";
-              cargoDeps = prev.rustPlatform.fetchCargoVendor {
-                inherit src version;
-                pname = "codex";
-                hash = cargoHash;
-              };
+            hyprland = prev.hyprland.overrideAttrs (old: {
+              patches = (old.patches or [ ]) ++ [
+                (prev.fetchurl {
+                  url = "https://github.com/hyprwm/Hyprland/commit/${hyprlandFix}.patch";
+                  hash = "sha256-cZ8LzzU7fUzV7C2VOqFUOs4IOuqDHFtBQmGGgbTRjhw=";
+                })
+              ];
+            });
+            codex = prev.codex.overrideAttrs (old: {
               env = (old.env or { }) // {
                 RUST_MIN_STACK = "16777216";
               };
@@ -132,7 +128,7 @@
       homeConfigurations.wonko = inputs.home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
         extraSpecialArgs = {
-          inherit unstable-pkgs useSaffireFfado;
+          inherit hyprlandFix unstable-pkgs useSaffireFfado;
           inherit (inputs) auto-splice pipewire-src spotify-midi-control;
         };
         modules = [

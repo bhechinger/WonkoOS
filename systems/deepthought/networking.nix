@@ -88,6 +88,10 @@
         PermitRootLogin = "no";
       };
     };
+    tailscale = {
+      enable = true;
+      openFirewall = false;
+    };
     zerotierone = {
       enable = true;
       joinNetworks = [ "a84ac5c10a853bc1" ];

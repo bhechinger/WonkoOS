@@ -1,4 +1,5 @@
 {
+  hyprlandFix,
   lib,
   pkgs,
   unstable-pkgs,
@@ -6,6 +7,31 @@
 }:
 let
   browser = "firefox";
+  hyprlandFixReleaseCheck = pkgs.writeShellApplication {
+    name = "hyprland-fix-release-check";
+    text = ''
+      release_json="$(${lib.getExe pkgs.curl} --fail --silent --show-error --location --retry 3 \
+        https://api.github.com/repos/hyprwm/Hyprland/releases/latest)"
+      release="$(printf '%s' "$release_json" | ${lib.getExe pkgs.jq} --exit-status --raw-output .tag_name)"
+      tmp="$(${lib.getExe' pkgs.coreutils "mktemp"} -d)"
+      trap '${lib.getExe' pkgs.coreutils "rm"} -rf "$tmp"' EXIT
+
+      ${lib.getExe' pkgs.coreutils "mkdir"} -p "$tmp/source/src/output"
+      ${lib.getExe pkgs.curl} --fail --silent --show-error --location --retry 3 \
+        --output "$tmp/source/src/output/Monitor.cpp" \
+        "https://raw.githubusercontent.com/hyprwm/Hyprland/$release/src/output/Monitor.cpp"
+      ${lib.getExe pkgs.curl} --fail --silent --show-error --location --retry 3 \
+        --output "$tmp/fix.patch" \
+        "https://github.com/hyprwm/Hyprland/commit/${hyprlandFix}.patch"
+
+      if ${lib.getExe pkgs.git} -C "$tmp/source" apply --reverse --check \
+        --include=src/output/Monitor.cpp "$tmp/fix.patch" >/dev/null 2>&1; then
+        message="Hyprland $release contains ${hyprlandFix}; update unstable-nixpkgs and verify its unpatched package before removing the temporary override and release check."
+        printf '%s\n' "$message"
+        ${lib.getExe pkgs.libnotify} "Hyprland fix released" "$message" || true
+      fi
+    '';
+  };
   terminal = "kitty";
   telegram = lib.getExe pkgs.telegram-desktop;
 in
@@ -22,6 +48,22 @@ in
   systemd.user.targets.hyprland-session.Unit.Before = [
     "xdg-desktop-autostart.target"
   ];
+  systemd.user.services.hyprland-fix-release-check = {
+    Unit.Description = "Check whether Hyprland has released the orphaned-workspace fix";
+    Service = {
+      Type = "oneshot";
+      ExecStart = lib.getExe hyprlandFixReleaseCheck;
+    };
+  };
+  systemd.user.timers.hyprland-fix-release-check = {
+    Unit.Description = "Weekly Hyprland orphaned-workspace fix release check";
+    Timer = {
+      OnCalendar = "Sun *-*-* 12:00:00";
+      Persistent = true;
+      RandomizedDelaySec = "1h";
+    };
+    Install.WantedBy = [ "timers.target" ];
+  };
 
   xdg = {
     configFile."mimeapps.list".force = true;
