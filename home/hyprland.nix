@@ -6,6 +6,29 @@
 }:
 let
   browser = "firefox";
+  hyprlandFix = "d8504461f0e9f95a5df9a0cdc0723d0ca6332888";
+  hyprlandFixReleaseCheck = pkgs.writeShellApplication {
+    name = "hyprland-fix-release-check";
+    runtimeInputs = with pkgs; [
+      curl
+      jq
+      libnotify
+    ];
+    text = ''
+      release="$(${lib.getExe pkgs.curl} --fail --silent --show-error --location --retry 3 \
+        https://api.github.com/repos/hyprwm/Hyprland/releases/latest | \
+        ${lib.getExe pkgs.jq} --exit-status --raw-output .tag_name)"
+      status="$(${lib.getExe pkgs.curl} --fail --silent --show-error --location --retry 3 \
+        "https://api.github.com/repos/hyprwm/Hyprland/compare/${hyprlandFix}...$release" | \
+        ${lib.getExe pkgs.jq} --exit-status --raw-output .status)"
+
+      if [[ "$status" == "ahead" || "$status" == "identical" ]]; then
+        message="Hyprland $release contains ${hyprlandFix}; remove the temporary package override and release check."
+        printf '%s\n' "$message"
+        notify-send "Hyprland fix released" "$message" || true
+      fi
+    '';
+  };
   terminal = "kitty";
   telegram = lib.getExe pkgs.telegram-desktop;
 in
@@ -22,6 +45,22 @@ in
   systemd.user.targets.hyprland-session.Unit.Before = [
     "xdg-desktop-autostart.target"
   ];
+  systemd.user.services.hyprland-fix-release-check = {
+    Unit.Description = "Check whether Hyprland has released the orphaned-workspace fix";
+    Service = {
+      Type = "oneshot";
+      ExecStart = lib.getExe hyprlandFixReleaseCheck;
+    };
+  };
+  systemd.user.timers.hyprland-fix-release-check = {
+    Unit.Description = "Weekly Hyprland orphaned-workspace fix release check";
+    Timer = {
+      OnCalendar = "Sun *-*-* 12:00:00";
+      Persistent = true;
+      RandomizedDelaySec = "1h";
+    };
+    Install.WantedBy = [ "timers.target" ];
+  };
 
   xdg = {
     configFile."mimeapps.list".force = true;
