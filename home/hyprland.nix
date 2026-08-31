@@ -34,6 +34,100 @@ let
   };
   terminal = "kitty";
   telegram = lib.getExe pkgs.telegram-desktop;
+  luaInline = lib.generators.mkLuaInline;
+  toLua = lib.generators.toLua { };
+  bind = key: dispatcher: {
+    _args = [
+      key
+      (luaInline dispatcher)
+    ];
+  };
+  mouseBind = key: dispatcher: {
+    _args = [
+      key
+      (luaInline dispatcher)
+      { mouse = true; }
+    ];
+  };
+  main = key: luaInline ''mainMod .. " + ${key}"'';
+  curve = name: points: {
+    _args = [
+      name
+      {
+        type = "bezier";
+        inherit points;
+      }
+    ];
+  };
+  animation =
+    leaf: enabled: speed: bezier: style:
+    {
+      inherit
+        leaf
+        enabled
+        speed
+        bezier
+        ;
+    }
+    // lib.optionalAttrs (style != null) { inherit style; };
+  workspaceWindowRule = class: workspace: {
+    match.class = class;
+    inherit workspace;
+  };
+  dimLayer = namespace: {
+    match.namespace = namespace;
+    dim_around = true;
+  };
+  noGaps = workspace: {
+    inherit workspace;
+    gaps_out = 0;
+    gaps_in = 0;
+  };
+  autostart = [
+    { command = "hyprctl setcursor Bibata-Modern-Ice 24"; }
+    {
+      command = browser;
+      rules.workspace = "1 silent";
+    }
+    {
+      command = terminal;
+      rules.workspace = "3 silent";
+    }
+    {
+      command = "slack";
+      rules.workspace = "special:chat silent";
+    }
+    {
+      command = "discord";
+      rules.workspace = "special:chat silent";
+    }
+    {
+      command = ''sed -i 's/^windowTheme=.*/windowTheme=dark/' "$HOME/.config/org.keshavnrj.ubuntu/WhatSie.conf"; exec whatsie'';
+      rules.workspace = "special:chat silent";
+    }
+    {
+      command = "irccloud";
+      rules.workspace = "special:chat silent";
+    }
+    {
+      command = "signal-desktop";
+      rules.workspace = "special:chat2 silent";
+    }
+    {
+      command = telegram;
+      rules.workspace = "special:chat2 silent";
+    }
+    {
+      command = "qpwgraph -d";
+      rules.workspace = "special:audio silent";
+    }
+  ];
+  renderAutostart =
+    {
+      command,
+      rules ? null,
+    }:
+    "  hl.exec_cmd(${toLua command}${lib.optionalString (rules != null) ", ${toLua rules}"})\n";
 in
 {
   home.packages = with pkgs; [
@@ -112,264 +206,263 @@ in
     };
   };
 
-  wayland.windowManager.hyprland.configType = "hyprlang";
   wayland.windowManager.hyprland = {
     enable = true;
+    configType = "lua";
     package = null;
     portalPackage = null;
 
-    xwayland = {
-      enable = true;
-      # hidpi = true;
-    };
+    xwayland.enable = true;
     systemd.enable = true;
     settings = {
-      "debug:disable_logs" = false;
-      "$mainMod" = "SUPER";
-      "$shiftMod" = "SHIFT";
-      "$fileManager" = "dolphin";
-      "$menu" = "wofi --show drun";
+      mainMod._var = "SUPER";
+      terminal._var = terminal;
+      fileManager._var = "dolphin";
+      menu._var = "wofi --show drun";
 
-      # autostart
-      exec-once = [
-        #"wl-paste --watch cliphist store &"
-        #"swaync &"
-        #"vicinae server &"
-        "hyprctl setcursor Bibata-Modern-Ice 24 &"
+      config = {
+        debug.disable_logs = false;
+        input = {
+          kb_layout = "us";
+          kb_options = "ctrl:nocaps";
+          numlock_by_default = true;
+          repeat_delay = 300;
+          follow_mouse = 1;
+          float_switch_override_focus = 0;
+          mouse_refocus = false;
+          sensitivity = 0;
+          touchpad.natural_scroll = false;
+        };
+        general = {
+          layout = "dwindle";
+          gaps_in = 0;
+          gaps_out = 2;
+          border_size = 2;
+          col = {
+            active_border = {
+              colors = [
+                "rgb(98971A)"
+                "rgb(CC241D)"
+              ];
+              angle = 45;
+            };
+            inactive_border = "rgba(00000000)";
+          };
+        };
+        misc = {
+          disable_autoreload = true;
+          disable_hyprland_logo = true;
+          always_follow_on_dnd = true;
+          layers_hog_keyboard_focus = true;
+          animate_manual_resizes = false;
+          enable_swallow = true;
+          focus_on_activate = true;
+          middle_click_paste = false;
+        };
+        dwindle = {
+          force_split = 2;
+          special_scale_factor = 1.0;
+          split_width_multiplier = 1.0;
+          use_active_for_splits = true;
+          preserve_split = true;
+        };
+        master = {
+          new_status = "master";
+          special_scale_factor = 1;
+        };
+        decoration = {
+          rounding = 0;
+          blur = {
+            enabled = true;
+            size = 3;
+            passes = 2;
+            brightness = 1;
+            contrast = 1.4;
+            ignore_opacity = true;
+            noise = 0;
+            new_optimizations = true;
+            xray = true;
+          };
+          shadow = {
+            enabled = true;
+            offset = [
+              0
+              2
+            ];
+            range = 20;
+            render_power = 3;
+            color = "rgba(00000055)";
+          };
+        };
+        animations.enabled = true;
+        binds = {
+          movefocus_cycles_fullscreen = true;
+          allow_workspace_cycles = true;
+        };
+        xwayland.force_zero_scaling = true;
+      };
 
-        # "${terminal} --gtk-single-instance=true --quit-after-last-window-closed=false --initial-window=false"
-        "[workspace 1 silent] ${browser}"
-        "[workspace 3 silent] ${terminal}"
-
-        "[workspace special:chat silent] slack"
-        "[workspace special:chat silent] discord"
-        "[workspace special:chat silent] sed -i 's/^windowTheme=.*/windowTheme=dark/' \"$HOME/.config/org.keshavnrj.ubuntu/WhatSie.conf\"; exec whatsie"
-        "[workspace special:chat silent] irccloud"
-        #"[workspace special:chat silent] kitty --class irssi -T irssi irssi"
-
-        #"[workspace special:chat2 silent] thunderbird"
-        "[workspace special:chat2 silent] signal-desktop"
-        "[workspace special:chat2 silent] ${telegram}"
-
-        "[workspace special:audio silent] qpwgraph -d"
-
-        #"[workspace special:games silent] steam"
-        #"[workspace special:games silent] r2modman"
+      curve = [
+        (curve "fluent_decel" [
+          [
+            0
+            0.2
+          ]
+          [
+            0.4
+            1
+          ]
+        ])
+        (curve "easeOutCirc" [
+          [
+            0
+            0.55
+          ]
+          [
+            0.45
+            1
+          ]
+        ])
+        (curve "easeOutCubic" [
+          [
+            0.33
+            1
+          ]
+          [
+            0.68
+            1
+          ]
+        ])
+        (curve "fade_curve" [
+          [
+            0
+            0.55
+          ]
+          [
+            0.45
+            1
+          ]
+        ])
       ];
 
-      input = {
-        kb_layout = "us";
-        kb_options = "ctrl:nocaps";
-        numlock_by_default = true;
-        repeat_delay = 300;
-        follow_mouse = 1;
-        float_switch_override_focus = 0;
-        mouse_refocus = 0;
-        sensitivity = 0;
-        touchpad = {
-          natural_scroll = false;
-        };
-      };
-
-      general = {
-        layout = "dwindle";
-        gaps_in = 0;
-        gaps_out = 2;
-        border_size = 2;
-        "col.active_border" = "rgb(98971A) rgb(CC241D) 45deg";
-        "col.inactive_border" = "0x00000000";
-        # border_part_of_window = false;
-      };
-
-      misc = {
-        disable_autoreload = true;
-        disable_hyprland_logo = true;
-        always_follow_on_dnd = true;
-        layers_hog_keyboard_focus = true;
-        animate_manual_resizes = false;
-        enable_swallow = true;
-        focus_on_activate = true;
-        middle_click_paste = false;
-      };
-
-      dwindle = {
-        force_split = 2;
-        special_scale_factor = 1.0;
-        split_width_multiplier = 1.0;
-        use_active_for_splits = true;
-        preserve_split = "yes";
-      };
-
-      master = {
-        new_status = "master";
-        special_scale_factor = 1;
-      };
-
-      decoration = {
-        rounding = 0;
-        # active_opacity = 0.90;
-        # inactive_opacity = 0.90;
-        # fullscreen_opacity = 1.0;
-
-        blur = {
-          enabled = true;
-          size = 3;
-          passes = 2;
-          brightness = 1;
-          contrast = 1.4;
-          ignore_opacity = true;
-          noise = 0;
-          new_optimizations = true;
-          xray = true;
-        };
-
-        shadow = {
-          enabled = true;
-
-          offset = "0 2";
-          range = 20;
-          render_power = 3;
-          color = "rgba(00000055)";
-        };
-      };
-
-      animations = {
-        enabled = true;
-
-        bezier = [
-          "fluent_decel, 0, 0.2, 0.4, 1"
-          "easeOutCirc, 0, 0.55, 0.45, 1"
-          "easeOutCubic, 0.33, 1, 0.68, 1"
-          "fade_curve, 0, 0.55, 0.45, 1"
-        ];
-
-        animation = [
-          # name, enable, speed, curve, style
-
-          # Windows
-          "windowsIn,   0, 4, easeOutCubic,  popin 20%" # window open
-          "windowsOut,  0, 4, fluent_decel,  popin 80%" # window close.
-          "windowsMove, 1, 2, fluent_decel, slide" # everything in between, moving, dragging, resizing.
-
-          # Fade
-          "fadeIn,      1, 3,   fade_curve" # fade in (open) -> layers and windows
-          "fadeOut,     1, 3,   fade_curve" # fade out (close) -> layers and windows
-          "fadeSwitch,  0, 1,   easeOutCirc" # fade on changing activewindow and its opacity
-          "fadeShadow,  1, 10,  easeOutCirc" # fade on changing activewindow for shadows
-          "fadeDim,     1, 4,   fluent_decel" # the easing of the dimming of inactive windows
-          # "border,      1, 2.7, easeOutCirc"  # for animating the border's color switch speed
-          # "borderangle, 1, 30,  fluent_decel, once" # for animating the border's gradient angle - styles: once (default), loop
-          "workspaces,  1, 4,   easeOutCubic, fade" # styles: slide, slidevert, fade, slidefade, slidefadevert
-        ];
-      };
-
-      binds = {
-        movefocus_cycles_fullscreen = true;
-        allow_workspace_cycles = true;
-      };
+      animation = [
+        (animation "windowsIn" false 4 "easeOutCubic" "popin 20%")
+        (animation "windowsOut" false 4 "fluent_decel" "popin 80%")
+        (animation "windowsMove" true 2 "fluent_decel" "slide")
+        (animation "fadeIn" true 3 "fade_curve" null)
+        (animation "fadeOut" true 3 "fade_curve" null)
+        (animation "fadeSwitch" false 1 "easeOutCirc" null)
+        (animation "fadeShadow" true 10 "easeOutCirc" null)
+        (animation "fadeDim" true 4 "fluent_decel" null)
+        (animation "workspaces" true 4 "easeOutCubic" "fade")
+      ];
 
       bind = [
-        # keybindings
-        "SUPER, Tab, workspace, previous"
-        "$mainMod, Return, exec, ${terminal}"
-        "$mainMod, Q, killactive,"
-        #"$mainMod, M, exit," # This is dangerous, so no.
-        "$mainMod, E, exec, $fileManager"
-        "$mainMod, V, togglefloating,"
-        "$mainMod, Space, exec, $menu"
-        "$mainMod, P, pseudo, # dwindle"
-        "$mainMod, J, layoutmsg, togglesplit # dwindle"
-        "$mainMod, l, exec, lock-screen"
-        "$mainMod, F, fullscreen"
-        "$mainMod, left, movefocus, l"
-        "$mainMod, right, movefocus, r"
-        "$mainMod, up, movefocus, u"
-        "$mainMod, down, movefocus, d"
-        "$mainMod, 1, workspace, 1"
-        "$mainMod, 2, workspace, 2"
-        "$mainMod, 3, workspace, 3"
-        "$mainMod, 4, workspace, 4"
-        "$mainMod, 5, workspace, 5"
-        "$mainMod, 6, workspace, 6"
-        "$mainMod, 7, workspace, 7"
-        "$mainMod, 8, workspace, 8"
-        "$mainMod, 9, workspace, 9"
-        "$mainMod, 0, workspace, 10"
-        "$mainMod CTRL, left, workspace, -1"
-        "$mainMod CTRL, right, workspace, +1"
-        "$mainMod CTRL SHIFT, left, movetoworkspace, -1"
-        "$mainMod CTRL SHIFT, right, movetoworkspace, +1"
-        "$mainMod SHIFT, left, movewindow, l"
-        "$mainMod SHIFT, right, movewindow, r"
-        "$mainMod SHIFT, up, movewindow, u"
-        "$mainMod SHIFT, down, movewindow, d"
-        "$mainMod SHIFT, 1, movetoworkspace, 1"
-        "$mainMod SHIFT, 2, movetoworkspace, 2"
-        "$mainMod SHIFT, 3, movetoworkspace, 3"
-        "$mainMod SHIFT, 4, movetoworkspace, 4"
-        "$mainMod SHIFT, 5, movetoworkspace, 5"
-        "$mainMod SHIFT, 6, movetoworkspace, 6"
-        "$mainMod SHIFT, 7, movetoworkspace, 7"
-        "$mainMod SHIFT, 8, movetoworkspace, 8"
-        "$mainMod SHIFT, 9, movetoworkspace, 9"
-        "$mainMod SHIFT, 0, movetoworkspace, 10"
-        "$mainMod, Z, togglespecialworkspace, chat"
-        "$mainMod, A, togglespecialworkspace, chat2"
-        "$mainMod, X, togglespecialworkspace, audio"
-        "$mainMod, G, togglespecialworkspace, games"
-        "$mainMod, PRINT, exec, hyprshot -m window"
-        ", PRINT, exec, hyprshot -m output"
-        "$shiftMod, PRINT, exec, hyprshot -m region"
-        "$mainMod, mouse_down, workspace, e+1"
-        "$mainMod, mouse_up, workspace, e-1"
+        (bind "SUPER + Tab" ''hl.dsp.focus({ workspace = "previous" })'')
+        (bind (main "Return") "hl.dsp.exec_cmd(terminal)")
+        (bind (main "Q") "hl.dsp.window.close()")
+        (bind (main "E") "hl.dsp.exec_cmd(fileManager)")
+        (bind (main "V") ''hl.dsp.window.float({ action = "toggle" })'')
+        (bind (main "Space") "hl.dsp.exec_cmd(menu)")
+        (bind (main "P") "hl.dsp.window.pseudo()")
+        (bind (main "J") ''hl.dsp.layout("togglesplit")'')
+        (bind (main "l") ''hl.dsp.exec_cmd("lock-screen")'')
+        (bind (main "F") "hl.dsp.window.fullscreen()")
+        (bind (main "left") ''hl.dsp.focus({ direction = "left" })'')
+        (bind (main "right") ''hl.dsp.focus({ direction = "right" })'')
+        (bind (main "up") ''hl.dsp.focus({ direction = "up" })'')
+        (bind (main "down") ''hl.dsp.focus({ direction = "down" })'')
+        (bind (main "CTRL + left") ''hl.dsp.focus({ workspace = "-1" })'')
+        (bind (main "CTRL + right") ''hl.dsp.focus({ workspace = "+1" })'')
+        (bind (main "CTRL + SHIFT + left") ''hl.dsp.window.move({ workspace = "-1" })'')
+        (bind (main "CTRL + SHIFT + right") ''hl.dsp.window.move({ workspace = "+1" })'')
+        (bind (main "SHIFT + left") ''hl.dsp.window.move({ direction = "left" })'')
+        (bind (main "SHIFT + right") ''hl.dsp.window.move({ direction = "right" })'')
+        (bind (main "SHIFT + up") ''hl.dsp.window.move({ direction = "up" })'')
+        (bind (main "SHIFT + down") ''hl.dsp.window.move({ direction = "down" })'')
+        (bind (main "Z") ''hl.dsp.workspace.toggle_special("chat")'')
+        (bind (main "A") ''hl.dsp.workspace.toggle_special("chat2")'')
+        (bind (main "X") ''hl.dsp.workspace.toggle_special("audio")'')
+        (bind (main "G") ''hl.dsp.workspace.toggle_special("games")'')
+        (bind (main "PRINT") ''hl.dsp.exec_cmd("hyprshot -m window")'')
+        (bind "PRINT" ''hl.dsp.exec_cmd("hyprshot -m output")'')
+        (bind "SHIFT + PRINT" ''hl.dsp.exec_cmd("hyprshot -m region")'')
+        (bind (main "mouse_down") ''hl.dsp.focus({ workspace = "e+1" })'')
+        (bind (main "mouse_up") ''hl.dsp.focus({ workspace = "e-1" })'')
+        (mouseBind (main "mouse:272") "hl.dsp.window.drag()")
+        (mouseBind (main "mouse:273") "hl.dsp.window.resize()")
       ];
 
-      # mouse binding
-      bindm = [
-        "$mainMod, mouse:272, movewindow"
-        "$mainMod, mouse:273, resizewindow"
+      window_rule = [
+        (workspaceWindowRule "Slack" "special:chat")
+        (workspaceWindowRule "discord" "special:chat")
+        (workspaceWindowRule "com.ktechpit.whatsie" "special:chat")
+        (workspaceWindowRule "IRCCloud" "special:chat")
+        (workspaceWindowRule "thunderbird" "special:chat2 silent")
+        (workspaceWindowRule "Signal" "special:chat2")
+        (workspaceWindowRule "org.telegram.desktop" "special:chat2")
+        (workspaceWindowRule "Ardour" "special:audio")
+        (workspaceWindowRule "org.rncbc.qpwgraph" "special:audio")
+        (workspaceWindowRule "steam" "special:games")
+        {
+          match.class = "steam";
+          suppress_event = "activate";
+        }
+        (workspaceWindowRule "r2modman" "special:games")
+        {
+          match.class = ".*";
+          suppress_event = "maximize";
+        }
+        {
+          match = {
+            class = "^$";
+            title = "^$";
+            xwayland = true;
+            float = true;
+            fullscreen = false;
+            pin = false;
+          };
+          no_focus = true;
+        }
       ];
 
-      # windowrule
-      windowrule = [
-        "workspace special:chat, match:class Slack"
-        "workspace special:chat, match:class discord"
-        "workspace special:chat, match:class com.ktechpit.whatsie"
-        "workspace special:chat, match:class IRCCloud"
-        "workspace special:chat2 silent, match:class thunderbird"
-        "workspace special:chat2, match:class Signal"
-        "workspace special:chat2, match:class org.telegram.desktop"
-        "workspace special:audio, match:class Ardour"
-        "workspace special:audio, match:class org.rncbc.qpwgraph"
-        "workspace special:games, match:class steam"
-        "suppress_event activate, match:class steam"
-        "workspace special:games, match:class r2modman"
-        "suppress_event maximize, match:class .*"
-        "no_focus on, match:class ^$, match:title ^$, match:xwayland 1, match:float 1, match:fullscreen 0, match:pin 0"
-
+      layer_rule = [
+        (dimLayer "vicinae")
+        (dimLayer "rofi")
+        (dimLayer "swaync-control-center")
       ];
 
-      layerrule = [
-        "dim_around on, match:namespace vicinae"
-        "dim_around on, match:namespace rofi"
-        "dim_around on, match:namespace swaync-control-center"
-      ];
-
-      # No gaps when only
-      workspace = [
-        "w[t1], gapsout:0, gapsin:0"
-        "w[tg1], gapsout:0, gapsin:0"
-        "f[1], gapsout:0, gapsin:0"
+      workspace_rule = [
+        (noGaps "w[t1]")
+        (noGaps "w[tg1]")
+        (noGaps "f[1]")
       ];
 
       monitor = [
-        "=,preferred,auto,auto"
-        "Virtual-1,1920x1080@60,0x0,1"
+        {
+          output = "";
+          mode = "preferred";
+          position = "auto";
+          scale = "auto";
+        }
+        {
+          output = "Virtual-1";
+          mode = "1920x1080@60";
+          position = "0x0";
+          scale = 1;
+        }
       ];
-
-      xwayland = {
-        force_zero_scaling = true;
-      };
     };
+
+    extraConfig = ''
+      for workspace = 1, 10 do
+        local key = workspace % 10
+        hl.bind(mainMod .. " + " .. key, hl.dsp.focus({ workspace = workspace }))
+        hl.bind(mainMod .. " + SHIFT + " .. key, hl.dsp.window.move({ workspace = workspace }))
+      end
+
+      hl.on("hyprland.start", function()
+      ${lib.concatMapStrings renderAutostart autostart}end)
+    '';
   };
 }
