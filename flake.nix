@@ -161,6 +161,16 @@
         nixos = self.nixosConfigurations.deepthought.config.system.build.toplevel;
         home = self.homeConfigurations.wonko.activationPackage;
 
+        hyprland-config =
+          let
+            hyprland = self.nixosConfigurations.deepthought.config.programs.hyprland.package;
+            hyprlandConfig = self.homeConfigurations.wonko.config.xdg.configFile."hypr/hyprland.lua".source;
+          in
+          pkgs.runCommand "hyprland-config-check" { } ''
+            XDG_RUNTIME_DIR="$TMPDIR" ${lib.getExe hyprland} --verify-config --config ${hyprlandConfig}
+            touch "$out"
+          '';
+
         hugepages =
           assert import ./common/hugepages-test.nix;
           pkgs.runCommand "hugepages-test" { } ''
