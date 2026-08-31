@@ -9,23 +9,26 @@ let
   browser = "firefox";
   hyprlandFixReleaseCheck = pkgs.writeShellApplication {
     name = "hyprland-fix-release-check";
-    runtimeInputs = with pkgs; [
-      curl
-      jq
-      libnotify
-    ];
     text = ''
-      release="$(${lib.getExe pkgs.curl} --fail --silent --show-error --location --retry 3 \
-        https://api.github.com/repos/hyprwm/Hyprland/releases/latest | \
-        ${lib.getExe pkgs.jq} --exit-status --raw-output .tag_name)"
-      status="$(${lib.getExe pkgs.curl} --fail --silent --show-error --location --retry 3 \
-        "https://api.github.com/repos/hyprwm/Hyprland/compare/${hyprlandFix}...$release" | \
-        ${lib.getExe pkgs.jq} --exit-status --raw-output .status)"
+      release_json="$(${lib.getExe pkgs.curl} --fail --silent --show-error --location --retry 3 \
+        https://api.github.com/repos/hyprwm/Hyprland/releases/latest)"
+      release="$(printf '%s' "$release_json" | ${lib.getExe pkgs.jq} --exit-status --raw-output .tag_name)"
+      tmp="$(${lib.getExe' pkgs.coreutils "mktemp"} -d)"
+      trap '${lib.getExe' pkgs.coreutils "rm"} -rf "$tmp"' EXIT
 
-      if [[ "$status" == "ahead" || "$status" == "identical" ]]; then
+      ${lib.getExe' pkgs.coreutils "mkdir"} -p "$tmp/source/src/output"
+      ${lib.getExe pkgs.curl} --fail --silent --show-error --location --retry 3 \
+        --output "$tmp/source/src/output/Monitor.cpp" \
+        "https://raw.githubusercontent.com/hyprwm/Hyprland/$release/src/output/Monitor.cpp"
+      ${lib.getExe pkgs.curl} --fail --silent --show-error --location --retry 3 \
+        --output "$tmp/fix.patch" \
+        "https://github.com/hyprwm/Hyprland/commit/${hyprlandFix}.patch"
+
+      if ${lib.getExe pkgs.git} -C "$tmp/source" apply --reverse --check \
+        --include=src/output/Monitor.cpp "$tmp/fix.patch" >/dev/null 2>&1; then
         message="Hyprland $release contains ${hyprlandFix}; update unstable-nixpkgs and verify its unpatched package before removing the temporary override and release check."
         printf '%s\n' "$message"
-        notify-send "Hyprland fix released" "$message" || true
+        ${lib.getExe pkgs.libnotify} "Hyprland fix released" "$message" || true
       fi
     '';
   };
