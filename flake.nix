@@ -79,20 +79,43 @@
                 })
               ];
             });
-            codex = prev.codex.overrideAttrs (old: {
-              env = (old.env or { }) // {
-                RUST_MIN_STACK = "16777216";
+            codex =
+              let
+                version = "0.153.0";
+                src = prev.fetchurl {
+                  url = "https://github.com/openai/codex/releases/download/rust-v${version}/codex-package-x86_64-unknown-linux-musl.tar.gz";
+                  hash = "sha256-J7DXp1OsGQw0ORhUGkIGe+MHzIijKxqf6vb5Nkig6eo=";
+                };
+              in
+              prev.stdenvNoCC.mkDerivation {
+                pname = "codex";
+                inherit version;
+
+                nativeBuildInputs = [ prev.makeWrapper ];
+                dontUnpack = true;
+
+                installPhase = ''
+                  runHook preInstall
+
+                  install -d $out/bin
+                  tar -xzf ${src} -C $out
+                  mv $out/bin/codex $out/bin/.codex-setpriv-target
+                  makeWrapper ${prev.util-linux}/bin/setpriv $out/bin/codex \
+                    --set RUST_MIN_STACK "16777216" \
+                    --set SSL_CERT_FILE "${prev.cacert}/etc/ssl/certs/ca-bundle.crt" \
+                    --set NIX_SSL_CERT_FILE "${prev.cacert}/etc/ssl/certs/ca-bundle.crt" \
+                    --add-flags "--inh-caps=-all" \
+                    --add-flags "--ambient-caps=-all" \
+                    --add-flags "$out/bin/.codex-setpriv-target"
+
+                  runHook postInstall
+                '';
+
+                meta = prev.codex.meta // {
+                  changelog = "https://raw.githubusercontent.com/openai/codex/refs/tags/rust-v${version}/CHANGELOG.md";
+                  platforms = [ "x86_64-linux" ];
+                };
               };
-              postFixup = (old.postFixup or "") + ''
-                mv $out/bin/codex $out/bin/.codex-setpriv-target
-                makeWrapper ${prev.util-linux}/bin/setpriv $out/bin/codex \
-                  --set SSL_CERT_FILE "${prev.cacert}/etc/ssl/certs/ca-bundle.crt" \
-                  --set NIX_SSL_CERT_FILE "${prev.cacert}/etc/ssl/certs/ca-bundle.crt" \
-                  --add-flags "--inh-caps=-all" \
-                  --add-flags "--ambient-caps=-all" \
-                  --add-flags "$out/bin/.codex-setpriv-target"
-              '';
-            });
           })
         ];
       };
