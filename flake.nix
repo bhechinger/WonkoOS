@@ -82,13 +82,9 @@
             codex =
               let
                 version = "0.153.0";
-                codexBin = prev.fetchurl {
-                  url = "https://github.com/openai/codex/releases/download/rust-v${version}/codex-x86_64-unknown-linux-musl.tar.gz";
-                  hash = "sha256-NagsFT2DlZ3gnCy4SscLpp0FeIrusI1Klcpo45+GaA4=";
-                };
-                codexCodeModeHost = prev.fetchurl {
-                  url = "https://github.com/openai/codex/releases/download/rust-v${version}/codex-code-mode-host-x86_64-unknown-linux-musl.tar.gz";
-                  hash = "sha256-K4F6SV41pTMz6Us1r57YeeGA+bKP1X7xWs6ahXuobyw=";
+                src = prev.fetchurl {
+                  url = "https://github.com/openai/codex/releases/download/rust-v${version}/codex-package-x86_64-unknown-linux-musl.tar.gz";
+                  hash = "sha256-J7DXp1OsGQw0ORhUGkIGe+MHzIijKxqf6vb5Nkig6eo=";
                 };
               in
               prev.stdenvNoCC.mkDerivation {
@@ -102,21 +98,12 @@
                   runHook preInstall
 
                   install -d $out/bin
-                  tar -xzf ${codexBin} -C $out/bin
-                  tar -xzf ${codexCodeModeHost} -C $out/bin
-                  mv $out/bin/codex-x86_64-unknown-linux-musl $out/bin/.codex-setpriv-target
-                  mv $out/bin/codex-code-mode-host-x86_64-unknown-linux-musl $out/bin/codex-code-mode-host
-                  chmod +x $out/bin/.codex-setpriv-target $out/bin/codex-code-mode-host
+                  tar -xzf ${src} -C $out
+                  mv $out/bin/codex $out/bin/.codex-setpriv-target
                   makeWrapper ${prev.util-linux}/bin/setpriv $out/bin/codex \
                     --set RUST_MIN_STACK "16777216" \
                     --set SSL_CERT_FILE "${prev.cacert}/etc/ssl/certs/ca-bundle.crt" \
                     --set NIX_SSL_CERT_FILE "${prev.cacert}/etc/ssl/certs/ca-bundle.crt" \
-                    --prefix PATH : ${
-                      prev.lib.makeBinPath [
-                        prev.ripgrep
-                        prev.bubblewrap
-                      ]
-                    } \
                     --add-flags "--inh-caps=-all" \
                     --add-flags "--ambient-caps=-all" \
                     --add-flags "$out/bin/.codex-setpriv-target"
