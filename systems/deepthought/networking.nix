@@ -90,6 +90,7 @@
     };
     tailscale = {
       enable = true;
+      extraSetFlags = [ "--accept-dns=false" ];
       openFirewall = false;
     };
     zerotierone = {
