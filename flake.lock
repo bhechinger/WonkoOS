@@ -24,6 +24,22 @@
         "type": "github"
       }
     },
+    "codex-nixpkgs": {
+      "locked": {
+        "lastModified": 1783676991,
+        "narHash": "sha256-Anp/Aql5DNEMoSAF5pNWv2dACIPtaiqkz4w0DTslJFE=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "4e6c396fbc0974adf2d938594afe665df15999fd",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "4e6c396fbc0974adf2d938594afe665df15999fd",
+        "type": "github"
+      }
+    },
     "crane": {
       "locked": {
         "lastModified": 1775236976,
@@ -512,6 +528,7 @@
     "root": {
       "inputs": {
         "auto-splice": "auto-splice",
+        "codex-nixpkgs": "codex-nixpkgs",
         "determinate": "determinate",
         "disko": "disko",
         "home-manager": "home-manager",

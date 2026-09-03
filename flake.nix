@@ -4,6 +4,7 @@
   inputs = {
     nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.2605"; # Stable Nixpkgs
     unstable-nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1"; # Unstable Nixpkgs
+    codex-nixpkgs.url = "github:NixOS/nixpkgs/4e6c396fbc0974adf2d938594afe665df15999fd";
     pipewire-src = {
       url = "path:/home/wonko/src/pipewire";
       flake = false;
@@ -66,6 +67,7 @@
         inherit system;
         config.allowUnfree = true;
       };
+      codex-pkgs = import inputs.codex-nixpkgs { inherit system; };
       unstable-pkgs = import inputs.unstable-nixpkgs {
         inherit system;
         config.allowUnfree = true;
@@ -79,7 +81,7 @@
                 })
               ];
             });
-            codex = prev.codex.overrideAttrs (old: {
+            codex = codex-pkgs.codex.overrideAttrs (old: {
               env = (old.env or { }) // {
                 RUST_MIN_STACK = "16777216";
               };
