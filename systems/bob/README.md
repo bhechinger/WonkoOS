@@ -60,8 +60,8 @@ OPNsense and is deliberately absent from public DNS and Cloudflare Tunnel.
 Jellyfin is available at `https://jellyfin.4amlunch.net` on the private
 networks. Complete its first-run wizard there and add `/nfs/Plex` as the media
 library. Then set Dashboard > Networking > Known Proxies to `127.0.0.1`. Intel
-Quick Sync handles supported transcoding through `/dev/dri/renderD128`;
-Jellyfin state is included in the hourly `/var` backup.
+VA-API handles supported transcoding through `/dev/dri/renderD128`; Jellyfin
+state is included in the hourly `/var` backup.
 
 The Packwiz source uses Modrinth for Create: Oxidized and Create: Design n'
 Decor so Bob can fetch them reproducibly. The generated CurseForge client ZIP
@@ -233,6 +233,10 @@ systemctl status nginx postgresql paperless-web paperless-task-queue \
   mc-router svc-router playit atticd
 findmnt /nfs/Restic /nfs/NixCache /nfs/Plex /nfs/Torrents
 ss -ltnup
+curl --fail https://jellyfin.4amlunch.net/health
+sudo -u jellyfin test -r /dev/dri/renderD128
+# After forcing a lower-bitrate playback:
+sudo grep -l -- '-hwaccel vaapi' /var/lib/jellyfin/log/FFmpeg.Transcode-*.txt
 ```
 
 Before the first Minecraft deployment, replace the placeholder in

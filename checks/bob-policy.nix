@@ -34,6 +34,9 @@ let
   svcRouter = config.systemd.services.svc-router;
   cloudflareSync = config.systemd.services.cloudflare-tunnel-sync;
   cloudflareSyncTimer = config.systemd.timers.cloudflare-tunnel-sync;
+  cloudflareSyncArgs = lib.splitString " " cloudflareSync.serviceConfig.ExecStart;
+  cloudflareTunnelConfig = builtins.elemAt cloudflareSyncArgs 6;
+  cloudflareDnsRecords = builtins.elemAt cloudflareSyncArgs 7;
   attic = config.services.atticd;
   bind = config.services.bind;
   grafana = config.services.grafana;
@@ -48,6 +51,7 @@ let
   vyprvpn = deepthought.services.openvpn.servers.vyprvpn-miami;
   vyprvpnProfile = builtins.readFile ../systems/deepthought/openvpn/vyprvpn-miami.ovpn;
   dnsUpdate = config.systemd.services.opnsense-dns-sync;
+  opnsenseDnsRecords = lib.last (lib.splitString " " dnsUpdate.serviceConfig.ExecStart);
   tandoor = config.services.tandoor-recipes;
   tandoorService = config.systemd.services.tandoor-recipes;
   tandoorNginx = config.services.nginx.virtualHosts."recipes.4amlunch.net";
@@ -118,10 +122,29 @@ assert config.services.jackett.dataDir == "/var/lib/jackett";
 assert jellyfin.enable;
 assert jellyfin.forceEncodingConfig;
 assert !jellyfin.openFirewall;
+assert jellyfin.dataDir == "/var/lib/jellyfin";
 assert jellyfin.hardwareAcceleration.enable;
 assert jellyfin.hardwareAcceleration.device == "/dev/dri/renderD128";
-assert jellyfin.hardwareAcceleration.type == "qsv";
+assert jellyfin.hardwareAcceleration.type == "vaapi";
 assert jellyfin.transcoding.enableHardwareEncoding;
+assert
+  jellyfin.transcoding.hardwareDecodingCodecs == {
+    av1 = false;
+    h264 = true;
+    hevc = true;
+    hevc10bit = true;
+    hevcRExt10bit = false;
+    hevcRExt12bit = false;
+    mpeg2 = true;
+    vc1 = true;
+    vp8 = true;
+    vp9 = true;
+  };
+assert
+  jellyfin.transcoding.hardwareEncodingCodecs == {
+    av1 = false;
+    hevc = true;
+  };
 assert lib.elem "render" config.users.users.jellyfin.extraGroups;
 assert lib.elem "video" config.users.users.jellyfin.extraGroups;
 assert lib.elem pkgs.intel-compute-runtime-legacy1 config.hardware.graphics.extraPackages;
@@ -547,6 +570,12 @@ assert
   (builtins.head config.swapDevices).device
   == "/dev/disk/by-partuuid/1ad95369-76dd-45cb-bf83-e84637ff25de";
 assert (builtins.head config.swapDevices).randomEncryption.enable;
-pkgs.runCommand "bob-policy-test" { } ''
+pkgs.runCommand "bob-policy-test" { nativeBuildInputs = [ pkgs.jq ]; } ''
+  jq -e 'any(.[]; .name == "jellyfin" and .type == "A" and .value == "10.42.0.2")' \
+    ${opnsenseDnsRecords} >/dev/null
+  jq -e 'all(.ingress[]; .hostname? != "jellyfin.4amlunch.net")' \
+    ${cloudflareTunnelConfig} >/dev/null
+  jq -e 'all(.[]; .name != "jellyfin.4amlunch.net")' \
+    ${cloudflareDnsRecords} >/dev/null
   touch "$out"
 ''

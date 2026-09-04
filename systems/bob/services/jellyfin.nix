@@ -13,7 +13,7 @@
     hardwareAcceleration = {
       enable = true;
       device = "/dev/dri/renderD128";
-      type = "qsv";
+      type = "vaapi";
     };
     transcoding = {
       enableHardwareEncoding = true;
