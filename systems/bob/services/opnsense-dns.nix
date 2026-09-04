@@ -18,6 +18,7 @@ let
     "gigglesomething"
     "grafana"
     "jackett"
+    "jellyfin"
     "minecraft"
     "paperless"
     "pwppp"

@@ -96,6 +96,16 @@ in
       "jackett.4amlunch.net" = tls // {
         locations."/".proxyPass = "http://127.0.0.1:9117";
       };
+      "jellyfin.4amlunch.net" = tls // {
+        extraConfig = hsts + ''
+          access_log off;
+          proxy_buffering off;
+        '';
+        locations."/" = {
+          proxyPass = "http://127.0.0.1:8096";
+          proxyWebsockets = true;
+        };
+      };
       "paperless.4amlunch.net" = tls // {
         extraConfig = hsts + ''
           proxy_cookie_flags ~ secure;

@@ -34,6 +34,9 @@ let
   svcRouter = config.systemd.services.svc-router;
   cloudflareSync = config.systemd.services.cloudflare-tunnel-sync;
   cloudflareSyncTimer = config.systemd.timers.cloudflare-tunnel-sync;
+  cloudflareSyncArgs = lib.splitString " " cloudflareSync.serviceConfig.ExecStart;
+  cloudflareTunnelConfig = builtins.elemAt cloudflareSyncArgs 6;
+  cloudflareDnsRecords = builtins.elemAt cloudflareSyncArgs 7;
   attic = config.services.atticd;
   bind = config.services.bind;
   grafana = config.services.grafana;
@@ -48,9 +51,12 @@ let
   vyprvpn = deepthought.services.openvpn.servers.vyprvpn-miami;
   vyprvpnProfile = builtins.readFile ../systems/deepthought/openvpn/vyprvpn-miami.ovpn;
   dnsUpdate = config.systemd.services.opnsense-dns-sync;
+  opnsenseDnsRecords = lib.last (lib.splitString " " dnsUpdate.serviceConfig.ExecStart);
   tandoor = config.services.tandoor-recipes;
   tandoorService = config.systemd.services.tandoor-recipes;
   tandoorNginx = config.services.nginx.virtualHosts."recipes.4amlunch.net";
+  jellyfin = config.services.jellyfin;
+  jellyfinNginx = config.services.nginx.virtualHosts."jellyfin.4amlunch.net";
 in
 assert config.services.tailscale.enable;
 assert config.services.zerotierone.enable;
@@ -113,6 +119,43 @@ assert !(config.systemd.services ? compose-main);
 assert !(config.systemd.services ? compose-unifi);
 assert config.services.jackett.enable;
 assert config.services.jackett.dataDir == "/var/lib/jackett";
+assert jellyfin.enable;
+assert jellyfin.forceEncodingConfig;
+assert !jellyfin.openFirewall;
+assert jellyfin.dataDir == "/var/lib/jellyfin";
+assert
+  config.systemd.services.jellyfin.environment.JELLYFIN_PublishedServerUrl
+  == "https://jellyfin.4amlunch.net";
+assert jellyfin.hardwareAcceleration.enable;
+assert jellyfin.hardwareAcceleration.device == "/dev/dri/renderD128";
+assert jellyfin.hardwareAcceleration.type == "vaapi";
+assert jellyfin.transcoding.enableHardwareEncoding;
+assert
+  jellyfin.transcoding.hardwareDecodingCodecs == {
+    av1 = false;
+    h264 = true;
+    hevc = true;
+    hevc10bit = true;
+    hevcRExt10bit = false;
+    hevcRExt12bit = false;
+    mpeg2 = true;
+    vc1 = true;
+    vp8 = true;
+    vp9 = true;
+  };
+assert
+  jellyfin.transcoding.hardwareEncodingCodecs == {
+    av1 = false;
+    hevc = true;
+  };
+assert lib.elem "render" config.users.users.jellyfin.extraGroups;
+assert lib.elem "video" config.users.users.jellyfin.extraGroups;
+assert lib.elem pkgs.intel-compute-runtime-legacy1 config.hardware.graphics.extraPackages;
+assert lib.elem pkgs.intel-media-driver config.hardware.graphics.extraPackages;
+assert jellyfinNginx.locations."/".proxyPass == "http://127.0.0.1:8096";
+assert jellyfinNginx.locations."/".proxyWebsockets;
+assert lib.hasInfix "access_log off;" jellyfinNginx.extraConfig;
+assert lib.hasInfix "proxy_buffering off;" jellyfinNginx.extraConfig;
 assert config.services.paperless.enable;
 assert config.services.paperless.dataDir == "/var/lib/paperless/data";
 assert config.services.paperless.mediaDir == "/var/lib/paperless/media";
@@ -203,6 +246,7 @@ assert
     53
     1900
     5353
+    7359
     9993
     32410
     32411
@@ -530,6 +574,12 @@ assert
   (builtins.head config.swapDevices).device
   == "/dev/disk/by-partuuid/1ad95369-76dd-45cb-bf83-e84637ff25de";
 assert (builtins.head config.swapDevices).randomEncryption.enable;
-pkgs.runCommand "bob-policy-test" { } ''
+pkgs.runCommand "bob-policy-test" { nativeBuildInputs = [ pkgs.jq ]; } ''
+  jq -e 'any(.[]; .name == "jellyfin" and .type == "A" and .value == "10.42.0.2")' \
+    ${opnsenseDnsRecords} >/dev/null
+  jq -e 'all(.ingress[]; .hostname? != "jellyfin.4amlunch.net")' \
+    ${cloudflareTunnelConfig} >/dev/null
+  jq -e 'all(.[]; .name != "jellyfin.4amlunch.net")' \
+    ${cloudflareDnsRecords} >/dev/null
   touch "$out"
 ''

@@ -4,6 +4,7 @@
     ./avahi.nix
     ./cloudflared.nix
     ./jackett.nix
+    ./jellyfin.nix
     ./media.nix
     ./minecraft.nix
     ./monitoring.nix
