@@ -104,6 +104,7 @@
                     --set RUST_MIN_STACK "16777216" \
                     --set SSL_CERT_FILE "${prev.cacert}/etc/ssl/certs/ca-bundle.crt" \
                     --set NIX_SSL_CERT_FILE "${prev.cacert}/etc/ssl/certs/ca-bundle.crt" \
+                    --prefix PATH : ${prev.lib.makeBinPath [ prev.bubblewrap ]} \
                     --add-flags "--inh-caps=-all" \
                     --add-flags "--ambient-caps=-all" \
                     --add-flags "$out/bin/.codex-setpriv-target"
