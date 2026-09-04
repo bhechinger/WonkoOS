@@ -58,10 +58,12 @@ use a shared cache-scoped Attic token. The hostname is managed only in
 OPNsense and is deliberately absent from public DNS and Cloudflare Tunnel.
 
 Jellyfin is available at `https://jellyfin.4amlunch.net` on the private
-networks. Complete its first-run wizard there and add `/nfs/Plex` as the media
-library. Then set Dashboard > Networking > Known Proxies to `127.0.0.1`. Intel
-VA-API handles supported transcoding through `/dev/dri/renderD128`; Jellyfin
-state is included in the hourly `/var` backup.
+networks. Clients on `10.42.0.0/24` can discover it automatically; clients on
+other networks must enter that URL manually. Complete its first-run wizard
+there and add `/nfs/Plex` as the media library. Then set Dashboard > Networking
+> Known Proxies to `127.0.0.1`. Intel VA-API handles supported transcoding
+through `/dev/dri/renderD128`; Jellyfin state is included in the hourly `/var`
+backup.
 
 The Packwiz source uses Modrinth for Create: Oxidized and Create: Design n'
 Decor so Bob can fetch them reproducibly. The generated CurseForge client ZIP

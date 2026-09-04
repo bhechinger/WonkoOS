@@ -123,6 +123,9 @@ assert jellyfin.enable;
 assert jellyfin.forceEncodingConfig;
 assert !jellyfin.openFirewall;
 assert jellyfin.dataDir == "/var/lib/jellyfin";
+assert
+  config.systemd.services.jellyfin.environment.JELLYFIN_PublishedServerUrl
+  == "https://jellyfin.4amlunch.net";
 assert jellyfin.hardwareAcceleration.enable;
 assert jellyfin.hardwareAcceleration.device == "/dev/dri/renderD128";
 assert jellyfin.hardwareAcceleration.type == "vaapi";
@@ -243,6 +246,7 @@ assert
     53
     1900
     5353
+    7359
     9993
     32410
     32411

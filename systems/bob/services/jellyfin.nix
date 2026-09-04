@@ -30,6 +30,8 @@
     };
   };
 
+  systemd.services.jellyfin.environment.JELLYFIN_PublishedServerUrl = "https://jellyfin.4amlunch.net";
+
   users.users.jellyfin.extraGroups = [
     "render"
     "video"
