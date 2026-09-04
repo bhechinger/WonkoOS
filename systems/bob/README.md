@@ -235,6 +235,7 @@ findmnt /nfs/Restic /nfs/NixCache /nfs/Plex /nfs/Torrents
 ss -ltnup
 curl --fail https://jellyfin.4amlunch.net/health
 sudo -u jellyfin test -r /dev/dri/renderD128
+sudo -u jellyfin test -w /dev/dri/renderD128
 # After forcing a lower-bitrate playback:
 sudo grep -l -- '-hwaccel vaapi' /var/lib/jellyfin/log/FFmpeg.Transcode-*.txt
 ```
