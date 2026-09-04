@@ -17,6 +17,7 @@ runtime model.
 | Sonarr | `/var/lib/sonarr` |
 | rTorrent and ruTorrent | `/var/lib/{rtorrent,rutorrent}` and `/nfs/Torrents` |
 | Plex | `/var/lib/plexmediaserver` and `/nfs/Plex` |
+| Jellyfin | `/var/lib/jellyfin` and `/nfs/Plex` |
 | Attic Nix cache | `/var/lib/atticd` and Basket at `/nfs/NixCache` |
 | pwppp Minecraft server | `/var/lib/minecraft/pwppp` |
 | Minecraft routers and Playit | Stateless; configuration is in this repository |
@@ -44,17 +45,23 @@ Bob has an internal network at `10.42.0.2` and a management network at
 TCP `8080` and UDP `1900`, `3478`, `5514`, and `10001`. Administration and all
 other application traffic use internal, Tailscale, or ZeroTier.
 
-Nginx serves Bob, Paperless, Tandoor, Jackett, Sonarr, and ruTorrent with the
-wildcard ACME certificate. It also serves the Minecraft server list and current
-pwppp client pack at `https://minecraft.4amlunch.net`. Unknown HTTP hosts
-receive `444` and unknown TLS handshakes are rejected. The rTorrent XML-RPC
-listener is only reachable through its Unix socket and the loopback nginx
-endpoint.
+Nginx serves Bob, Paperless, Tandoor, Jackett, Jellyfin, Sonarr, and ruTorrent
+with the wildcard ACME certificate. It also serves the Minecraft server list
+and current pwppp client pack at `https://minecraft.4amlunch.net`. Unknown HTTP
+hosts receive `444` and unknown TLS handshakes are rejected. The rTorrent
+XML-RPC listener is only reachable through its Unix socket and the loopback
+nginx endpoint.
 
 Attic listens only on loopback and Nginx exposes it internally at
 `https://cache.4amlunch.net`. Pulls are public on the trusted networks; pushes
 use a shared cache-scoped Attic token. The hostname is managed only in
 OPNsense and is deliberately absent from public DNS and Cloudflare Tunnel.
+
+Jellyfin is available at `https://jellyfin.4amlunch.net` on the private
+networks. Complete its first-run wizard there and add `/nfs/Plex` as the media
+library. Then set Dashboard > Networking > Known Proxies to `127.0.0.1`. Intel
+Quick Sync handles supported transcoding through `/dev/dri/renderD128`;
+Jellyfin state is included in the hourly `/var` backup.
 
 The Packwiz source uses Modrinth for Create: Oxidized and Create: Design n'
 Decor so Bob can fetch them reproducibly. The generated CurseForge client ZIP
@@ -222,7 +229,7 @@ After deploying Bob, verify the native services and their listeners:
 systemctl --failed
 systemctl status nginx postgresql paperless-web paperless-task-queue \
   tandoor-recipes postgresqlBackup-tandoor_recipes \
-  protonmail-bridge unifi jackett sonarr rtorrent minecraft-server-pwppp \
+  protonmail-bridge unifi jackett jellyfin sonarr rtorrent minecraft-server-pwppp \
   mc-router svc-router playit atticd
 findmnt /nfs/Restic /nfs/NixCache /nfs/Plex /nfs/Torrents
 ss -ltnup
