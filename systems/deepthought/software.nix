@@ -1,5 +1,6 @@
 {
   pkgs,
+  unstable-pkgs,
   ...
 }:
 
@@ -78,7 +79,7 @@
     steam = {
       enable = true;
       protontricks.enable = true;
-      extraCompatPackages = with pkgs; [ proton-ge-bin ];
+      extraCompatPackages = [ unstable-pkgs.proton-ge-bin ];
     };
 
     nix-ld = {
