@@ -30,9 +30,13 @@
     pcscd.enable = true;
 
     udev = {
+      packages = [
+        (pkgs.writeTextDir "etc/udev/rules.d/72-dualsense-touchpad.rules" ''
+          SUBSYSTEM=="input", KERNEL=="event*", ATTRS{id/vendor}=="054c", ATTRS{id/product}=="0ce6", ENV{ID_INPUT_TOUCHPAD}=="1", TAG+="uaccess", ENV{LIBINPUT_IGNORE_DEVICE}="1"
+        '')
+      ];
       extraRules = ''
         SUBSYSTEM=="usbmon", GROUP="wireshark", MODE="0640"
-        SUBSYSTEM=="input", KERNEL=="event*", ATTRS{id/vendor}=="054c", ATTRS{id/product}=="0ce6", ENV{ID_INPUT_TOUCHPAD}=="1", ENV{LIBINPUT_IGNORE_DEVICE}="1"
       '';
     };
     avahi = {
