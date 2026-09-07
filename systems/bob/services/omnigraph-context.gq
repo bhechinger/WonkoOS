@@ -1,16 +1,22 @@
-query recent_context()
+query recent_context($project: String)
     @description("Recent durable agent context")
 {
-    match { $c: Learning }
+    match {
+        $c: Learning
+        $c.slug starts_with $project
+    }
     return { $c.slug, $c.title, $c.body, $c.learningKind, $c.createdAt, $c.createdBy }
     order { $c.createdAt desc }
     limit 50
 }
 
-query context_lookup($slug: String)
+query context_lookup($project: String, $slug: String)
     @description("Fetch one durable agent context record")
 {
-    match { $c: Learning { slug: $slug } }
+    match {
+        $c: Learning { slug: $slug }
+        $c.slug starts_with $project
+    }
     return { $c.slug, $c.title, $c.body, $c.learningKind, $c.createdAt, $c.createdBy }
 }
 

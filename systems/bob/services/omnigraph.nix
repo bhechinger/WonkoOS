@@ -7,6 +7,13 @@
 
 let
   omnigraph = pkgs.callPackage ../../../packages/omnigraph.nix { };
+  graphIds = [
+    "dev"
+    "gevulot"
+    "nix"
+    "projects"
+    "shared"
+  ];
   cookbooks = pkgs.fetchFromGitHub {
     owner = "ModernRelay";
     repo = "omnigraph-cookbooks";
@@ -21,25 +28,14 @@ let
       backend = "cluster";
       lock = true;
     };
-    graphs =
-      lib.genAttrs
-        [
-          "dev"
-          "shared"
-          "wonkoos"
-        ]
-        (_: {
-          schema = "schema.pg";
-          queries = "queries/";
-        });
+    graphs = lib.genAttrs graphIds (_: {
+      schema = "schema.pg";
+      queries = "queries/";
+    });
     policies = {
       graph = {
         file = "policies/graph.yaml";
-        applies_to = [
-          "dev"
-          "shared"
-          "wonkoos"
-        ];
+        applies_to = graphIds;
       };
       server = {
         file = "policies/server.yaml";

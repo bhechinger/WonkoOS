@@ -72,7 +72,6 @@ in
         url: https://omnigraph.4amlunch.net
     defaults:
       server: bob
-      default_graph: wonkoos
       output: table
   '';
 
