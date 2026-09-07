@@ -75,7 +75,7 @@ in
       output: table
   '';
 
-  home.file.".agents/skills/omnigraph-context/SKILL.md".source = ./skills/omnigraph-context/SKILL.md;
+  home.file.".agents/skills/omnigraph-context".source = ./skills/omnigraph-context;
 
   programs = {
     firefox = {
