@@ -68,10 +68,6 @@ in
     firefox = {
       enable = true;
       configPath = "${config.xdg.configHome}/mozilla/firefox";
-      policies.Preferences."media.setsinkid.enabled" = {
-        Value = false;
-        Status = "locked";
-      };
       policies.SearchEngines.Default = "DuckDuckGo";
     };
     chromium.enable = true;
