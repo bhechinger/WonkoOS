@@ -81,11 +81,15 @@ in
     skill_dir="$HOME/.agents/skills/omnigraph-context"
     skill_file="$skill_dir/SKILL.md"
     if [[ -v oldGenPath && ! -L "$skill_dir" && -L "$skill_file" ]]; then
-      old_skill="$oldGenPath/home-files/.agents/skills/omnigraph-context/SKILL.md"
-      if [[ -e "$old_skill" && "$(readlink -e "$skill_file")" == "$(readlink -e "$old_skill")" ]]; then
+      old_home_files="$(readlink -e "$oldGenPath/home-files")"
+      old_skill="$old_home_files/.agents/skills/omnigraph-context/SKILL.md"
+      if [[ "$(readlink "$skill_file")" == "$old_skill" ]]; then
         if [[ -n "$(find "$skill_dir" -mindepth 1 -maxdepth 1 ! -name SKILL.md -print -quit)" ]]; then
-          backup_dir="$skill_dir.before-directory-link"
-          [[ ! -e "$backup_dir" && ! -L "$backup_dir" ]]
+          if [[ -v DRY_RUN ]]; then
+            backup_dir="$skill_dir.before-directory-link.XXXXXXXX/omnigraph-context"
+          else
+            backup_dir="$(mktemp -d "$skill_dir.before-directory-link.XXXXXXXX")/omnigraph-context"
+          fi
           run mv "$skill_dir" "$backup_dir"
           run rm "$backup_dir/SKILL.md"
         else
