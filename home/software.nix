@@ -77,10 +77,22 @@ in
   '';
 
   home.file.".agents/skills/omnigraph-context".source = ./skills/omnigraph-context;
-  home.activation.migrateOmnigraphContextSkill = lib.hm.dag.entryBefore [ "linkGeneration" ] ''
-    if [[ -L "$HOME/.agents/skills/omnigraph-context/SKILL.md" && ! -L "$HOME/.agents/skills/omnigraph-context" ]]; then
-      rm "$HOME/.agents/skills/omnigraph-context/SKILL.md"
-      rmdir "$HOME/.agents/skills/omnigraph-context"
+  home.activation.migrateOmnigraphContextSkill = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
+    skill_dir="$HOME/.agents/skills/omnigraph-context"
+    skill_file="$skill_dir/SKILL.md"
+    if [[ -v oldGenPath && ! -L "$skill_dir" && -L "$skill_file" ]]; then
+      old_skill="$oldGenPath/home-files/.agents/skills/omnigraph-context/SKILL.md"
+      if [[ -e "$old_skill" && "$(readlink -e "$skill_file")" == "$(readlink -e "$old_skill")" ]]; then
+        if [[ -n "$(find "$skill_dir" -mindepth 1 -maxdepth 1 ! -name SKILL.md -print -quit)" ]]; then
+          backup_dir="$skill_dir.before-directory-link"
+          [[ ! -e "$backup_dir" && ! -L "$backup_dir" ]]
+          run mv "$skill_dir" "$backup_dir"
+          run rm "$backup_dir/SKILL.md"
+        else
+          run rm "$skill_file"
+          run rmdir "$skill_dir"
+        fi
+      fi
     fi
   '';
 
