@@ -39,6 +39,10 @@ let
         chmod u+w "$steamcompattool/files/lib/wine/x86_64-windows/lsteamclient.dll"
         ${pkgs.python3}/bin/python ${./patch-lsteamclient-ccenter.py} \
           "$steamcompattool/files/lib/wine/x86_64-windows/lsteamclient.dll"
+
+        rm "$steamcompattool/files/share/default_pfx/drive_c/windows/system32/lsteamclient.dll"
+        ln -s ../../../../../lib/wine/x86_64-windows/lsteamclient.dll \
+          "$steamcompattool/files/share/default_pfx/drive_c/windows/system32/lsteamclient.dll"
       '';
     }
   );

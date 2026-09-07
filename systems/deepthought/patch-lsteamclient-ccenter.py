@@ -6,6 +6,7 @@ from struct import pack
 
 EXPECTED_HASH = "9d68340151e999f68175feacb00b9fe5fab6fff062def58868c48b1d928f9c07"
 HOOK = 0x137D9
+# The executable .text raw mapping spans 0x1000..0x121000; this is zero padding.
 CAVE = 0x120400
 RETURN = 0x137A2
 GET_MODULE_HANDLE_W = 0x258260
@@ -45,6 +46,7 @@ user32_at = CAVE + 0x70
 get_async_key_state_at = user32_at + len(user32)
 
 cave = bytearray()
+# The stock aligned 0x38-byte frame supplies Win64 shadow space; RETURN sets EDX=1.
 cave += b"\x48\x8d\x0d" + rel32(CAVE + len(cave) + 7, user32_at)
 cave += b"\xff\x15" + rel32(CAVE + len(cave) + 6, GET_MODULE_HANDLE_W)
 cave += b"\x48\x85\xc0"
