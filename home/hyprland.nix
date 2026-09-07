@@ -456,7 +456,7 @@ in
 
     extraConfig = ''
       hl.device({
-        name = "dualsense-wireless-controller-touchpad",
+        name = "sony-interactive-entertainment-dualsense-wireless-controller-touchpad",
         enabled = false
       })
 
