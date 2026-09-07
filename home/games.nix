@@ -39,7 +39,6 @@
     paths.dualsense-touchpad-button = {
       Unit = {
         Description = "Watch for the DualSense touchpad button";
-        After = [ "hyprland-session.target" ];
         PartOf = [ "hyprland-session.target" ];
       };
       Path.PathExists = "/dev/input/dualsense-touchpad";
