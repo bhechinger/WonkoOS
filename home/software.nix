@@ -5,6 +5,7 @@
 }:
 
 let
+  omnigraph = pkgs.callPackage ../packages/omnigraph.nix { };
   qnap = pkgs.rustPlatform.buildRustPackage rec {
     pname = "qnap";
     version = "0.1.12";
@@ -62,7 +63,19 @@ in
     mesa-demos
     whatsie
     qnap
+    omnigraph
   ];
+
+  home.file.".omnigraph/config.yaml".text = ''
+    servers:
+      bob:
+        url: https://omnigraph.4amlunch.net
+    defaults:
+      server: bob
+      output: table
+  '';
+
+  home.file.".agents/skills/omnigraph-context/SKILL.md".source = ./skills/omnigraph-context/SKILL.md;
 
   programs = {
     firefox = {
