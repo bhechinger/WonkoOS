@@ -16,6 +16,7 @@ let
         chmod -R u+w "$steamcompattool/files"
         cp "$src/proton" "$steamcompattool/proton"
 
+        # Wine resolves these loader symlinks into $src and otherwise bypasses the patched DLL.
         for file_path in \
           files/bin/wine \
           files/bin/wineserver \

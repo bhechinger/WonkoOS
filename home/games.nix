@@ -37,15 +37,22 @@
 
   systemd.user = {
     paths.dualsense-touchpad-button = {
-      Unit.Description = "Watch for the DualSense touchpad button";
-      Path.PathExists = "/dev/input/by-id/usb-Sony_Interactive_Entertainment_DualSense_Wireless_Controller-if03-event-mouse";
-      Install.WantedBy = [ "default.target" ];
+      Unit = {
+        Description = "Watch for the DualSense touchpad button";
+        After = [ "hyprland-session.target" ];
+        PartOf = [ "hyprland-session.target" ];
+      };
+      Path.PathExists = "/dev/input/dualsense-touchpad";
+      Install.WantedBy = [ "hyprland-session.target" ];
     };
 
     services.dualsense-touchpad-button = {
-      Unit.Description = "Expose the DualSense touchpad button as F24";
+      Unit = {
+        Description = "Expose the DualSense touchpad button as F24";
+        PartOf = [ "hyprland-session.target" ];
+      };
       Service = {
-        ExecStart = "${lib.getExe pkgs.evsieve} --input /dev/input/by-id/usb-Sony_Interactive_Entertainment_DualSense_Wireless_Controller-if03-event-mouse persist=reopen --map btn:left key:f24 --output key:f24 name=dualsense-touchpad-button";
+        ExecStart = "${lib.getExe pkgs.evsieve} --input /dev/input/dualsense-touchpad persist=reopen --map btn:left key:f24 --output key:f24 name=dualsense-touchpad-button";
         Restart = "on-failure";
         RestartSec = 2;
       };
