@@ -219,20 +219,6 @@ let
     '';
   };
 
-  cleanupGoogleMeetPipewireClients = pkgs.writeShellApplication {
-    name = "cleanup-google-meet-pipewire-clients";
-    runtimeInputs = with pkgs; [
-      coreutils
-      jq
-      pipewire
-    ];
-    text = ''
-      pw-dump |
-        jq -r '.[] | select(.type == "PipeWire:Interface:Node" and ((.info.props["media.name"] // "") | test("^Meet( - [a-z]{3}-[a-z]{4}-[a-z]{3})?$"))) | .id' |
-        xargs --no-run-if-empty --max-args=1 pw-cli destroy 2>/dev/null
-    '';
-  };
-
   ffadoFailureMonitor = pkgs.writeShellApplication {
     name = "ffado-failure-monitor";
     runtimeInputs = with pkgs; [
@@ -412,7 +398,6 @@ in
     carla
     qpwgraph
     ardourPipewire
-    cleanupGoogleMeetPipewireClients
     audioPipewire.jack
     rnnoise-plugin.lv2
     lmms

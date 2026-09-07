@@ -36,7 +36,7 @@ in
   services = {
     pipewire = {
       enable = true;
-      package = if useSaffireFfado then ffadoPipewire else pkgs.pipewire;
+      package = if useSaffireFfado then ffadoPipewire else unstable-pkgs.pipewire;
       audio.enable = true;
       wireplumber.enable = true;
       alsa = {
