@@ -69,8 +69,10 @@ backup.
 OmniGraph serves an empty `dev` graph at
 `https://omnigraph.4amlunch.net/graphs/dev/`. The hostname is private: Nginx
 proxies it to the loopback-only service, internal DNS points it at Bob, and it
-is absent from Cloudflare Tunnel and public DNS. The CLI is installed on Bob;
-authenticate with the `act-admin` token from the SOPS secret. Use the HTTPS API
+is absent from Cloudflare Tunnel and public DNS. The CLI is installed on Bob
+and declaratively installed and configured for this endpoint on Deepthought by
+Home Manager. Store the `act-admin` token once with `omnigraph login bob`; it is
+kept separately from the declarative operator configuration. Use the HTTPS API
 for normal reads and writes, since direct storage writers must not run while
 the server is active.
 
