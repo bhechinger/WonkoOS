@@ -4,6 +4,44 @@
   ...
 }:
 
+let
+  proton-ge-ccenter = unstable-pkgs.proton-ge-bin.overrideAttrs (
+    oldAttrs:
+    assert oldAttrs.version == "GE-Proton11-5";
+    {
+      steamDisplayName = "GE-Proton11-5-CCenter";
+      postInstall = (oldAttrs.postInstall or "") + ''
+        rm "$steamcompattool/files" "$steamcompattool/proton"
+        cp -rs "$src/files" "$steamcompattool/files"
+        chmod -R u+w "$steamcompattool/files"
+        cp "$src/proton" "$steamcompattool/proton"
+
+        for file_path in \
+          files/bin/wine \
+          files/bin/wineserver \
+          files/lib/wine/i386-unix/ntdll.so \
+          files/lib/wine/i386-unix/wine \
+          files/lib/wine/i386-unix/wine-preloader \
+          files/lib/wine/i386-windows/ntdll.dll \
+          files/lib/wine/x86_64-unix/lsteamclient.so \
+          files/lib/wine/x86_64-unix/ntdll.so \
+          files/lib/wine/x86_64-unix/wine \
+          files/lib/wine/x86_64-unix/wine-preloader \
+          files/lib/wine/x86_64-unix/wine64 \
+          files/lib/wine/x86_64-unix/wine64-preloader \
+          files/lib/wine/x86_64-windows/lsteamclient.dll
+        do
+          rm "$steamcompattool/$file_path"
+          cp "$src/$file_path" "$steamcompattool/$file_path"
+        done
+
+        chmod u+w "$steamcompattool/files/lib/wine/x86_64-windows/lsteamclient.dll"
+        ${pkgs.python3}/bin/python ${./patch-lsteamclient-ccenter.py} \
+          "$steamcompattool/files/lib/wine/x86_64-windows/lsteamclient.dll"
+      '';
+    }
+  );
+in
 {
 
   environment = {
@@ -79,7 +117,7 @@
     steam = {
       enable = true;
       protontricks.enable = true;
-      extraCompatPackages = [ unstable-pkgs.proton-ge-bin ];
+      extraCompatPackages = [ proton-ge-ccenter ];
     };
 
     nix-ld = {
