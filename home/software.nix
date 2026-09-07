@@ -1,6 +1,7 @@
 {
   pkgs,
   config,
+  lib,
   ...
 }:
 
@@ -76,6 +77,12 @@ in
   '';
 
   home.file.".agents/skills/omnigraph-context".source = ./skills/omnigraph-context;
+  home.activation.migrateOmnigraphContextSkill = lib.hm.dag.entryBefore [ "linkGeneration" ] ''
+    if [[ -L "$HOME/.agents/skills/omnigraph-context/SKILL.md" && ! -L "$HOME/.agents/skills/omnigraph-context" ]]; then
+      rm "$HOME/.agents/skills/omnigraph-context/SKILL.md"
+      rmdir "$HOME/.agents/skills/omnigraph-context"
+    fi
+  '';
 
   programs = {
     firefox = {
