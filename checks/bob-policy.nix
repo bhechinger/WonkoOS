@@ -55,6 +55,8 @@ let
   tandoor = config.services.tandoor-recipes;
   tandoorService = config.systemd.services.tandoor-recipes;
   tandoorNginx = config.services.nginx.virtualHosts."recipes.4amlunch.net";
+  omnigraphService = config.systemd.services.omnigraph;
+  omnigraphNginx = config.services.nginx.virtualHosts."omnigraph.4amlunch.net";
   jellyfin = config.services.jellyfin;
   jellyfinNginx = config.services.nginx.virtualHosts."jellyfin.4amlunch.net";
 in
@@ -188,6 +190,20 @@ assert lib.hasInfix "proxy_set_header X-Forwarded-For $remote_addr;"
 assert lib.hasInfix "deny all;" tandoorNginx.locations."^~ /setup/".extraConfig;
 assert tandoorNginx.locations."/media/".alias == "/var/lib/tandoor-recipes/media/";
 assert config.services.postgresqlBackup.databases == [ "tandoor_recipes" ];
+assert config.systemd.services ? omnigraph;
+assert omnigraphService.serviceConfig.DynamicUser;
+assert omnigraphService.serviceConfig.IPAddressDeny == "any";
+assert omnigraphService.serviceConfig.ProtectSystem == "strict";
+assert omnigraphService.serviceConfig.StateDirectory == "omnigraph";
+assert lib.hasInfix "cluster apply" omnigraphService.preStart;
+assert lib.hasInfix "--bind 127.0.0.1:18085" omnigraphService.serviceConfig.ExecStart;
+assert lib.hasInfix "--require-all-graphs" omnigraphService.serviceConfig.ExecStart;
+assert omnigraphService.environment.OMNIGRAPH_SERVER_BEARER_TOKENS_FILE == "%d/tokens.json";
+assert lib.any (lib.hasPrefix "tokens.json:") omnigraphService.serviceConfig.LoadCredential;
+assert config.sops.secrets.omnigraph-bearer-tokens.mode == "0400";
+assert omnigraphNginx.locations."/".proxyPass == "http://127.0.0.1:18085";
+assert lib.hasInfix "client_max_body_size 32M;" omnigraphNginx.extraConfig;
+assert !lib.elem 18085 internal.allowedTCPPorts;
 assert lib.hasInfix "/var/lib/paperless/consume " config.services.nfs.server.exports;
 assert lib.hasInfix "/var/lib/paperless/export " config.services.nfs.server.exports;
 assert config.services.nginx.virtualHosts."bob.4amlunch.net".root == "/var/www";
@@ -577,9 +593,15 @@ assert (builtins.head config.swapDevices).randomEncryption.enable;
 pkgs.runCommand "bob-policy-test" { nativeBuildInputs = [ pkgs.jq ]; } ''
   jq -e 'any(.[]; .name == "jellyfin" and .type == "A" and .value == "10.42.0.2")' \
     ${opnsenseDnsRecords} >/dev/null
+  jq -e 'any(.[]; .name == "omnigraph" and .type == "A" and .value == "10.42.0.2")' \
+    ${opnsenseDnsRecords} >/dev/null
   jq -e 'all(.ingress[]; .hostname? != "jellyfin.4amlunch.net")' \
     ${cloudflareTunnelConfig} >/dev/null
+  jq -e 'all(.ingress[]; .hostname? != "omnigraph.4amlunch.net")' \
+    ${cloudflareTunnelConfig} >/dev/null
   jq -e 'all(.[]; .name != "jellyfin.4amlunch.net")' \
+    ${cloudflareDnsRecords} >/dev/null
+  jq -e 'all(.[]; .name != "omnigraph.4amlunch.net")' \
     ${cloudflareDnsRecords} >/dev/null
   touch "$out"
 ''

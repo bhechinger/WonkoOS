@@ -106,6 +106,16 @@ in
           proxyWebsockets = true;
         };
       };
+      "omnigraph.4amlunch.net" = tls // {
+        extraConfig = hsts + ''
+          client_max_body_size 32M;
+          proxy_buffering off;
+          proxy_request_buffering off;
+          proxy_read_timeout 3600s;
+          proxy_send_timeout 3600s;
+        '';
+        locations."/".proxyPass = "http://127.0.0.1:18085";
+      };
       "paperless.4amlunch.net" = tls // {
         extraConfig = hsts + ''
           proxy_cookie_flags ~ secure;
