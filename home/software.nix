@@ -72,9 +72,11 @@ in
         url: https://omnigraph.4amlunch.net
     defaults:
       server: bob
-      default_graph: dev
+      default_graph: wonkoos
       output: table
   '';
+
+  home.file.".agents/skills/omnigraph-context/SKILL.md".source = ./skills/omnigraph-context/SKILL.md;
 
   programs = {
     firefox = {

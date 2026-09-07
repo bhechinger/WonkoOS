@@ -66,12 +66,12 @@ there and add `/nfs/Plex` as the media library. Then set Dashboard > Networking
 through `/dev/dri/renderD128`; Jellyfin state is included in the hourly `/var`
 backup.
 
-OmniGraph serves an empty `dev` graph at
-`https://omnigraph.4amlunch.net/graphs/dev/`. The hostname is private: Nginx
-proxies it to the loopback-only service, internal DNS points it at Bob, and it
-is absent from Cloudflare Tunnel and public DNS. The CLI is installed on Bob
-and declaratively installed and configured for this endpoint on Deepthought by
-Home Manager. Store the `act-admin` token once with `omnigraph login bob`; it is
+OmniGraph serves the `wonkoos` project graph, the explicitly cross-project
+`shared` graph, and the retained legacy `dev` graph. The hostname is private:
+Nginx proxies it to the loopback-only service, internal DNS points it at Bob,
+and it is absent from Cloudflare Tunnel and public DNS. Home Manager installs
+the CLI, its operator configuration, and a user-scoped Codex skill on
+Deepthought. Store the `act-admin` token once with `omnigraph login bob`; it is
 kept separately from the declarative operator configuration. Use the HTTPS API
 for normal reads and writes, since direct storage writers must not run while
 the server is active.

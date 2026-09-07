@@ -1,0 +1,21 @@
+query recent_context()
+    @description("Recent durable agent context")
+{
+    match { $c: Learning }
+    return { $c.slug, $c.title, $c.body, $c.learningKind, $c.createdAt, $c.createdBy }
+    order { $c.createdAt desc }
+    limit 50
+}
+
+query context_lookup($slug: String)
+    @description("Fetch one durable agent context record")
+{
+    match { $c: Learning { slug: $slug } }
+    return { $c.slug, $c.title, $c.body, $c.learningKind, $c.createdAt, $c.createdBy }
+}
+
+query remember_context($slug: String, $title: String, $body: String, $actor: String, $at: Date)
+    @description("Append a durable agent context record")
+{
+    insert Learning { slug: $slug, title: $title, body: $body, learningKind: "hindsight", createdAt: $at, createdBy: $actor }
+}

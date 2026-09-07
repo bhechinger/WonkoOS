@@ -21,14 +21,25 @@ let
       backend = "cluster";
       lock = true;
     };
-    graphs.dev = {
-      schema = "schema.pg";
-      queries = "queries/";
-    };
+    graphs =
+      lib.genAttrs
+        [
+          "dev"
+          "shared"
+          "wonkoos"
+        ]
+        (_: {
+          schema = "schema.pg";
+          queries = "queries/";
+        });
     policies = {
       graph = {
         file = "policies/graph.yaml";
-        applies_to = [ "dev" ];
+        applies_to = [
+          "dev"
+          "shared"
+          "wonkoos"
+        ];
       };
       server = {
         file = "policies/server.yaml";
@@ -40,7 +51,8 @@ let
     mkdir -p "$out/policies"
     ln -s ${clusterConfig} "$out/cluster.yaml"
     ln -s ${cookbooks}/dev-graph/schema.pg "$out/schema.pg"
-    ln -s ${cookbooks}/dev-graph/queries "$out/queries"
+    cp -r --no-preserve=mode ${cookbooks}/dev-graph/queries "$out/queries"
+    ln -s ${./omnigraph-context.gq} "$out/queries/omnigraph-context.gq"
     ln -s ${cookbooks}/deploy/railway/config/policy.railway.yaml "$out/policies/graph.yaml"
     ln -s ${cookbooks}/deploy/railway/config/server.policy.railway.yaml "$out/policies/server.yaml"
     omnigraph cluster validate --config "$out"
