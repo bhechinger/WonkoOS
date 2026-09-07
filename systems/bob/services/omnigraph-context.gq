@@ -6,7 +6,7 @@ query recent_context($project: String)
         $c.slug starts_with $project
     }
     return { $c.slug, $c.title, $c.body, $c.learningKind, $c.createdAt, $c.createdBy }
-    order { $c.createdAt desc }
+    order { $c.createdAt desc, $c.slug desc }
     limit 50
 }
 
