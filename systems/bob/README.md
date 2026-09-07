@@ -10,6 +10,7 @@ runtime model.
 |---|---|
 | Paperless-ngx | `/var/lib/paperless` and `/var/lib/postgresql/paperless` |
 | Tandoor Recipes | `/var/lib/tandoor-recipes` and the `tandoor_recipes` database in `/var/lib/postgresql/paperless` |
+| OmniGraph | `/var/lib/omnigraph/cluster` |
 | Proton Mail Bridge | `/var/lib/protonmail-bridge` |
 | UniFi Network Application | `/var/lib/unifi` |
 | Nginx | `/var/www` and ACME state under `/var/lib/acme` |
@@ -23,10 +24,10 @@ runtime model.
 | Minecraft routers and Playit | Stateless; configuration is in this repository |
 | Murmur, Postfix, NFS, Tailscale, ZeroTier | Their standard NixOS state paths |
 
-Runtime credentials for Attic, Paperless, Tandoor, Cloudflare Tunnel,
-Minecraft RCON and backups, Playit, Murmur, and ruTorrent are encrypted with
-SOPS in [`secrets/`](./secrets/) and materialized under `/run/secrets`. Do not
-recreate plaintext copies under `/home` or `/var/lib`.
+Runtime credentials for Attic, Paperless, Tandoor, OmniGraph, Cloudflare
+Tunnel, Minecraft RCON and backups, Playit, Murmur, and ruTorrent are encrypted
+with SOPS in [`secrets/`](./secrets/) and materialized under `/run/secrets`. Do
+not recreate plaintext copies under `/home` or `/var/lib`.
 
 Paperless connects to the native Proton Mail Bridge on loopback port `1143`
 using STARTTLS. The Bridge certificate is trusted through
@@ -45,12 +46,12 @@ Bob has an internal network at `10.42.0.2` and a management network at
 TCP `8080` and UDP `1900`, `3478`, `5514`, and `10001`. Administration and all
 other application traffic use internal, Tailscale, or ZeroTier.
 
-Nginx serves Bob, Paperless, Tandoor, Jackett, Jellyfin, Sonarr, and ruTorrent
-with the wildcard ACME certificate. It also serves the Minecraft server list
-and current pwppp client pack at `https://minecraft.4amlunch.net`. Unknown HTTP
-hosts receive `444` and unknown TLS handshakes are rejected. The rTorrent
-XML-RPC listener is only reachable through its Unix socket and the loopback
-nginx endpoint.
+Nginx serves Bob, Paperless, Tandoor, OmniGraph, Jackett, Jellyfin, Sonarr, and
+ruTorrent with the wildcard ACME certificate. It also serves the Minecraft
+server list and current pwppp client pack at `https://minecraft.4amlunch.net`.
+Unknown HTTP hosts receive `444` and unknown TLS handshakes are rejected. The
+rTorrent XML-RPC listener is only reachable through its Unix socket and the
+loopback nginx endpoint.
 
 Attic listens only on loopback and Nginx exposes it internally at
 `https://cache.4amlunch.net`. Pulls are public on the trusted networks; pushes
@@ -64,6 +65,14 @@ there and add `/nfs/Plex` as the media library. Then set Dashboard > Networking
 > Known Proxies to `127.0.0.1`. Intel VA-API handles supported transcoding
 through `/dev/dri/renderD128`; Jellyfin state is included in the hourly `/var`
 backup.
+
+OmniGraph serves an empty `dev` graph at
+`https://omnigraph.4amlunch.net/graphs/dev/`. The hostname is private: Nginx
+proxies it to the loopback-only service, internal DNS points it at Bob, and it
+is absent from Cloudflare Tunnel and public DNS. The CLI is installed on Bob;
+authenticate with the `act-admin` token from the SOPS secret. Use the HTTPS API
+for normal reads and writes, since direct storage writers must not run while
+the server is active.
 
 The Packwiz source uses Modrinth for Create: Oxidized and Create: Design n'
 Decor so Bob can fetch them reproducibly. The generated CurseForge client ZIP
@@ -145,6 +154,10 @@ automounted over NFSv4 at `/nfs/Restic`, `/nfs/NixCache`, `/nfs/Plex`, and
 
 Tandoor media stays on the parent `/var` dataset at
 `/var/lib/tandoor-recipes/media`; no separate dataset is required.
+
+OmniGraph also stays on the parent `/var` dataset, so the existing hourly
+service snapshot includes its complete cluster root. Keep that root intact for
+restore and upgrade rollback; a single graph export is not a full backup.
 
 Jackett, Sonarr, rTorrent, and Plex keep separate service accounts. Basket's
 NFS host entries for Bob on both `Plex` and `Torrents` use **Squash all users**
@@ -232,10 +245,11 @@ systemctl --failed
 systemctl status nginx postgresql paperless-web paperless-task-queue \
   tandoor-recipes postgresqlBackup-tandoor_recipes \
   protonmail-bridge unifi jackett jellyfin sonarr rtorrent minecraft-server-pwppp \
-  mc-router svc-router playit atticd
+  mc-router svc-router playit atticd omnigraph
 findmnt /nfs/Restic /nfs/NixCache /nfs/Plex /nfs/Torrents
 ss -ltnup
 curl --fail https://jellyfin.4amlunch.net/health
+curl --fail https://omnigraph.4amlunch.net/healthz
 sudo -u jellyfin test -r /dev/dri/renderD128
 sudo -u jellyfin test -w /dev/dri/renderD128
 # After forcing a lower-bitrate playback:

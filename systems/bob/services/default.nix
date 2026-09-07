@@ -11,6 +11,7 @@
     ./murmur.nix
     ./nfs.nix
     ./nginx.nix
+    ./omnigraph.nix
     ./opnsense-dns.nix
     ./paperless.nix
     ./plex.nix

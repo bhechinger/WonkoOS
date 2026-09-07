@@ -20,6 +20,7 @@ let
     "jackett"
     "jellyfin"
     "minecraft"
+    "omnigraph"
     "paperless"
     "pwppp"
     "recipes"
