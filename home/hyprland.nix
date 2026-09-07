@@ -455,6 +455,11 @@ in
     };
 
     extraConfig = ''
+      hl.device({
+        name = "dualsense-wireless-controller-touchpad",
+        enabled = false
+      })
+
       for workspace = 1, 10 do
         local key = workspace % 10
         hl.bind(mainMod .. " + " .. key, hl.dsp.focus({ workspace = workspace }))
