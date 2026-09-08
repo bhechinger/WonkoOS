@@ -2,8 +2,8 @@
 
 Wintermute is the Apple Silicon macOS laptop. Nix is installed independently;
 the `homeConfigurations.wintermute` Home Manager profile manages Codex, its
-GitHub MCP helper, Node.js, OmniGraph, the OmniGraph context skill, and Codex's
-OmniGraph allow rule.
+GitHub MCP helper, Node.js, OmniGraph, Kitty and its terminfo, the OmniGraph
+context skill, and Codex's OmniGraph allow rule.
 
 Codex owns `~/.codex/config.toml` and `~/.codex/auth.json`. Home Manager must
 not replace them because they contain machine-specific project paths, plugin
@@ -34,5 +34,6 @@ Verify the setup with:
 codex --version
 codex login status
 gh auth status
+infocmp -x xterm-kitty
 omnigraph query recent_context --graph nix --params '{"project":"nix:wonkoos:"}' --json
 ```
