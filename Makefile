@@ -1,9 +1,15 @@
-.PHONY: hugepages-inputs refresh-pwppp refresh-gigglesomething refresh-packwiz boot switch build build-bob deploy-bob build-minecraft stage-minecraft deploy-minecraft rollback-minecraft
+.PHONY: hugepages-inputs refresh-pwppp refresh-gigglesomething refresh-packwiz boot switch build build-bob deploy-bob build-wintermute deploy-wintermute build-minecraft stage-minecraft deploy-minecraft rollback-minecraft
 .PHONY: build-pwppp build-gigglesomething stage-pwppp stage-gigglesomething deploy-pwppp deploy-gigglesomething rollback-pwppp rollback-gigglesomething
 
 HOST := $(shell hostname -s)
 BOB := wonko@bob.4amlunch.net
 BOB_SSH := ssh -F /home/wonko/.ssh/config -o ControlMaster=no -o ControlPath=none -T $(BOB)
+WINTERMUTE := wonko@wintermute.lan
+WINTERMUTE_SSHOPTS := -F /dev/null -o BatchMode=yes
+WINTERMUTE_SSH := ssh $(WINTERMUTE_SSHOPTS) -T $(WINTERMUTE)
+WINTERMUTE_STORE := ssh-ng://$(WINTERMUTE)
+WINTERMUTE_HOME := .\#homeConfigurations.wintermute.activationPackage
+WINTERMUTE_BUILD := NIX_SSHOPTS='$(WINTERMUTE_SSHOPTS)' nix build --store $(WINTERMUTE_STORE) $(WINTERMUTE_HOME) --no-link --print-out-paths
 MINECRAFT_PROFILE := /nix/var/nix/profiles/per-user/root/minecraft
 
 hugepages-inputs:
@@ -39,6 +45,14 @@ deploy-bob: build-bob
 	$(BOB_SSH) sudo --non-interactive "$$(readlink -f result)/bin/switch-to-configuration" switch
 	$(BOB_SSH) sudo --non-interactive nix build --no-link --profile /nix/var/nix/profiles/system "$$(readlink -f result)"
 	$(BOB_SSH) sudo --non-interactive "$$(readlink -f result)/bin/switch-to-configuration" boot
+
+build-wintermute:
+	@$(WINTERMUTE_BUILD)
+
+deploy-wintermute:
+	@set -eu; \
+	generation="$$( $(WINTERMUTE_BUILD) )"; \
+	$(WINTERMUTE_SSH) "$$generation/activate"
 
 build-pwppp build-gigglesomething: build-%: refresh-%
 	nix build .#nixosConfigurations.bob.config.system.build.minecraftDeployments.$* --out-link result-minecraft-$*
