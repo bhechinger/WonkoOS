@@ -180,29 +180,19 @@
         };
       };
 
-      homeConfigurations.wonko = inputs.home-manager.lib.homeManagerConfiguration {
+      homeConfigurations.deepthought = inputs.home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
         extraSpecialArgs = {
-          inherit hyprlandFix unstable-pkgs useSaffireFfado;
+          inherit
+            inputs
+            hyprlandFix
+            unstable-pkgs
+            useSaffireFfado
+            ;
           inherit (inputs) auto-splice pipewire-src spotify-midi-control;
         };
         modules = [
-          inputs.determinate.homeManagerModules.default
-          inputs.spotify-midi-control.homeManagerModules.default
-          ./home/home.nix
-          ./home/codex.nix
-          ./home/zsh.nix
-          ./home/atuin.nix
-          ./home/audio.nix
-          ./home/development.nix
-          ./home/greptile.nix
-          ./home/kubernetes.nix
-          ./home/software.nix
-          ./home/desktop.nix
-          ./home/nix_tools.nix
-          ./home/zenith.nix
-          ./home/games.nix
-          ./home/gamedev.nix
+          ./home/deepthought
         ];
       };
 
@@ -210,9 +200,7 @@
         pkgs = darwinPkgs;
         extraSpecialArgs.unstable-pkgs = darwinUnstablePkgs;
         modules = [
-          ./home/home.nix
-          ./home/codex.nix
-          { programs.home-manager.enable = true; }
+          ./home/wintermute
         ];
       };
 
@@ -225,12 +213,13 @@
       checks.${system} = {
         bob = self.nixosConfigurations.bob.config.system.build.toplevel;
         nixos = self.nixosConfigurations.deepthought.config.system.build.toplevel;
-        home = self.homeConfigurations.wonko.activationPackage;
+        home = self.homeConfigurations.deepthought.activationPackage;
 
         hyprland-config =
           let
             hyprland = self.nixosConfigurations.deepthought.config.programs.hyprland.package;
-            hyprlandConfig = self.homeConfigurations.wonko.config.xdg.configFile."hypr/hyprland.lua".source;
+            hyprlandConfig =
+              self.homeConfigurations.deepthought.config.xdg.configFile."hypr/hyprland.lua".source;
           in
           pkgs.runCommand "hyprland-config-check" { } ''
             XDG_RUNTIME_DIR="$TMPDIR" ${lib.getExe hyprland} --verify-config --config ${hyprlandConfig}

@@ -27,7 +27,7 @@ let
       exec github-mcp-server stdio
     '';
   };
-  omnigraph = pkgs.callPackage ../packages/omnigraph.nix { };
+  omnigraph = pkgs.callPackage ../../packages/omnigraph.nix { };
 in
 {
   home.packages = with pkgs; [

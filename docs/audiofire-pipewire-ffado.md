@@ -48,7 +48,7 @@ Observed before implementation:
   Saffire. `musnix.ffado.enable`, audio-group access, and realtime limits are
   already configured.
 - The repository had unrelated uncommitted changes before this work, including
-  edits in `home/audio.nix` and `home/wireplumber/saffire-clock.conf`; they must
+  edits in `home/deepthought/audio.nix` and `home/deepthought/wireplumber/saffire-clock.conf`; they must
   be preserved.
 
 An earlier isolated prototype copied a complete PipeWire configuration and
