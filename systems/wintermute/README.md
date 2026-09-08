@@ -49,15 +49,16 @@ they are supplied by the Nix closures that need them.
 The first deployment needs a guarded cutover because the existing shell files
 conflict with Home Manager links and PostgreSQL, skhd, and Yabai are still
 running from `/opt/homebrew`. Create a dated backup outside that prefix, save a
-logical PostgreSQL dump, and capture the current Podman inventory. Run every
-block below in the same zsh session; the first command makes later failures stop
-the cutover:
+logical PostgreSQL dump, preserve its four configuration files, and capture the
+current Podman inventory. Run every block below in the same zsh session; the
+first command makes later failures stop the cutover:
 
 ```sh
 set -euo pipefail
 umask 077
 migration_dir="$HOME/Backups/WonkoOS/wintermute-homebrew-$(date +%Y%m%d-%H%M%S)"
-mkdir -p "$migration_dir/config" "$migration_dir/launch-agents"
+mkdir -p "$migration_dir/config" "$migration_dir/launch-agents" \
+  "$migration_dir/postgresql-config"
 cp "$HOME/.zprofile" "$HOME/.gitconfig" "$migration_dir/config/"
 cp "$HOME/.gnupg/gpg-agent.conf" "$migration_dir/config/"
 cp "$HOME/.config/atuin/config.toml" "$migration_dir/config/"
@@ -68,6 +69,10 @@ cp "$HOME/Library/LaunchAgents/homebrew.mxcl.atuin.plist" \
   "$HOME/Library/LaunchAgents/com.koekeishiya.skhd.plist" \
   "$HOME/Library/LaunchAgents/com.koekeishiya.yabai.plist" \
   "$migration_dir/launch-agents/"
+for file in postgresql.conf postgresql.auto.conf pg_hba.conf pg_ident.conf; do
+  /usr/bin/install -m 0600 "/opt/homebrew/var/postgresql@14/$file" \
+    "$migration_dir/postgresql-config/$file"
+done
 capture_podman_inventory() {
   local podman_cli="$1" prefix="$2"
   "$podman_cli" machine list --format '{{.Name}}' | \
@@ -153,6 +158,9 @@ postgres_source_running=1
 "$postgres_bin/psql" -h "$postgres_socket" -p 55431 -d postgres -AtF '|' -c \
   "select rolname, rolsuper, rolinherit, rolcreaterole, rolcreatedb, rolcanlogin, rolreplication, rolbypassrls, rolconnlimit, coalesce(rolvaliduntil::text, ''), md5(coalesce(rolpassword, '')) from pg_authid where rolname not like 'pg_%' order by rolname;" \
   >"$migration_dir/postgresql-roles.txt"
+"$postgres_bin/psql" -h "$postgres_socket" -p 55431 -d postgres -AtF '|' -c \
+  "select name, setting from pg_settings where source = 'configuration file' order by name;" \
+  >"$migration_dir/postgresql-settings.txt"
 "$postgres_bin/psql" -h "$postgres_socket" -p 55431 -d atuin -AtF '|' -c \
   "select (select count(*) from public.users), (select count(*) from public.history), (select count(*) from public.records), (select count(*) from public.sessions), (select count(*) from public.store);" \
   >"$migration_dir/atuin-counts.txt"
@@ -207,6 +215,10 @@ test ! -e "$postgres_data" && test ! -e "$postgres_new"
 mkdir -p "$(dirname "$postgres_data")"
 "$nix_postgres/initdb" -D "$postgres_new" --encoding=UTF8 \
   --locale=en_US.UTF-8 --username=wonko
+for file in postgresql.conf postgresql.auto.conf pg_hba.conf pg_ident.conf; do
+  /usr/bin/install -m 0600 "$migration_dir/postgresql-config/$file" \
+    "$postgres_new/$file"
+done
 nix_postgres_socket="$(mktemp -d /tmp/wonko-pg-nix.XXXXXX)"
 nix_postgres_running=0
 stop_nix_postgres() {
@@ -233,6 +245,10 @@ nix_postgres_running=1
   "select rolname, rolsuper, rolinherit, rolcreaterole, rolcreatedb, rolcanlogin, rolreplication, rolbypassrls, rolconnlimit, coalesce(rolvaliduntil::text, ''), md5(coalesce(rolpassword, '')) from pg_authid where rolname not like 'pg_%' order by rolname;" \
   >"$migration_dir/postgresql-roles-restored.txt"
 "$nix_postgres/psql" -h "$nix_postgres_socket" -p 55432 \
+  -U wonko -d postgres -AtF '|' -c \
+  "select name, setting from pg_settings where source = 'configuration file' order by name;" \
+  >"$migration_dir/postgresql-settings-restored.txt"
+"$nix_postgres/psql" -h "$nix_postgres_socket" -p 55432 \
   -U wonko -d atuin -AtF '|' -c \
   "select (select count(*) from public.users), (select count(*) from public.history), (select count(*) from public.records), (select count(*) from public.sessions), (select count(*) from public.store);" \
   >"$migration_dir/atuin-counts-restored.txt"
@@ -240,6 +256,8 @@ nix_postgres_running=1
   "$migration_dir/postgresql-databases-restored.txt"
 /usr/bin/cmp "$migration_dir/postgresql-roles.txt" \
   "$migration_dir/postgresql-roles-restored.txt"
+/usr/bin/cmp "$migration_dir/postgresql-settings.txt" \
+  "$migration_dir/postgresql-settings-restored.txt"
 /usr/bin/cmp "$migration_dir/atuin-counts.txt" \
   "$migration_dir/atuin-counts-restored.txt"
 "$nix_postgres/pg_ctl" -D "$postgres_new" -m fast stop
