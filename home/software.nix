@@ -76,26 +76,35 @@ in
       output: table
   '';
 
-  home.file.".agents/skills/omnigraph-context".source = ./skills/omnigraph-context;
+  home.file.".agents/skills/omnigraph-context" = {
+    source = ./skills/omnigraph-context;
+    force = true;
+  };
   home.activation.migrateOmnigraphContextSkill = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
     skill_dir="$HOME/.agents/skills/omnigraph-context"
     skill_file="$skill_dir/SKILL.md"
-    if [[ -v oldGenPath && ! -L "$skill_dir" && -L "$skill_file" ]]; then
+    if [[ -e "$skill_dir" && ! -L "$skill_dir" ]]; then
+      if [[ ! -v oldGenPath || ! -L "$skill_file" ]]; then
+        _iError "Refusing to replace unmanaged path %s" "$skill_dir"
+        exit 1
+      fi
       old_home_files="$(readlink -e "$oldGenPath/home-files")"
       old_skill="$old_home_files/.agents/skills/omnigraph-context/SKILL.md"
-      if [[ "$(readlink "$skill_file")" == "$old_skill" ]]; then
-        if [[ -n "$(find "$skill_dir" -mindepth 1 -maxdepth 1 ! -name SKILL.md -print -quit)" ]]; then
-          if [[ -v DRY_RUN ]]; then
-            backup_dir="$skill_dir.before-directory-link.XXXXXXXX/omnigraph-context"
-          else
-            backup_dir="$(mktemp -d "$skill_dir.before-directory-link.XXXXXXXX")/omnigraph-context"
-          fi
-          run mv "$skill_dir" "$backup_dir"
-          run rm "$backup_dir/SKILL.md"
+      if [[ "$(readlink "$skill_file")" != "$old_skill" ]]; then
+        _iError "Refusing to replace unmanaged path %s" "$skill_file"
+        exit 1
+      fi
+      if [[ -n "$(find "$skill_dir" -mindepth 1 -maxdepth 1 ! -name SKILL.md -print -quit)" ]]; then
+        if [[ -v DRY_RUN ]]; then
+          backup_dir="$skill_dir.before-directory-link.XXXXXXXX/omnigraph-context"
         else
-          run rm "$skill_file"
-          run rmdir "$skill_dir"
+          backup_dir="$(mktemp -d "$skill_dir.before-directory-link.XXXXXXXX")/omnigraph-context"
         fi
+        run mv "$skill_dir" "$backup_dir"
+        run rm "$backup_dir/SKILL.md"
+      else
+        run rm "$skill_file"
+        run rmdir "$skill_dir"
       fi
     fi
   '';
