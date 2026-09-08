@@ -7,6 +7,13 @@ description: Maintain durable OmniGraph context for substantive work in any loca
 
 Use the globally configured `omnigraph` CLI. Its default server is `bob`.
 
+Run each `omnigraph` invocation as its own shell-tool call with
+`sandbox_permissions: "require_escalated"`, `prefix_rule: ["omnigraph"]`, and
+`login: false`. Never combine it with another command or a second `omnigraph`
+invocation: the global allow rule matches the executable prefix, not a compound
+shell command. If an invocation prompts for approval, stop and diagnose the
+rule match instead of asking the user to approve it.
+
 ## Select context
 
 Resolve the Git root, or the current directory outside Git, to a physical path.
