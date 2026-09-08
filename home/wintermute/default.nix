@@ -1,7 +1,10 @@
 { pkgs, ... }:
 
 {
-  imports = [ ../common ];
+  imports = [
+    ../common
+    ./software.nix
+  ];
 
   home.homeDirectory = "/Users/wonko";
   home.packages = [ pkgs.kitty ];
