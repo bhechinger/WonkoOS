@@ -76,6 +76,13 @@ in
       output: table
   '';
 
+  home.file.".codex/rules/default.rules" = {
+    force = true;
+    text = ''
+      prefix_rule(pattern = ["omnigraph"], decision = "allow")
+    '';
+  };
+
   home.file.".agents/skills/omnigraph-context" = {
     source = ./skills/omnigraph-context;
     force = true;
