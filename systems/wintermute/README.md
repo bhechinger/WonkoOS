@@ -61,6 +61,8 @@ mkdir -p "$migration_dir/config" "$migration_dir/launch-agents"
 cp "$HOME/.gitconfig" "$migration_dir/config/"
 cp "$HOME/.gnupg/gpg-agent.conf" "$migration_dir/config/"
 cp "$HOME/.config/atuin/config.toml" "$migration_dir/config/"
+cp "$HOME/.config/skhd/skhdrc" "$HOME/.config/yabai/yabairc" \
+  "$migration_dir/config/"
 cp "$HOME/Library/LaunchAgents/homebrew.mxcl.atuin.plist" \
   "$HOME/Library/LaunchAgents/homebrew.mxcl.postgresql@14.plist" \
   "$HOME/Library/LaunchAgents/com.koekeishiya.skhd.plist" \
@@ -81,6 +83,8 @@ dump from that quiescent snapshot:
 postgres_bin=/opt/homebrew/opt/postgresql@14/bin
 postgres_copy="$HOME/.local/share/postgresql/14"
 postgres_socket="$migration_dir/postgresql-socket"
+test "$("$postgres_bin/psql" -d postgres -Atqc \
+  "select current_setting('data_directory');")" = /opt/homebrew/var/postgresql@14
 test "$("$postgres_bin/psql" -d postgres -Atqc \
   "select count(*) from pg_stat_activity where pid <> pg_backend_pid() and backend_type = 'client backend';")" = 0
 launchctl bootout "gui/$(id -u)" "$HOME/Library/LaunchAgents/homebrew.mxcl.postgresql@14.plist"
@@ -109,14 +113,17 @@ trap - EXIT
   grep 'Database cluster state:.*shut down'
 
 for agent in homebrew.mxcl.atuin com.koekeishiya.skhd com.koekeishiya.yabai; do
-  launchctl bootout "gui/$(id -u)" "$HOME/Library/LaunchAgents/$agent.plist" 2>/dev/null || true
+  if launchctl print "gui/$(id -u)/$agent" >/dev/null 2>&1; then
+    launchctl bootout "gui/$(id -u)" "$HOME/Library/LaunchAgents/$agent.plist"
+  fi
+  ! launchctl print "gui/$(id -u)/$agent" >/dev/null 2>&1
 done
 mv "$HOME/.zprofile" "$HOME/.zshrc" "$HOME/.zshenv" "$migration_dir/config/"
 ```
 
-Deploy from Deepthought with `make deploy-wintermute`. Then replace the two
-remaining Homebrew paths in user-owned configuration without replacing the
-rest of either file:
+Deploy from Deepthought with `make deploy-wintermute`. Then replace the
+remaining obsolete paths in user-owned configuration without replacing the
+rest of those files:
 
 ```sh
 git config --global --unset-all credential.https://github.com.helper || true
@@ -127,6 +134,8 @@ git config --global --add credential.https://gist.github.com.helper ''
 git config --global --add credential.https://gist.github.com.helper '!gh auth git-credential'
 sed -i '' 's|^pinentry-program .*|pinentry-program /Users/wonko/.nix-profile/bin/pinentry-mac|' \
   "$HOME/.gnupg/gpg-agent.conf"
+sed -i '' 's|/Applications/kitty.app/Contents/MacOS/kitty|/Users/wonko/.nix-profile/bin/kitty|' \
+  "$HOME/.config/skhd/skhdrc"
 gpgconf --kill gpg-agent
 ```
 
@@ -157,10 +166,14 @@ clients stopped. Restart the existing Podman VM with the Nix CLI so the test
 cannot pass only because an old process is still alive:
 
 ```sh
-"$HOME/.nix-profile/bin/podman" machine stop || true
-"$HOME/.nix-profile/bin/podman" machine start
-"$HOME/.nix-profile/bin/podman" info
-"$HOME/.nix-profile/bin/podman" ps -a
+podman="$HOME/.nix-profile/bin/podman"
+if [ "$("$podman" machine inspect --format '{{.State}}')" = running ]; then
+  "$podman" machine stop
+fi
+test "$("$podman" machine inspect --format '{{.State}}')" = stopped
+"$podman" machine start
+"$podman" info
+"$podman" ps -a
 test ! -e /var/run/docker.sock && test ! -L /var/run/docker.sock
 ```
 
@@ -207,6 +220,11 @@ sudo rm -rf /opt/podman /usr/local/podman/helper/wonko
 sudo rmdir /usr/local/podman/helper /usr/local/podman 2>/dev/null || true
 sudo rm -f /etc/paths.d/podman-pkg /usr/local/etc/man.d/podman.man.conf
 sudo pkgutil --forget com.redhat.podman
+
+"$podman" machine stop
+"$podman" machine start
+"$podman" info
+"$podman" ps -a
 
 rm -rf "$HOME/.Trash/nix-managed-tool-cleanup-20260908/homebrew-kitty-cask" \
   "$HOME/.Trash/nix-managed-tool-cleanup-20260908/homebrew-kitty-bin-link" \
