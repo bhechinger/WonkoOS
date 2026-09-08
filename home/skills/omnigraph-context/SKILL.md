@@ -13,7 +13,7 @@ Resolve the Git root, or the current directory outside Git, to a physical path.
 Choose the graph and context prefix by the first matching rule:
 
 - `/home/wonko/projects/Gevulot/**`: graph `gevulot`, prefix `gevulot:`.
-- `/home/wonko/nix/WonkoOS/**`: graph `nix`, prefix `nix:wonkoos:`.
+- Git root `/home/wonko/nix/WonkoOS`: graph `nix`, prefix `nix:wonkoos:`.
 - `/home/wonko/nix/**`: graph `nix`, prefix `nix:`.
 - Everything else: graph `projects`, prefix `project:<key>:`, where `key` is
   the first 16 lowercase hex characters of the SHA-256 of the origin URL, or
