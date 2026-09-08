@@ -15,6 +15,8 @@ Treat the host named below as the operational owner of its services.
   `systems/bob/services/`; work on and deploy them only from `deepthought`.
 - `deepthought` is the workstation and build/deployment host. Use
   `systems/deepthought/`, `home/`, and the root `Makefile`.
+- `wintermute` is the Apple Silicon macOS laptop. Use
+  `systems/wintermute/README.md` and `homeConfigurations.wintermute`.
 - `basket` owns NAS storage and its HTTPS endpoint. Use
   `systems/basket/README.md` and `systems/basket/*.sh`; administer it over SSH.
 - Cloudflare and Playit are external control planes reconciled from

@@ -60,6 +60,8 @@
     { self, nixpkgs, ... }@inputs:
     let
       system = "x86_64-linux";
+      darwinSystem = "aarch64-darwin";
+      codexVersion = "0.153.0";
       useSaffireFfado = false;
       hyprlandFix = "d8504461f0e9f95a5df9a0cdc0723d0ca6332888";
       pkgs = import nixpkgs {
@@ -81,7 +83,7 @@
             });
             codex =
               let
-                version = "0.153.0";
+                version = codexVersion;
                 src = prev.fetchurl {
                   url = "https://github.com/openai/codex/releases/download/rust-v${version}/codex-package-x86_64-unknown-linux-musl.tar.gz";
                   hash = "sha256-J7DXp1OsGQw0ORhUGkIGe+MHzIijKxqf6vb5Nkig6eo=";
@@ -117,6 +119,35 @@
                   platforms = [ "x86_64-linux" ];
                 };
               };
+          })
+        ];
+      };
+      darwinPkgs = import nixpkgs {
+        system = darwinSystem;
+        config.allowUnfree = true;
+      };
+      darwinUnstablePkgs = import inputs.unstable-nixpkgs {
+        system = darwinSystem;
+        config.allowUnfree = true;
+        overlays = [
+          (_final: prev: {
+            codex = prev.stdenvNoCC.mkDerivation {
+              pname = "codex";
+              version = codexVersion;
+              src = prev.fetchurl {
+                url = "https://github.com/openai/codex/releases/download/rust-v${codexVersion}/codex-aarch64-apple-darwin.tar.gz";
+                hash = "sha256-jN7NC46+I/IOs3MBD9kelReXfoQLaJQe9qZGtAnLMuE=";
+              };
+              dontUnpack = true;
+              installPhase = ''
+                mkdir -p "$out/bin"
+                tar -xzf "$src"
+                install -m 0755 codex-aarch64-apple-darwin "$out/bin/codex"
+              '';
+              meta = prev.codex.meta // {
+                platforms = [ darwinSystem ];
+              };
+            };
           })
         ];
       };
@@ -159,6 +190,7 @@
           inputs.determinate.homeManagerModules.default
           inputs.spotify-midi-control.homeManagerModules.default
           ./home/home.nix
+          ./home/codex.nix
           ./home/zsh.nix
           ./home/atuin.nix
           ./home/audio.nix
@@ -171,6 +203,16 @@
           ./home/zenith.nix
           ./home/games.nix
           ./home/gamedev.nix
+        ];
+      };
+
+      homeConfigurations.wintermute = inputs.home-manager.lib.homeManagerConfiguration {
+        pkgs = darwinPkgs;
+        extraSpecialArgs.unstable-pkgs = darwinUnstablePkgs;
+        modules = [
+          ./home/home.nix
+          ./home/codex.nix
+          { programs.home-manager.enable = true; }
         ];
       };
 
@@ -248,5 +290,7 @@
           touch "$out"
         '';
       };
+
+      checks.${darwinSystem}.home = self.homeConfigurations.wintermute.activationPackage;
     };
 }
