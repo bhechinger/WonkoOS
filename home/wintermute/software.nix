@@ -128,6 +128,8 @@ in
           "${pkgs.postgresql_14}/bin/postgres"
           "-D"
           postgresDataDirectory
+          "-c"
+          "data_directory=${postgresDataDirectory}"
         ];
         RunAtLoad = true;
         StandardErrorPath = "${homeDirectory}/Library/Logs/postgresql-14.log";

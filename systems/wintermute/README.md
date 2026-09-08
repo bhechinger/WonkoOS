@@ -151,7 +151,7 @@ trap stop_postgres_source EXIT
 postgres_source_running=1
 "$postgres_bin/pg_ctl" -D "$postgres_source" \
   -l "$migration_dir/postgresql-source.log" \
-  -o "-k $postgres_socket -h '' -p 55431" start
+  -o "-c data_directory=$postgres_source -k $postgres_socket -h '' -p 55431" start
 "$postgres_bin/psql" -h "$postgres_socket" -p 55431 -d postgres -AtF '|' -c \
   "select datname, pg_get_userbyid(datdba), encoding, datcollate, datctype, datistemplate, datallowconn, datconnlimit from pg_database order by datname;" \
   >"$migration_dir/postgresql-databases.txt"
@@ -231,7 +231,10 @@ trap stop_nix_postgres EXIT
 nix_postgres_running=1
 "$nix_postgres/pg_ctl" -D "$postgres_new" \
   -l "$migration_dir/postgresql-restore.log" \
-  -o "-k $nix_postgres_socket -h '' -p 55432" start
+  -o "-c data_directory=$postgres_new -k $nix_postgres_socket -h '' -p 55432" start
+test "$("$nix_postgres/psql" -h "$nix_postgres_socket" -p 55432 \
+  -U wonko -d postgres -Atqc "select current_setting('data_directory');")" = \
+  "$postgres_new"
 /usr/bin/sed '/^CREATE ROLE wonko;$/d' \
   "$migration_dir/postgresql-14.sql" | \
   "$nix_postgres/psql" -h "$nix_postgres_socket" -p 55432 \
