@@ -55,6 +55,7 @@ in
     atuin = {
       enable = true;
       enableZshIntegration = true;
+      daemon.enable = true;
     };
 
     direnv = {
@@ -79,7 +80,10 @@ in
   };
 
   launchd.agents = {
-    skhd.config.EnvironmentVariables.PATH = servicePath;
+    skhd.config = {
+      EnvironmentVariables.PATH = servicePath;
+      Nice = -20;
+    };
 
     yabai = {
       enable = true;
