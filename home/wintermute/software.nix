@@ -55,7 +55,6 @@ in
     atuin = {
       enable = true;
       enableZshIntegration = true;
-      daemon.enable = true;
     };
 
     direnv = {
@@ -80,6 +79,22 @@ in
   };
 
   launchd.agents = {
+    atuin-daemon = {
+      enable = true;
+      config = {
+        KeepAlive = true;
+        ProcessType = "Background";
+        ProgramArguments = [
+          "${pkgs.atuin}/bin/atuin"
+          "daemon"
+          "start"
+        ];
+        RunAtLoad = true;
+        StandardErrorPath = "${homeDirectory}/Library/Logs/atuin.log";
+        StandardOutPath = "${homeDirectory}/Library/Logs/atuin.log";
+      };
+    };
+
     skhd.config = {
       EnvironmentVariables.PATH = servicePath;
       Nice = -20;

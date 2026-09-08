@@ -49,37 +49,64 @@ they are supplied by the Nix closures that need them.
 The first deployment needs a guarded cutover because the existing shell files
 conflict with Home Manager links and PostgreSQL, skhd, and Yabai are still
 running from `/opt/homebrew`. Create a dated backup outside that prefix, save a
-logical PostgreSQL dump, and capture the current Podman inventory:
+logical PostgreSQL dump, and capture the current Podman inventory. Run every
+block below in the same zsh session; the first command makes later failures stop
+the cutover:
 
 ```sh
+set -euo pipefail
+umask 077
 migration_dir="$HOME/Backups/WonkoOS/wintermute-homebrew-$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$migration_dir/config" "$migration_dir/launch-agents"
 cp "$HOME/.gitconfig" "$migration_dir/config/"
 cp "$HOME/.gnupg/gpg-agent.conf" "$migration_dir/config/"
+cp "$HOME/.config/atuin/config.toml" "$migration_dir/config/"
 cp "$HOME/Library/LaunchAgents/homebrew.mxcl.atuin.plist" \
   "$HOME/Library/LaunchAgents/homebrew.mxcl.postgresql@14.plist" \
   "$HOME/Library/LaunchAgents/com.koekeishiya.skhd.plist" \
   "$HOME/Library/LaunchAgents/com.koekeishiya.yabai.plist" \
   "$migration_dir/launch-agents/"
-/opt/homebrew/opt/postgresql@14/bin/pg_dumpall >"$migration_dir/postgresql-14.sql"
 /opt/podman/bin/podman machine list >"$migration_dir/podman-machines.txt"
 /opt/podman/bin/podman system connection list >"$migration_dir/podman-connections.txt"
 /opt/podman/bin/podman ps -a >"$migration_dir/podman-containers.txt"
 ```
 
-Confirm PostgreSQL has no other client sessions, unload the old agents, verify
-that PostgreSQL stopped cleanly, and copy its same-major cluster to the path
-used by the Nix launch agent:
+Stop every application that can use PostgreSQL and keep it stopped until the
+cutover is accepted. Confirm there are no client sessions, unload the old
+agent, verify that PostgreSQL stopped cleanly, and copy its same-major cluster.
+Start only the copy on a private socket to prove it works and create the logical
+dump from that quiescent snapshot:
 
 ```sh
-test "$(/opt/homebrew/opt/postgresql@14/bin/psql -d postgres -Atqc \
+postgres_bin=/opt/homebrew/opt/postgresql@14/bin
+postgres_copy="$HOME/.local/share/postgresql/14"
+postgres_socket="$migration_dir/postgresql-socket"
+test "$("$postgres_bin/psql" -d postgres -Atqc \
   "select count(*) from pg_stat_activity where pid <> pg_backend_pid() and backend_type = 'client backend';")" = 0
 launchctl bootout "gui/$(id -u)" "$HOME/Library/LaunchAgents/homebrew.mxcl.postgresql@14.plist"
-/opt/homebrew/opt/postgresql@14/bin/pg_controldata /opt/homebrew/var/postgresql@14 | \
+"$postgres_bin/pg_controldata" /opt/homebrew/var/postgresql@14 | \
   grep 'Database cluster state:.*shut down'
-test ! -e "$HOME/.local/share/postgresql/14"
+test ! -e "$postgres_copy"
 mkdir -p "$HOME/.local/share/postgresql"
-ditto /opt/homebrew/var/postgresql@14 "$HOME/.local/share/postgresql/14"
+ditto /opt/homebrew/var/postgresql@14 "$postgres_copy"
+mkdir -p "$postgres_socket"
+"$postgres_bin/pg_ctl" -D "$postgres_copy" \
+  -l "$migration_dir/postgresql-copy.log" \
+  -o "-k $postgres_socket -h '' -p 55432" start
+postgres_copy_running=1
+stop_postgres_copy() {
+  if [ "$postgres_copy_running" -eq 1 ]; then
+    "$postgres_bin/pg_ctl" -D "$postgres_copy" -m fast stop
+  fi
+}
+trap stop_postgres_copy EXIT
+"$postgres_bin/pg_dumpall" -h "$postgres_socket" -p 55432 \
+  >"$migration_dir/postgresql-14.sql"
+"$postgres_bin/pg_ctl" -D "$postgres_copy" -m fast stop
+postgres_copy_running=0
+trap - EXIT
+"$postgres_bin/pg_controldata" "$postgres_copy" | \
+  grep 'Database cluster state:.*shut down'
 
 for agent in homebrew.mxcl.atuin com.koekeishiya.skhd com.koekeishiya.yabai; do
   launchctl bootout "gui/$(id -u)" "$HOME/Library/LaunchAgents/$agent.plist" 2>/dev/null || true
@@ -125,11 +152,27 @@ launchctl kickstart -k "gui/$(id -u)/org.nix-community.home.skhd"
 If macOS requests it, authorize the Nix-profile Yabai and skhd executables in
 Privacy & Security > Accessibility before continuing.
 
-Before deleting anything, verify the Nix PostgreSQL cluster, Podman machine,
-Yabai/skhd, GPG pinentry, Google Cloud CLI, Signal, Podman Desktop, Kitty, and
-Stremio after a fresh login. If any check fails, restore the saved shell files,
-unload the Nix agents, and reload the saved launch agents; do not uninstall
-Homebrew.
+Before deleting anything, use only read-only PostgreSQL checks and keep its
+clients stopped. Restart the existing Podman VM with the Nix CLI so the test
+cannot pass only because an old process is still alive:
+
+```sh
+"$HOME/.nix-profile/bin/podman" machine stop || true
+"$HOME/.nix-profile/bin/podman" machine start
+"$HOME/.nix-profile/bin/podman" info
+"$HOME/.nix-profile/bin/podman" ps -a
+test ! -e /var/run/docker.sock && test ! -L /var/run/docker.sock
+```
+
+Also verify the Nix PostgreSQL cluster, Yabai/skhd, Atuin daemon, GPG pinentry,
+Google Cloud CLI, Signal, Podman Desktop, Kitty, and Stremio after a fresh
+login. The Nix Podman package does not provide the privileged Docker-compatible
+`/var/run/docker.sock`; stop here if anything requires that socket.
+
+If a check fails before PostgreSQL accepts writes, restore the saved shell
+files, unload the Nix agents, and reload the saved launch agents; do not
+uninstall Homebrew. If the Nix cluster has accepted a write, do not reload the
+old PostgreSQL agent: stop clients and reconcile or dump the Nix cluster first.
 
 Once the cutover passes, download and inspect Homebrew's official uninstaller,
 run its dry-run against the explicit Apple Silicon prefix, and then run it:
@@ -156,11 +199,13 @@ sudo rm -rf "/Applications/Podman Desktop.app" "/Applications/Signal.app"
 rm -rf "$HOME/Library/Caches/Homebrew" "$HOME/Library/Logs/Homebrew"
 sudo rm -f /etc/paths.d/homebrew
 
+sudo /usr/local/podman/helper/wonko/podman-mac-helper uninstall
 sudo launchctl bootout system /Library/LaunchDaemons/com.github.containers.podman.helper-wonko.plist 2>/dev/null || true
 sudo rm -f /Library/LaunchDaemons/com.github.containers.podman.helper-wonko.plist \
   /private/var/run/podman-helper-wonko.socket
 sudo rm -rf /opt/podman /usr/local/podman/helper/wonko
 sudo rmdir /usr/local/podman/helper /usr/local/podman 2>/dev/null || true
+sudo rm -f /etc/paths.d/podman-pkg /usr/local/etc/man.d/podman.man.conf
 sudo pkgutil --forget com.redhat.podman
 
 rm -rf "$HOME/.Trash/nix-managed-tool-cleanup-20260908/homebrew-kitty-cask" \
