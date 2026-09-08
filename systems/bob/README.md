@@ -39,6 +39,18 @@ UniFi is the native NixOS service. Import controller state from a UniFi `.unf`
 backup through the setup UI at `https://bob.4amlunch.net:8443`; do not copy an
 old MongoDB data directory into `/var/lib/unifi`.
 
+## Migration history
+
+Bob was migrated from Ubuntu and Docker Compose to this declarative NixOS
+configuration. The migration backup intentionally omitted the old Sonarr and
+rTorrent configuration and session state, so those histories and settings
+cannot be restored. Shows and downloaded payloads remain on Basket and were
+not lost. Old GeoIP databases are non-authoritative leftovers with no active
+consumer.
+
+The retired migration backup used `/nfs/Brian`; current backups use the Restic
+services and `/nfs/Restic` described below.
+
 ## Network policy
 
 Bob has an internal network at `10.42.0.2` and a management network at

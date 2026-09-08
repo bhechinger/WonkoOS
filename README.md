@@ -31,22 +31,14 @@ sudo nix run .#disko-install -- \
 Remove `--dry-run` only when both target drives are blank or disposable. Do not
 use disko's `destroy` mode for repair or reinstallation.
 
-## One-time native ZFS mount migration
+## Storage layout
 
-The disko layout uses NixOS mounts only for `/` and `/nix`. OpenZFS mounts
-`/var`, `/var/lib/docker`, and `/home` natively. Install the new boot generation
-first, then run these commands from a maintenance shell:
+The native-mount migration is complete. NixOS mounts `/` and `/nix` from ZFS
+datasets whose `mountpoint` property is `legacy`. OpenZFS mounts `/var`,
+`/var/lib/docker`, and `/home` natively. Do not repeat the migration commands
+retained in Git history.
 
-```sh
-make boot
-sudo zfs set -u mountpoint=legacy zpool/root
-sudo zfs set -u mountpoint=legacy zpool/nix
-sudo zfs set -u mountpoint=/var zpool/var
-sudo zfs set -u mountpoint=/var/lib/docker zpool/docker
-sudo reboot
-```
-
-Do not use `make switch` for this migration. After reboot, verify with:
+Verify the active layout with:
 
 ```sh
 for mountpoint in / /nix /var /var/lib/docker /home; do findmnt "$mountpoint"; done
@@ -54,32 +46,21 @@ zfs mount
 systemctl --failed
 ```
 
-To roll the dataset properties back before booting the previous generation:
-
-```sh
-sudo zfs set -u mountpoint=none zpool/root
-sudo zfs set -u mountpoint=none zpool/nix
-sudo zfs set -u mountpoint=none zpool/var
-sudo zfs set -u mountpoint=none zpool/docker
-```
-
-`tank/home` already has the native `/home` mountpoint and needs no migration.
-After local ZFS mounts are ready, `zfs-import-basket.service` imports the remote
-pool normally and ZFS mounts its datasets under `/basket` and `/home/wonko`.
+`zfs-import-basket.service` imports the remote pool after local ZFS mounts are
+ready and ZFS mounts its datasets under `/basket` and `/home/wonko`.
 
 ## Codex GitHub authentication
 
 Home Manager installs a local `codex-github-mcp` server that obtains the
-current GitHub CLI token only inside the MCP child process. After switching the
-Home Manager generation, replace the existing `[mcp_servers.github]` URL and
-`bearer_token_env_var` entries in `~/.codex/config.toml` with:
+current GitHub CLI token only inside the MCP child process. The migration from
+URL and `bearer_token_env_var` configuration is complete. Keep this command
+configuration in `~/.codex/config.toml`:
 
 ```toml
 [mcp_servers.github]
 command = "codex-github-mcp"
 ```
 
-Keep the existing per-tool approval table below it. Revoke credentials exposed
-by the old wrapper, run `gh auth login`, and verify that `codex` starts without
-GitHub authentication while GitHub MCP calls work after login. The Codex
-launcher excludes GitHub token variables from tool subprocesses.
+Keep the existing per-tool approval table below it. Use `gh auth login` to
+repair authentication if needed. The Codex launcher excludes GitHub token
+variables from tool subprocesses.
