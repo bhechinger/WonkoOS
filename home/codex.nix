@@ -33,6 +33,7 @@ in
   home.packages = with pkgs; [
     codex
     codexGithubMcp
+    gh
     nodejs
     omnigraph
   ];

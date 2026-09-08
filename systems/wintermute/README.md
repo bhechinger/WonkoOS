@@ -15,12 +15,12 @@ From this repository on Wintermute, bootstrap or update the profile with:
 nix run github:nix-community/home-manager/release-26.05 -- switch --flake .#wintermute
 ```
 
-Point Codex's GitHub MCP configuration at the managed helper once per config
-reset:
+Point the `command` in Codex's existing `[mcp_servers.github]` configuration at
+the managed helper once per config reset, preserving every other setting:
 
-```sh
-codex mcp remove github
-codex mcp add github -- codex-github-mcp
+```toml
+[mcp_servers.github]
+command = "codex-github-mcp"
 ```
 
 Verify the setup with:
