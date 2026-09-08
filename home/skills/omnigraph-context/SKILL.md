@@ -12,10 +12,10 @@ Use the globally configured `omnigraph` CLI. Its default server is `bob`.
 Resolve the Git root, or the current directory outside Git, to a physical path.
 Choose the graph and context prefix by the first matching rule:
 
-- `/home/wonko/projects/Gevulot/**`: graph `gevulot`, prefix `gevulot:`.
+- Git root `/home/wonko/projects/Gevulot`: graph `gevulot`, prefix `gevulot:`.
 - The WonkoOS repository: physical Git root `/home/wonko/nix/WonkoOS`, a
-  linked worktree sharing its Git common directory, or origin
-  `https://github.com/bhechinger/WonkoOS.git`; graph `nix`, prefix
+  linked worktree sharing its Git common directory, or an HTTPS or SSH origin
+  identifying GitHub repository `bhechinger/WonkoOS`; graph `nix`, prefix
   `nix:wonkoos:`.
 - `/home/wonko/nix/**`: graph `nix`, prefix `nix:`.
 - Everything else: graph `projects`, prefix `project:<key>:`, where `key` is
@@ -27,11 +27,11 @@ selected graph with its prefix as the `project` parameter. Also query
 `recent_context` from `shared` with `shared:` as that parameter. Always pass
 `--graph` and `--json`; use only relevant results.
 
-Repository files are authoritative for current and actionable state, exact
-procedures, safety conditions, and the rationale needed to maintain them.
-OmniGraph is a non-authoritative handoff and history layer: its records may
-summarize and link to repository paths or commits, but must never be the only
-source of migration completion or another operational status.
+Repository files are authoritative for current and actionable state,
+architecture, exact procedures, safety conditions, and the rationale needed to
+maintain them. OmniGraph is a non-authoritative handoff and history layer: its
+records may summarize and link to repository paths or commits, but must never
+be the only source of migration completion or another operational status.
 
 ## Persist context
 
@@ -48,8 +48,8 @@ Write to the selected graph by default. Write to `shared` with prefix `shared:`
 only when the user explicitly authorizes cross-scope storage and the information
 has a concrete consumer in an unrelated project. Multiple hosts in one project
 do not make information shared. Never copy scoped records into another graph. A
-new company-specific directory requires a matching graph and routing rule in
-the Bob configuration.
+new company-specific directory requires a matching graph in
+`systems/bob/services/omnigraph.nix` and a routing rule in this skill.
 
 Read the graph commit id with `--json` before mutating and pass it with
 `--if-commit`. On exit code 4, re-read and reconcile once; do not blindly retry.
