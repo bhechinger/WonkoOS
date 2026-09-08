@@ -7,8 +7,8 @@
 
 let
   codex = pkgs.writeShellScriptBin "codex" ''
+    unset GITHUB_PAT_TOKEN GITHUB_TOKEN GH_TOKEN GITHUB_PERSONAL_ACCESS_TOKEN
     exec ${unstable-pkgs.codex}/bin/codex \
-      -c 'shell_environment_policy.exclude=["GITHUB_PAT_TOKEN","GITHUB_TOKEN","GH_TOKEN","GITHUB_PERSONAL_ACCESS_TOKEN"]' \
       -c 'shell_environment_policy.allow_login_shell=false' \
       "$@"
   '';
@@ -46,12 +46,9 @@ in
       output: table
   '';
 
-  home.file.".codex/rules/default.rules" = {
-    force = true;
-    text = ''
-      prefix_rule(pattern = ["omnigraph"], decision = "allow")
-    '';
-  };
+  home.file.".codex/rules/omnigraph.rules".text = ''
+    prefix_rule(pattern = ["omnigraph"], decision = "allow")
+  '';
 
   home.file.".agents/skills/omnigraph-context" = {
     source = ./skills/omnigraph-context;
