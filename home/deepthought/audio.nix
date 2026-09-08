@@ -8,7 +8,7 @@
   ...
 }:
 let
-  ffadoPipewire = import ../common/pipewire-ffado {
+  ffadoPipewire = import ../../common/pipewire-ffado {
     pkgs = unstable-pkgs;
     inherit pipewire-src;
   };
