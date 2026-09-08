@@ -7,6 +7,7 @@
 
 let
   homeDirectory = config.home.homeDirectory;
+  postgresDataDirectory = "${homeDirectory}/.local/share/postgresql/14";
   servicePath = lib.makeBinPath [ pkgs.yabai ] + ":/usr/bin:/bin:/usr/sbin:/sbin";
 in
 {
@@ -74,8 +75,8 @@ in
 
   services.skhd = {
     enable = true;
-    errorLogFile = "/tmp/skhd_wonko.err.log";
-    outLogFile = "/tmp/skhd_wonko.out.log";
+    errorLogFile = "${homeDirectory}/Library/Logs/skhd.err.log";
+    outLogFile = "${homeDirectory}/Library/Logs/skhd.out.log";
   };
 
   launchd.agents = {
@@ -112,19 +113,21 @@ in
         ProcessType = "Interactive";
         ProgramArguments = [ "${pkgs.yabai}/bin/yabai" ];
         RunAtLoad = true;
-        StandardErrorPath = "/tmp/yabai_wonko.err.log";
-        StandardOutPath = "/tmp/yabai_wonko.out.log";
+        StandardErrorPath = "${homeDirectory}/Library/Logs/yabai.err.log";
+        StandardOutPath = "${homeDirectory}/Library/Logs/yabai.out.log";
       };
     };
 
     "postgresql-14" = {
       enable = true;
       config = {
-        KeepAlive = true;
+        KeepAlive.PathState = {
+          "${postgresDataDirectory}/PG_VERSION" = true;
+        };
         ProgramArguments = [
           "${pkgs.postgresql_14}/bin/postgres"
           "-D"
-          "${homeDirectory}/.local/share/postgresql/14"
+          postgresDataDirectory
         ];
         RunAtLoad = true;
         StandardErrorPath = "${homeDirectory}/Library/Logs/postgresql-14.log";

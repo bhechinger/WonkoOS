@@ -75,42 +75,49 @@ cp "$HOME/Library/LaunchAgents/homebrew.mxcl.atuin.plist" \
 
 Stop every application that can use PostgreSQL and keep it stopped until the
 cutover is accepted. Confirm there are no client sessions, unload the old
-agent, verify that PostgreSQL stopped cleanly, and copy its same-major cluster.
-Start only the copy on a private socket to prove it works and create the logical
-dump from that quiescent snapshot:
+agent, and restart the source only on a private socket. Capture the dump and
+data inventory from that quiescent source before stopping it again:
 
 ```sh
 postgres_bin=/opt/homebrew/opt/postgresql@14/bin
-postgres_copy="$HOME/.local/share/postgresql/14"
-postgres_socket="$migration_dir/postgresql-socket"
+postgres_source=/opt/homebrew/var/postgresql@14
+postgres_data="$HOME/.local/share/postgresql/14"
+postgres_socket="$migration_dir/homebrew-postgresql-socket"
 test "$("$postgres_bin/psql" -d postgres -Atqc \
-  "select current_setting('data_directory');")" = /opt/homebrew/var/postgresql@14
+  "select current_setting('data_directory');")" = "$postgres_source"
 test "$("$postgres_bin/psql" -d postgres -Atqc \
   "select count(*) from pg_stat_activity where pid <> pg_backend_pid() and backend_type = 'client backend';")" = 0
 launchctl bootout "gui/$(id -u)" "$HOME/Library/LaunchAgents/homebrew.mxcl.postgresql@14.plist"
-"$postgres_bin/pg_controldata" /opt/homebrew/var/postgresql@14 | \
+"$postgres_bin/pg_controldata" "$postgres_source" | \
   grep 'Database cluster state:.*shut down'
-test ! -e "$postgres_copy"
-mkdir -p "$HOME/.local/share/postgresql"
-ditto /opt/homebrew/var/postgresql@14 "$postgres_copy"
 mkdir -p "$postgres_socket"
-"$postgres_bin/pg_ctl" -D "$postgres_copy" \
-  -l "$migration_dir/postgresql-copy.log" \
-  -o "-k $postgres_socket -h '' -p 55432" start
-postgres_copy_running=1
-stop_postgres_copy() {
-  if [ "$postgres_copy_running" -eq 1 ]; then
-    "$postgres_bin/pg_ctl" -D "$postgres_copy" -m fast stop
+"$postgres_bin/pg_ctl" -D "$postgres_source" \
+  -l "$migration_dir/postgresql-source.log" \
+  -o "-k $postgres_socket -h '' -p 55431" start
+postgres_source_running=1
+stop_postgres_source() {
+  if [ "$postgres_source_running" -eq 1 ]; then
+    "$postgres_bin/pg_ctl" -D "$postgres_source" -m fast stop
   fi
 }
-trap stop_postgres_copy EXIT
-"$postgres_bin/pg_dumpall" -h "$postgres_socket" -p 55432 \
+trap stop_postgres_source EXIT
+"$postgres_bin/psql" -h "$postgres_socket" -p 55431 -d postgres -Atqc \
+  "select datname from pg_database where not datistemplate order by datname;" \
+  >"$migration_dir/postgresql-databases.txt"
+"$postgres_bin/psql" -h "$postgres_socket" -p 55431 -d postgres -Atqc \
+  "select rolname from pg_roles where rolname not like 'pg_%' order by rolname;" \
+  >"$migration_dir/postgresql-roles.txt"
+"$postgres_bin/psql" -h "$postgres_socket" -p 55431 -d atuin -AtF '|' -c \
+  "select (select count(*) from public.users), (select count(*) from public.history), (select count(*) from public.records), (select count(*) from public.sessions), (select count(*) from public.store);" \
+  >"$migration_dir/atuin-counts.txt"
+"$postgres_bin/pg_dumpall" -h "$postgres_socket" -p 55431 \
   >"$migration_dir/postgresql-14.sql"
-"$postgres_bin/pg_ctl" -D "$postgres_copy" -m fast stop
-postgres_copy_running=0
+"$postgres_bin/pg_ctl" -D "$postgres_source" -m fast stop
+postgres_source_running=0
 trap - EXIT
-"$postgres_bin/pg_controldata" "$postgres_copy" | \
+"$postgres_bin/pg_controldata" "$postgres_source" | \
   grep 'Database cluster state:.*shut down'
+test ! -e "$postgres_data"
 
 for agent in homebrew.mxcl.atuin com.koekeishiya.skhd com.koekeishiya.yabai; do
   if launchctl print "gui/$(id -u)/$agent" >/dev/null 2>&1; then
@@ -137,6 +144,67 @@ sed -i '' 's|^pinentry-program .*|pinentry-program /Users/wonko/.nix-profile/bin
 sed -i '' 's|/Applications/kitty.app/Contents/MacOS/kitty|/Users/wonko/.nix-profile/bin/kitty|' \
   "$HOME/.config/skhd/skhdrc"
 gpgconf --kill gpg-agent
+```
+
+Initialize a fresh cluster with the Nix PostgreSQL binaries in a temporary
+directory, restore the dump, and move it into the launch agent's watched path
+only after the restore succeeds:
+
+```sh
+nix_postgres="$HOME/.nix-profile/bin"
+postgres_new="${postgres_data}.new"
+nix_postgres_socket="$migration_dir/nix-postgresql-socket"
+test ! -e "$postgres_data" && test ! -e "$postgres_new"
+mkdir -p "$(dirname "$postgres_data")" "$nix_postgres_socket"
+"$nix_postgres/initdb" -D "$postgres_new" --encoding=UTF8 \
+  --locale=en_US.UTF-8 --username=bootstrap_restore
+"$nix_postgres/pg_ctl" -D "$postgres_new" \
+  -l "$migration_dir/postgresql-restore.log" \
+  -o "-k $nix_postgres_socket -h '' -p 55432" start
+nix_postgres_running=1
+stop_nix_postgres() {
+  if [ "$nix_postgres_running" -eq 1 ]; then
+    "$nix_postgres/pg_ctl" -D "$postgres_new" -m fast stop
+  fi
+}
+trap stop_nix_postgres EXIT
+"$nix_postgres/psql" -h "$nix_postgres_socket" -p 55432 \
+  -U bootstrap_restore -d postgres -X -v ON_ERROR_STOP=1 \
+  -f "$migration_dir/postgresql-14.sql"
+"$nix_postgres/psql" -h "$nix_postgres_socket" -p 55432 \
+  -U wonko -d postgres -v ON_ERROR_STOP=1 -c 'drop role bootstrap_restore;'
+"$nix_postgres/psql" -h "$nix_postgres_socket" -p 55432 \
+  -U wonko -d postgres -Atqc \
+  "select datname from pg_database where not datistemplate order by datname;" \
+  >"$migration_dir/postgresql-databases-restored.txt"
+"$nix_postgres/psql" -h "$nix_postgres_socket" -p 55432 \
+  -U wonko -d postgres -Atqc \
+  "select rolname from pg_roles where rolname not like 'pg_%' order by rolname;" \
+  >"$migration_dir/postgresql-roles-restored.txt"
+"$nix_postgres/psql" -h "$nix_postgres_socket" -p 55432 \
+  -U wonko -d atuin -AtF '|' -c \
+  "select (select count(*) from public.users), (select count(*) from public.history), (select count(*) from public.records), (select count(*) from public.sessions), (select count(*) from public.store);" \
+  >"$migration_dir/atuin-counts-restored.txt"
+/usr/bin/cmp "$migration_dir/postgresql-databases.txt" \
+  "$migration_dir/postgresql-databases-restored.txt"
+/usr/bin/cmp "$migration_dir/postgresql-roles.txt" \
+  "$migration_dir/postgresql-roles-restored.txt"
+/usr/bin/cmp "$migration_dir/atuin-counts.txt" \
+  "$migration_dir/atuin-counts-restored.txt"
+"$nix_postgres/pg_ctl" -D "$postgres_new" -m fast stop
+nix_postgres_running=0
+trap - EXIT
+mv "$postgres_new" "$postgres_data"
+launchctl kickstart -k "gui/$(id -u)/org.nix-community.home.postgresql-14"
+for attempt in {1..30}; do
+  "$nix_postgres/pg_isready" -d postgres && break
+  sleep 1
+done
+"$nix_postgres/pg_isready" -d postgres
+test "$("$nix_postgres/psql" -d postgres -Atqc \
+  "select current_setting('data_directory');")" = "$postgres_data"
+ps -p "$(head -n 1 "$postgres_data/postmaster.pid")" -o command= | \
+  grep '^/nix/store/.*-postgresql-14\..*/bin/postgres'
 ```
 
 Yabai's scripting addition needs a digest-restricted sudoers entry for the
@@ -174,7 +242,6 @@ test "$("$podman" machine inspect --format '{{.State}}')" = stopped
 "$podman" machine start
 "$podman" info
 "$podman" ps -a
-test ! -e /var/run/docker.sock && test ! -L /var/run/docker.sock
 ```
 
 Also verify the Nix PostgreSQL cluster, Yabai/skhd, Atuin daemon, GPG pinentry,
@@ -186,6 +253,19 @@ If a check fails before PostgreSQL accepts writes, restore the saved shell
 files, unload the Nix agents, and reload the saved launch agents; do not
 uninstall Homebrew. If the Nix cluster has accepted a write, do not reload the
 old PostgreSQL agent: stop clients and reconcile or dump the Nix cluster first.
+
+Confirm the login shell and the manually managed Stremio bundle do not depend
+on Homebrew. The conditional handles Wintermute if its account is ever switched
+to Homebrew zsh before this migration runs:
+
+```sh
+user_shell="$(dscl . -read /Users/wonko UserShell | awk '{print $2}')"
+if [ "$user_shell" = /opt/homebrew/bin/zsh ]; then
+  sudo dscl . -change /Users/wonko UserShell "$user_shell" /bin/zsh
+fi
+test "$(dscl . -read /Users/wonko UserShell | awk '{print $2}')" = /bin/zsh
+test -d /Applications/Stremio.app && test ! -L /Applications/Stremio.app
+```
 
 Once the cutover passes, download and inspect Homebrew's official uninstaller,
 run its dry-run against the explicit Apple Silicon prefix, and then run it:
@@ -213,6 +293,7 @@ rm -rf "$HOME/Library/Caches/Homebrew" "$HOME/Library/Logs/Homebrew"
 sudo rm -f /etc/paths.d/homebrew
 
 sudo /usr/local/podman/helper/wonko/podman-mac-helper uninstall
+test ! -e /var/run/docker.sock && test ! -L /var/run/docker.sock
 sudo launchctl bootout system /Library/LaunchDaemons/com.github.containers.podman.helper-wonko.plist 2>/dev/null || true
 sudo rm -f /Library/LaunchDaemons/com.github.containers.podman.helper-wonko.plist \
   /private/var/run/podman-helper-wonko.socket
