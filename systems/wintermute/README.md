@@ -58,7 +58,7 @@ set -euo pipefail
 umask 077
 migration_dir="$HOME/Backups/WonkoOS/wintermute-homebrew-$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$migration_dir/config" "$migration_dir/launch-agents"
-cp "$HOME/.gitconfig" "$migration_dir/config/"
+cp "$HOME/.zprofile" "$HOME/.gitconfig" "$migration_dir/config/"
 cp "$HOME/.gnupg/gpg-agent.conf" "$migration_dir/config/"
 cp "$HOME/.config/atuin/config.toml" "$migration_dir/config/"
 cp "$HOME/.config/skhd/skhdrc" "$HOME/.config/yabai/yabairc" \
@@ -68,10 +68,55 @@ cp "$HOME/Library/LaunchAgents/homebrew.mxcl.atuin.plist" \
   "$HOME/Library/LaunchAgents/com.koekeishiya.skhd.plist" \
   "$HOME/Library/LaunchAgents/com.koekeishiya.yabai.plist" \
   "$migration_dir/launch-agents/"
-/opt/podman/bin/podman machine list >"$migration_dir/podman-machines.txt"
-/opt/podman/bin/podman system connection list >"$migration_dir/podman-connections.txt"
-/opt/podman/bin/podman ps -a >"$migration_dir/podman-containers.txt"
+capture_podman_inventory() {
+  local podman_cli="$1" prefix="$2"
+  "$podman_cli" machine list --format '{{.Name}}' | \
+    /usr/bin/sort >"${prefix}-machines.txt"
+  while IFS= read -r machine; do
+    "$podman_cli" machine inspect "$machine" --format \
+      '{{.Name}}|{{.Resources.CPUs}}|{{.Resources.DiskSize}}|{{.Resources.Memory}}|{{.SSHConfig.Port}}|{{.SSHConfig.RemoteUsername}}|{{.UserModeNetworking}}|{{.Rootful}}|{{.Rosetta}}'
+  done <"${prefix}-machines.txt" | /usr/bin/sort >"${prefix}-machine-configs.txt"
+  "$podman_cli" system connection list --format \
+    '{{.Name}}|{{.URI}}|{{.Default}}|{{.ReadWrite}}' | \
+    /usr/bin/sort >"${prefix}-connections.txt"
+  "$podman_cli" ps -a --format '{{.ID}}|{{.Names}}|{{.Image}}' | \
+    /usr/bin/sort >"${prefix}-containers.txt"
+}
+compare_podman_inventory() {
+  local podman_cli="$1" prefix="$2" inventory
+  capture_podman_inventory "$podman_cli" "$prefix"
+  for inventory in machines machine-configs connections containers; do
+    /usr/bin/cmp "$migration_dir/podman-original-${inventory}.txt" \
+      "${prefix}-${inventory}.txt"
+  done
+}
+old_podman=/opt/podman/bin/podman
+podman_initial_state="$("$old_podman" machine inspect --format '{{.State}}')"
+podman_started_for_inventory=0
+restore_podman_state() {
+  if [ "$podman_started_for_inventory" -eq 1 ]; then
+    "$old_podman" machine stop
+  fi
+}
+trap restore_podman_state EXIT
+case "$podman_initial_state" in
+  running) ;;
+  stopped)
+    "$old_podman" machine start
+    podman_started_for_inventory=1
+    ;;
+  *) exit 1 ;;
+esac
+capture_podman_inventory "$old_podman" "$migration_dir/podman-original"
+restore_podman_state
+podman_started_for_inventory=0
+trap - EXIT
+test "$("$old_podman" machine inspect --format '{{.State}}')" = \
+  "$podman_initial_state"
 ```
+
+The inventory step temporarily starts a stopped default Podman VM and restores
+its original state before continuing.
 
 Stop every application that can use PostgreSQL and keep it stopped until the
 cutover is accepted. Confirm there are no client sessions, unload the old
@@ -82,7 +127,6 @@ data inventory from that quiescent source before stopping it again:
 postgres_bin=/opt/homebrew/opt/postgresql@14/bin
 postgres_source=/opt/homebrew/var/postgresql@14
 postgres_data="$HOME/.local/share/postgresql/14"
-postgres_socket="$migration_dir/homebrew-postgresql-socket"
 test "$("$postgres_bin/psql" -d postgres -Atqc \
   "select current_setting('data_directory');")" = "$postgres_source"
 test "$("$postgres_bin/psql" -d postgres -Atqc \
@@ -90,22 +134,24 @@ test "$("$postgres_bin/psql" -d postgres -Atqc \
 launchctl bootout "gui/$(id -u)" "$HOME/Library/LaunchAgents/homebrew.mxcl.postgresql@14.plist"
 "$postgres_bin/pg_controldata" "$postgres_source" | \
   grep 'Database cluster state:.*shut down'
-mkdir -p "$postgres_socket"
+postgres_socket="$(mktemp -d /tmp/wonko-pg-source.XXXXXX)"
+postgres_source_running=0
+stop_postgres_source() {
+  if [ "$postgres_source_running" -eq 1 ]; then
+    "$postgres_bin/pg_ctl" -D "$postgres_source" -m fast stop || true
+  fi
+  rmdir "$postgres_socket" 2>/dev/null || true
+}
+trap stop_postgres_source EXIT
+postgres_source_running=1
 "$postgres_bin/pg_ctl" -D "$postgres_source" \
   -l "$migration_dir/postgresql-source.log" \
   -o "-k $postgres_socket -h '' -p 55431" start
-postgres_source_running=1
-stop_postgres_source() {
-  if [ "$postgres_source_running" -eq 1 ]; then
-    "$postgres_bin/pg_ctl" -D "$postgres_source" -m fast stop
-  fi
-}
-trap stop_postgres_source EXIT
-"$postgres_bin/psql" -h "$postgres_socket" -p 55431 -d postgres -Atqc \
-  "select datname from pg_database where not datistemplate order by datname;" \
+"$postgres_bin/psql" -h "$postgres_socket" -p 55431 -d postgres -AtF '|' -c \
+  "select datname, pg_get_userbyid(datdba), encoding, datcollate, datctype, datistemplate, datallowconn, datconnlimit from pg_database order by datname;" \
   >"$migration_dir/postgresql-databases.txt"
-"$postgres_bin/psql" -h "$postgres_socket" -p 55431 -d postgres -Atqc \
-  "select rolname from pg_roles where rolname not like 'pg_%' order by rolname;" \
+"$postgres_bin/psql" -h "$postgres_socket" -p 55431 -d postgres -AtF '|' -c \
+  "select rolname, rolsuper, rolinherit, rolcreaterole, rolcreatedb, rolcanlogin, rolreplication, rolbypassrls, rolconnlimit, coalesce(rolvaliduntil::text, ''), md5(coalesce(rolpassword, '')) from pg_authid where rolname not like 'pg_%' order by rolname;" \
   >"$migration_dir/postgresql-roles.txt"
 "$postgres_bin/psql" -h "$postgres_socket" -p 55431 -d atuin -AtF '|' -c \
   "select (select count(*) from public.users), (select count(*) from public.history), (select count(*) from public.records), (select count(*) from public.sessions), (select count(*) from public.store);" \
@@ -114,6 +160,7 @@ trap stop_postgres_source EXIT
   >"$migration_dir/postgresql-14.sql"
 "$postgres_bin/pg_ctl" -D "$postgres_source" -m fast stop
 postgres_source_running=0
+rmdir "$postgres_socket"
 trap - EXIT
 "$postgres_bin/pg_controldata" "$postgres_source" | \
   grep 'Database cluster state:.*shut down'
@@ -125,7 +172,7 @@ for agent in homebrew.mxcl.atuin com.koekeishiya.skhd com.koekeishiya.yabai; do
   fi
   ! launchctl print "gui/$(id -u)/$agent" >/dev/null 2>&1
 done
-mv "$HOME/.zprofile" "$HOME/.zshrc" "$HOME/.zshenv" "$migration_dir/config/"
+mv "$HOME/.zshrc" "$HOME/.zshenv" "$migration_dir/config/"
 ```
 
 Deploy from Deepthought with `make deploy-wintermute`. Then replace the
@@ -143,43 +190,47 @@ sed -i '' 's|^pinentry-program .*|pinentry-program /Users/wonko/.nix-profile/bin
   "$HOME/.gnupg/gpg-agent.conf"
 sed -i '' 's|/Applications/kitty.app/Contents/MacOS/kitty|/Users/wonko/.nix-profile/bin/kitty|' \
   "$HOME/.config/skhd/skhdrc"
+sed -i '' '/\/opt\/homebrew\/bin\/brew shellenv/d' "$HOME/.zprofile"
 gpgconf --kill gpg-agent
 ```
 
 Initialize a fresh cluster with the Nix PostgreSQL binaries in a temporary
 directory, restore the dump, and move it into the launch agent's watched path
-only after the restore succeeds:
+only after the restore succeeds. `initdb` creates the existing `wonko`
+superuser, so the restore removes only that role's duplicate `CREATE` statement
+and retains its dumped attributes:
 
 ```sh
 nix_postgres="$HOME/.nix-profile/bin"
 postgres_new="${postgres_data}.new"
-nix_postgres_socket="$migration_dir/nix-postgresql-socket"
 test ! -e "$postgres_data" && test ! -e "$postgres_new"
-mkdir -p "$(dirname "$postgres_data")" "$nix_postgres_socket"
+mkdir -p "$(dirname "$postgres_data")"
 "$nix_postgres/initdb" -D "$postgres_new" --encoding=UTF8 \
-  --locale=en_US.UTF-8 --username=bootstrap_restore
+  --locale=en_US.UTF-8 --username=wonko
+nix_postgres_socket="$(mktemp -d /tmp/wonko-pg-nix.XXXXXX)"
+nix_postgres_running=0
+stop_nix_postgres() {
+  if [ "$nix_postgres_running" -eq 1 ]; then
+    "$nix_postgres/pg_ctl" -D "$postgres_new" -m fast stop || true
+  fi
+  rmdir "$nix_postgres_socket" 2>/dev/null || true
+}
+trap stop_nix_postgres EXIT
+nix_postgres_running=1
 "$nix_postgres/pg_ctl" -D "$postgres_new" \
   -l "$migration_dir/postgresql-restore.log" \
   -o "-k $nix_postgres_socket -h '' -p 55432" start
-nix_postgres_running=1
-stop_nix_postgres() {
-  if [ "$nix_postgres_running" -eq 1 ]; then
-    "$nix_postgres/pg_ctl" -D "$postgres_new" -m fast stop
-  fi
-}
-trap stop_nix_postgres EXIT
+/usr/bin/sed '/^CREATE ROLE wonko;$/d' \
+  "$migration_dir/postgresql-14.sql" | \
+  "$nix_postgres/psql" -h "$nix_postgres_socket" -p 55432 \
+    -U wonko -d postgres -X -v ON_ERROR_STOP=1
 "$nix_postgres/psql" -h "$nix_postgres_socket" -p 55432 \
-  -U bootstrap_restore -d postgres -X -v ON_ERROR_STOP=1 \
-  -f "$migration_dir/postgresql-14.sql"
-"$nix_postgres/psql" -h "$nix_postgres_socket" -p 55432 \
-  -U wonko -d postgres -v ON_ERROR_STOP=1 -c 'drop role bootstrap_restore;'
-"$nix_postgres/psql" -h "$nix_postgres_socket" -p 55432 \
-  -U wonko -d postgres -Atqc \
-  "select datname from pg_database where not datistemplate order by datname;" \
+  -U wonko -d postgres -AtF '|' -c \
+  "select datname, pg_get_userbyid(datdba), encoding, datcollate, datctype, datistemplate, datallowconn, datconnlimit from pg_database order by datname;" \
   >"$migration_dir/postgresql-databases-restored.txt"
 "$nix_postgres/psql" -h "$nix_postgres_socket" -p 55432 \
-  -U wonko -d postgres -Atqc \
-  "select rolname from pg_roles where rolname not like 'pg_%' order by rolname;" \
+  -U wonko -d postgres -AtF '|' -c \
+  "select rolname, rolsuper, rolinherit, rolcreaterole, rolcreatedb, rolcanlogin, rolreplication, rolbypassrls, rolconnlimit, coalesce(rolvaliduntil::text, ''), md5(coalesce(rolpassword, '')) from pg_authid where rolname not like 'pg_%' order by rolname;" \
   >"$migration_dir/postgresql-roles-restored.txt"
 "$nix_postgres/psql" -h "$nix_postgres_socket" -p 55432 \
   -U wonko -d atuin -AtF '|' -c \
@@ -193,6 +244,7 @@ trap stop_nix_postgres EXIT
   "$migration_dir/atuin-counts-restored.txt"
 "$nix_postgres/pg_ctl" -D "$postgres_new" -m fast stop
 nix_postgres_running=0
+rmdir "$nix_postgres_socket"
 trap - EXIT
 mv "$postgres_new" "$postgres_data"
 launchctl kickstart -k "gui/$(id -u)/org.nix-community.home.postgresql-14"
@@ -242,6 +294,7 @@ test "$("$podman" machine inspect --format '{{.State}}')" = stopped
 "$podman" machine start
 "$podman" info
 "$podman" ps -a
+compare_podman_inventory "$podman" "$migration_dir/podman-nix-before-purge"
 ```
 
 Also verify the Nix PostgreSQL cluster, Yabai/skhd, Atuin daemon, GPG pinentry,
@@ -306,6 +359,12 @@ sudo pkgutil --forget com.redhat.podman
 "$podman" machine start
 "$podman" info
 "$podman" ps -a
+compare_podman_inventory "$podman" "$migration_dir/podman-nix-after-purge"
+if [ "$podman_initial_state" = stopped ]; then
+  "$podman" machine stop
+fi
+test "$("$podman" machine inspect --format '{{.State}}')" = \
+  "$podman_initial_state"
 
 rm -rf "$HOME/.Trash/nix-managed-tool-cleanup-20260908/homebrew-kitty-cask" \
   "$HOME/.Trash/nix-managed-tool-cleanup-20260908/homebrew-kitty-bin-link" \
