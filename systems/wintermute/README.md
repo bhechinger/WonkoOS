@@ -386,7 +386,7 @@ continuing with the removal block:
 
 ```sh
 if [ -d /opt/homebrew ]; then
-  find /opt/homebrew -mindepth 1 -maxdepth 3 -print
+  find /opt/homebrew -mindepth 1 -print
 fi
 ```
 
