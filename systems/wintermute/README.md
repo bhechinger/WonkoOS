@@ -4,7 +4,7 @@ Wintermute is the Apple Silicon macOS laptop. Nix is installed independently;
 the `homeConfigurations.wintermute` Home Manager profile manages Codex, its
 GitHub MCP helper, Node.js, OmniGraph, Kitty and its terminfo, development
 tools, desktop applications, shell integrations, user launch agents, and
-Codex's OmniGraph allow rule.
+Codex's OmniGraph allow rule and credential.
 
 Codex owns `~/.codex/config.toml` and `~/.codex/auth.json`. Home Manager must
 not replace them because they contain machine-specific project paths, plugin
@@ -19,7 +19,25 @@ make deploy-wintermute
 ```
 
 The deploy target activates the exact generation returned by the build target;
-Wintermute does not need a repository checkout.
+Wintermute does not need a repository checkout. The `wonko` account must have
+an active macOS GUI login because Home Manager bootstraps its user LaunchAgents
+into that login's `gui/UID` launchd domain.
+
+The OmniGraph credential is an encrypted SOPS secret in the repository and is
+decrypted to `~/.omnigraph/credentials` during Home Manager activation. The
+mode-0600 age identity at
+`~/Library/Application Support/sops/age/keys.txt` is intentionally outside Nix
+and must be created and backed up once before the first deployment:
+
+```sh
+install -d -m 0700 "$HOME/Library/Application Support/sops/age"
+nix shell nixpkgs#age -c age-keygen -o \
+  "$HOME/Library/Application Support/sops/age/keys.txt"
+```
+
+Add the printed public recipient to `.sops.yaml` and rekey
+`home/wintermute/secrets/omnigraph-credentials.sops` before deploying a new
+machine. Never commit the private age identity or a plaintext OmniGraph token.
 
 Point the `command` in Codex's existing `[mcp_servers.github]` configuration at
 the managed helper once per config reset, preserving every other setting:
@@ -36,6 +54,8 @@ codex --version
 codex login status
 gh auth status
 infocmp -x xterm-kitty
+test -L "$HOME/.omnigraph/credentials"
+test "$(stat -f %Lp "$(readlink "$HOME/.omnigraph/credentials")")" = 600
 omnigraph query recent_context --graph nix --params '{"project":"nix:wonkoos:"}' --json
 ```
 

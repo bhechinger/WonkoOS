@@ -83,10 +83,14 @@ OmniGraph serves general `projects`, company-specific `gevulot`, Nix-specific
 hostname is private: Nginx proxies it to the loopback-only service, internal
 DNS points it at Bob, and it is absent from Cloudflare Tunnel and public DNS.
 Home Manager installs the CLI, its operator configuration, and a user-scoped
-Codex skill on Deepthought. Store the `act-writer` token once with
-`omnigraph login bob`; it is kept separately from the declarative operator
-configuration. Use the HTTPS API for normal reads and writes, since direct
-storage writers must not run while the server is active.
+Codex skill on Deepthought and Wintermute. Wintermute's OmniGraph credential is
+deployed by the Home Manager SOPS module to `~/.omnigraph/credentials`; maintain
+it in `home/wintermute/secrets/omnigraph-credentials.sops`, never as plaintext
+Nix configuration. Its age identity is the mode-0600 file at
+`~/Library/Application Support/sops/age/keys.txt` and must be bootstrapped once
+outside Nix. Deepthought's credential remains local state created with
+`omnigraph login bob`. Use the HTTPS API for normal reads and writes, since
+direct storage writers must not run while the server is active.
 
 The Packwiz source uses Modrinth for Create: Oxidized and Create: Design n'
 Decor so Bob can fetch them reproducibly. The generated CurseForge client ZIP
