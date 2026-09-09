@@ -112,6 +112,7 @@ case "$podman_initial_state" in
     ;;
   *) exit 1 ;;
 esac
+printf '%s\n' "$podman_initial_state" >"$migration_dir/podman-initial-state.txt"
 capture_podman_inventory "$old_podman" "$migration_dir/podman-original"
 restore_podman_state
 podman_started_for_inventory=0
@@ -207,6 +208,8 @@ sed -i '' '/\/opt\/homebrew\/bin\/brew shellenv/d' "$HOME/.zprofile"
 path_line='export PATH="$HOME/.nix-profile/bin:$PATH"'
 grep -Fqx "$path_line" "$HOME/.zprofile" || \
   printf '\n%s\n' "$path_line" >>"$HOME/.zprofile"
+export PATH="$HOME/.nix-profile/bin:$PATH"
+rehash
 gpgconf --kill gpg-agent
 test "$(/bin/zsh -lic 'command -v git')" = "$HOME/.nix-profile/bin/git"
 ```
@@ -295,16 +298,31 @@ Restrictions, and NVRAM Protection disabled as described in the
 plus the arm64e preview ABI boot argument. Check both before configuring it:
 
 ```sh
-csrutil status
-nvram boot-args | grep -E '(^|[[:space:]])-arm64e_preview_abi([[:space:]]|$)'
+sip_status="$(csrutil status)"
+boot_args="$(nvram boot-args 2>/dev/null || true)"
+printf '%s\n%s\n' "$sip_status" "$boot_args"
+yabai_sip_ready=0
+if [[ "$sip_status" == *'System Integrity Protection status: disabled.'* ]] ||
+  [[ "$sip_status" == *'Filesystem Protections: disabled'* &&
+    "$sip_status" == *'Debugging Restrictions: disabled'* &&
+    "$sip_status" == *'NVRAM Protections: disabled'* ]]; then
+  yabai_sip_ready=1
+fi
+if (( yabai_sip_ready )) &&
+  printf '%s\n' "$boot_args" | \
+    grep -E '(^|[[:space:]])-arm64e_preview_abi([[:space:]]|$)' >/dev/null; then
+  yabai_sa_ready=1
+else
+  yabai_sa_ready=0
+  echo 'Skipping the Yabai scripting addition; core Yabai remains available.'
+fi
 ```
 
 Authenticated Root can remain enabled. If `csrutil status` does not show the
-three required protections disabled, or the boot-argument check fails, skip
-the scripting-addition block; core Yabai continues to work, and changing those
-recovery-mode security settings is a separate decision. If the machine is
-already configured to permit the scripting addition, continue below. In either
-case, first archive and remove any sudoers rule that still grants access to the
+three required protections disabled, or the boot-argument check fails, the
+commands set `yabai_sa_ready=0`; core Yabai continues to work, and changing
+those recovery-mode security settings is a separate decision. In either case,
+first archive and remove any sudoers rule that still grants access to the
 Homebrew binary:
 
 ```sh
@@ -315,22 +333,25 @@ if sudo grep -q '/opt/homebrew' "$legacy_yabai_sudoers" 2>/dev/null; then
 fi
 ```
 
-For a machine configured to permit the scripting addition, give the immutable
-Nix binary a digest-restricted sudoers entry. Recreate this entry after every
-Yabai package update. In Yabai 7.1.25, `--load-sa` installs and loads the
-addition; there is no separate `--install-sa` option:
+When `yabai_sa_ready=1`, give the immutable Nix binary a digest-restricted
+sudoers entry. Recreate this entry after every Yabai package update. In Yabai
+7.1.25, `--load-sa` installs and loads the addition; there is no separate
+`--install-sa` option:
 
 ```sh
-yabai_path="$(readlink "$HOME/.nix-profile/bin/yabai")"
-yabai_hash="$(shasum -a 256 "$yabai_path" | awk '{print $1}')"
-sudoers_file="$(mktemp)"
-printf 'wonko ALL = (root) NOPASSWD: sha256:%s %s --load-sa\n' \
-  "$yabai_hash" "$yabai_path" >"$sudoers_file"
-sudo visudo -cf "$sudoers_file"
-sudo install -o root -g wheel -m 0440 "$sudoers_file" /private/etc/sudoers.d/yabai
-rm "$sudoers_file"
-sudo "$yabai_path" --uninstall-sa 2>/dev/null || true
-sudo "$yabai_path" --load-sa
+if (( yabai_sa_ready )); then
+  yabai_path="$(readlink "$HOME/.nix-profile/bin/yabai")"
+  yabai_hash="$(shasum -a 256 "$yabai_path" | awk '{print $1}')"
+  sudoers_file="$(mktemp)"
+  printf 'wonko ALL = (root) NOPASSWD: sha256:%s %s --load-sa\n' \
+    "$yabai_hash" "$yabai_path" >"$sudoers_file"
+  sudo visudo -cf "$sudoers_file"
+  sudo install -o root -g wheel -m 0440 "$sudoers_file" \
+    /private/etc/sudoers.d/yabai
+  rm "$sudoers_file"
+  sudo "$yabai_path" --uninstall-sa 2>/dev/null || true
+  sudo "$yabai_path" --load-sa
+fi
 ```
 
 Restart and verify the managed agents whether or not the scripting addition is
@@ -368,18 +389,30 @@ package does not provide the privileged Docker-compatible
 
 ```sh
 verify_nix_cutover() {
-  local agent executable
+  local expected_podman_state="$1"
+  local agent command executable nix_profile="$HOME/.nix-profile/bin"
+  for command in atuin gcloud gpg-connect-agent pg_isready pinentry-mac \
+    podman psql skhd yabai; do
+    test "$(command -v "$command")" = "$nix_profile/$command"
+  done
   for agent in atuin-daemon skhd yabai postgresql-14; do
     launchctl print "gui/$(id -u)/org.nix-community.home.$agent" | \
       grep 'state = running' >/dev/null
   done
-  atuin daemon status >/dev/null
-  gpg-connect-agent updatestartuptty /bye | grep -qx OK
+  "$nix_profile/atuin" daemon status >/dev/null
+  "$nix_profile/gpg-connect-agent" updatestartuptty /bye | grep -qx OK
   grep -Fqx \
     'pinentry-program /Users/wonko/.nix-profile/bin/pinentry-mac' \
     "$HOME/.gnupg/gpg-agent.conf"
-  gcloud --version >/dev/null
+  "$nix_profile/gcloud" --version >/dev/null
   infocmp -x xterm-kitty >/dev/null
+  "$nix_profile/yabai" -m query --spaces >/dev/null
+  "$nix_profile/pg_isready" -d postgres >/dev/null
+  test "$("$nix_profile/psql" -d postgres -Atqc \
+    "select current_setting('data_directory');")" = \
+    "$HOME/.local/share/postgresql/14"
+  test "$("$nix_profile/podman" machine inspect --format '{{.State}}')" = \
+    "$expected_podman_state"
   for executable in \
     "$HOME/Applications/Home Manager Apps/Podman Desktop.app/Contents/MacOS/Podman Desktop" \
     "$HOME/Applications/Home Manager Apps/Signal.app/Contents/MacOS/Signal" \
@@ -389,7 +422,7 @@ verify_nix_cutover() {
     file "$executable" | grep 'Mach-O 64-bit executable arm64' >/dev/null
   done
 }
-verify_nix_cutover
+verify_nix_cutover running
 ```
 
 If a check fails before PostgreSQL accepts writes, restore the saved shell
@@ -471,7 +504,7 @@ if [ "$podman_initial_state" = stopped ]; then
 fi
 test "$("$podman" machine inspect --format '{{.State}}')" = \
   "$podman_initial_state"
-verify_nix_cutover
+verify_nix_cutover "$podman_initial_state"
 
 rm -rf "$HOME/.Trash/nix-managed-tool-cleanup-20260908/homebrew-kitty-cask" \
   "$HOME/.Trash/nix-managed-tool-cleanup-20260908/homebrew-kitty-bin-link" \
@@ -479,9 +512,18 @@ rm -rf "$HOME/.Trash/nix-managed-tool-cleanup-20260908/homebrew-kitty-cask" \
   "$HOME/.Trash/nix-managed-tool-cleanup-20260908/homebrew-kitty-0.44.0.app"
 ```
 
-Log out and back in, then rerun the `verify_nix_cutover` definition and call
-above. This confirms that launchd did not merely preserve the processes from
-the migration session.
+Log out and back in, re-enable `set -euo pipefail`, set `migration_dir` to the
+dated backup created at the start, and reload the original Podman state:
+
+```sh
+set -euo pipefail
+migration_dir="$HOME/Backups/WonkoOS/wintermute-homebrew-YYYYMMDD-HHMMSS"
+podman_initial_state="$(<"$migration_dir/podman-initial-state.txt")"
+```
+
+Then rerun the `verify_nix_cutover` definition above followed by
+`verify_nix_cutover "$podman_initial_state"`. This confirms that launchd did
+not merely preserve the processes from the migration session.
 
 The migration is complete only when `brew` no longer resolves, `/opt/homebrew`
 and `/etc/paths.d/homebrew` are absent, no active shell/Git/GPG/launchd file
