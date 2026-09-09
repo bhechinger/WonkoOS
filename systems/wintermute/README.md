@@ -137,18 +137,73 @@ test "$("$postgres_bin/psql" -d postgres -Atqc \
   "select current_setting('data_directory');")" = "$postgres_source"
 test "$("$postgres_bin/psql" -d postgres -Atqc \
   "select count(*) from pg_stat_activity where pid <> pg_backend_pid() and backend_type = 'client backend';")" = 0
+postgres_socket=
+postgres_source_running=0
+nix_postgres_socket=
+nix_postgres_running=0
+restore_postgres_cutover() {
+  local original_exit=$?
+  local attempt domain="gui/$(id -u)" rollback_exit=0 socket_dir
+  local nix_label="$domain/org.nix-community.home.postgresql-14"
+  local old_label="$domain/homebrew.mxcl.postgresql@14"
+  trap - EXIT
+  if [ "$nix_postgres_running" -eq 1 ]; then
+    if "$nix_postgres/pg_ctl" -D "$postgres_new" status >/dev/null 2>&1; then
+      "$nix_postgres/pg_ctl" -D "$postgres_new" -m fast stop || \
+        rollback_exit=1
+    fi
+  fi
+  if [ "$postgres_source_running" -eq 1 ]; then
+    if "$postgres_bin/pg_ctl" -D "$postgres_source" status \
+      >/dev/null 2>&1; then
+      "$postgres_bin/pg_ctl" -D "$postgres_source" -m fast stop || \
+        rollback_exit=1
+    fi
+  fi
+  for socket_dir in "$nix_postgres_socket" "$postgres_socket"; do
+    if [ -n "$socket_dir" ] && [ -d "$socket_dir" ]; then
+      rmdir "$socket_dir" || rollback_exit=1
+    fi
+  done
+  if [ "$rollback_exit" -eq 0 ]; then
+    if launchctl print "$nix_label" >/dev/null 2>&1; then
+      launchctl bootout "$domain" \
+        "$HOME/Library/LaunchAgents/org.nix-community.home.postgresql-14.plist" || \
+        rollback_exit=1
+    fi
+  fi
+  if [ "$rollback_exit" -eq 0 ]; then
+    if launchctl print "$old_label" >/dev/null 2>&1; then
+      launchctl kickstart -k "$old_label" || rollback_exit=1
+    else
+      launchctl bootstrap "$domain" \
+        "$HOME/Library/LaunchAgents/homebrew.mxcl.postgresql@14.plist" || \
+        rollback_exit=1
+    fi
+  fi
+  if [ "$rollback_exit" -eq 0 ]; then
+    for attempt in {1..30}; do
+      "$postgres_bin/pg_isready" -d postgres >/dev/null && break
+      sleep 1
+    done
+    "$postgres_bin/pg_isready" -d postgres >/dev/null || rollback_exit=1
+    test "$("$postgres_bin/psql" -d postgres -Atqc \
+      "select current_setting('data_directory');")" = "$postgres_source" || \
+      rollback_exit=1
+  fi
+  if [ "$rollback_exit" -ne 0 ]; then
+    echo 'Failed to restore the original PostgreSQL service' >&2
+  fi
+  if [ "$original_exit" -ne 0 ]; then
+    return "$original_exit"
+  fi
+  return "$rollback_exit"
+}
+trap restore_postgres_cutover EXIT
 launchctl bootout "gui/$(id -u)" "$HOME/Library/LaunchAgents/homebrew.mxcl.postgresql@14.plist"
 "$postgres_bin/pg_controldata" "$postgres_source" | \
   grep 'Database cluster state:.*shut down'
 postgres_socket="$(mktemp -d /tmp/wonko-pg-source.XXXXXX)"
-postgres_source_running=0
-stop_postgres_source() {
-  if [ "$postgres_source_running" -eq 1 ]; then
-    "$postgres_bin/pg_ctl" -D "$postgres_source" -m fast stop || true
-  fi
-  rmdir "$postgres_socket" 2>/dev/null || true
-}
-trap stop_postgres_source EXIT
 postgres_source_running=1
 "$postgres_bin/pg_ctl" -D "$postgres_source" \
   -l "$migration_dir/postgresql-source.log" \
@@ -170,7 +225,7 @@ postgres_source_running=1
 "$postgres_bin/pg_ctl" -D "$postgres_source" -m fast stop
 postgres_source_running=0
 rmdir "$postgres_socket"
-trap - EXIT
+postgres_socket=
 "$postgres_bin/pg_controldata" "$postgres_source" | \
   grep 'Database cluster state:.*shut down'
 test ! -e "$postgres_data"
@@ -235,14 +290,6 @@ for file in postgresql.conf postgresql.auto.conf pg_hba.conf pg_ident.conf; do
     "$postgres_new/$file"
 done
 nix_postgres_socket="$(mktemp -d /tmp/wonko-pg-nix.XXXXXX)"
-nix_postgres_running=0
-stop_nix_postgres() {
-  if [ "$nix_postgres_running" -eq 1 ]; then
-    "$nix_postgres/pg_ctl" -D "$postgres_new" -m fast stop || true
-  fi
-  rmdir "$nix_postgres_socket" 2>/dev/null || true
-}
-trap stop_nix_postgres EXIT
 nix_postgres_running=1
 "$nix_postgres/pg_ctl" -D "$postgres_new" \
   -l "$migration_dir/postgresql-restore.log" \
@@ -281,7 +328,7 @@ test "$("$nix_postgres/psql" -h "$nix_postgres_socket" -p 55432 \
 "$nix_postgres/pg_ctl" -D "$postgres_new" -m fast stop
 nix_postgres_running=0
 rmdir "$nix_postgres_socket"
-trap - EXIT
+nix_postgres_socket=
 mv "$postgres_new" "$postgres_data"
 launchctl kickstart -k "gui/$(id -u)/org.nix-community.home.postgresql-14"
 for attempt in {1..30}; do
@@ -293,6 +340,7 @@ test "$("$nix_postgres/psql" -d postgres -Atqc \
   "select current_setting('data_directory');")" = "$postgres_data"
 ps -p "$(head -n 1 "$postgres_data/postmaster.pid")" -o command= | \
   grep '^/nix/store/.*-postgresql-14\..*/bin/postgres'
+trap - EXIT
 ```
 
 Yabai's optional scripting addition needs Filesystem Protections, Debugging
@@ -325,17 +373,14 @@ Authenticated Root can remain enabled. If `csrutil status` does not show the
 three required protections disabled, or the boot-argument check fails, the
 commands set `yabai_sa_ready=0`; core Yabai continues to work, and changing
 those recovery-mode security settings is a separate decision. In either case,
-first archive and remove any sudoers rule that still grants access to the
-Homebrew binary:
+first archive and remove any existing Yabai sudoers rule. The eligible path
+below recreates it for the current immutable Nix binary:
 
 ```sh
-legacy_yabai_sudoers=/private/etc/sudoers.d/yabai
-if [ -e "$legacy_yabai_sudoers" ]; then
-  legacy_yabai_sudoers_contents="$(sudo cat "$legacy_yabai_sudoers")"
-  if [[ "$legacy_yabai_sudoers_contents" == *'/opt/homebrew'* ]]; then
-    sudo cp "$legacy_yabai_sudoers" "$migration_dir/config/yabai-sudoers"
-    sudo rm -f "$legacy_yabai_sudoers"
-  fi
+yabai_sudoers=/private/etc/sudoers.d/yabai
+if [[ -e "$yabai_sudoers" || -L "$yabai_sudoers" ]]; then
+  sudo cp "$yabai_sudoers" "$migration_dir/config/yabai-sudoers"
+  sudo rm -f "$yabai_sudoers"
 fi
 ```
 
