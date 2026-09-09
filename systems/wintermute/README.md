@@ -98,21 +98,27 @@ compare_podman_inventory() {
 old_podman=/opt/podman/bin/podman
 podman_initial_state="$("$old_podman" machine inspect --format '{{.State}}')"
 podman_started_for_inventory=0
+restore_podman_with_cli() {
+  local current_state podman_cli="$1" wanted_state="$2"
+  current_state="$("$podman_cli" machine inspect --format '{{.State}}')" || \
+    return 1
+  if [ "$current_state" != "$wanted_state" ]; then
+    case "$wanted_state" in
+      stopped) "$podman_cli" machine stop || return 1 ;;
+      running) "$podman_cli" machine start || return 1 ;;
+      *) return 1 ;;
+    esac
+  fi
+  test "$("$podman_cli" machine inspect --format '{{.State}}')" = \
+    "$wanted_state"
+}
 restore_podman_state() {
   local original_exit=$?
-  local current_state restore_exit=0
+  local restore_exit=0
   trap - EXIT
-  if [ "$podman_started_for_inventory" -eq 1 ]; then
-    if current_state="$("$old_podman" machine inspect --format '{{.State}}' \
-      2>/dev/null)"; then
-      if [ "$current_state" != "$podman_initial_state" ]; then
-        "$old_podman" machine stop || restore_exit=1
-      fi
-      test "$("$old_podman" machine inspect --format '{{.State}}')" = \
-        "$podman_initial_state" || restore_exit=1
-    else
-      restore_exit=1
-    fi
+  if [ "$podman_started_for_inventory" -eq 1 ] &&
+    ! restore_podman_with_cli "$old_podman" "$podman_initial_state"; then
+    restore_exit=1
   fi
   if [ "$original_exit" -ne 0 ]; then
     return "$original_exit"
@@ -207,6 +213,13 @@ restore_postgres_cutover() {
         safe_to_restart=0
       fi
     fi
+  fi
+  if [ "$safe_to_restart" -eq 1 ] && [ -n "$nix_postgres" ] &&
+    [[ -d "$postgres_data" || -L "$postgres_data" ]] &&
+    ! stop_postgres_cluster_if_running "$nix_postgres/pg_ctl" \
+      "$postgres_data"; then
+    rollback_exit=1
+    safe_to_restart=0
   fi
   if [ "$safe_to_restart" -eq 1 ] && [ -n "$postgres_new" ] &&
     [[ -e "$postgres_new" || -L "$postgres_new" ]]; then
@@ -478,26 +491,15 @@ cannot pass only because an old process is still alive:
 podman="$HOME/.nix-profile/bin/podman"
 restore_nix_podman_state() {
   local original_exit=$?
-  local current_state exit_to_preserve restored_state restore_exit=0
+  local exit_to_preserve restore_exit=0
   trap - EXIT
-  if current_state="$("$podman" machine inspect --format '{{.State}}' \
-    2>/dev/null)"; then
-    if [ "$podman_initial_state" = stopped ] && \
-      [ "$current_state" != stopped ]; then
-      "$podman" machine stop || restore_exit=1
-    elif [ "$podman_initial_state" = running ] && \
-      [ "$current_state" != running ]; then
-      "$podman" machine start || restore_exit=1
+  if ! restore_podman_with_cli "$podman" "$podman_initial_state"; then
+    if [ "$postgres_cutover_accepted" -eq 0 ] &&
+      restore_podman_with_cli "$old_podman" "$podman_initial_state"; then
+      restore_exit=0
+    else
+      restore_exit=1
     fi
-  else
-    restore_exit=1
-  fi
-  if [ "$restore_exit" -eq 0 ] &&
-    restored_state="$("$podman" machine inspect --format '{{.State}}' \
-      2>/dev/null)"; then
-    [ "$restored_state" = "$podman_initial_state" ] || restore_exit=1
-  else
-    restore_exit=1
   fi
   if [ "$restore_exit" -ne 0 ]; then
     printf 'Failed to restore Podman machine state to %s\n' \
@@ -533,8 +535,11 @@ package does not provide the privileged Docker-compatible
 verify_nix_cutover() {
   local expected_podman_state="$1"
   local agent command executable nix_profile="$HOME/.nix-profile/bin"
-  for command in atuin gcloud git gpg-connect-agent pg_isready pinentry-mac \
-    podman psql skhd yabai; do
+  for command in ansible atuin btop cloc cloud-sql-proxy codex \
+    codex-github-mcp direnv dot egctl gcloud gh git gke-gcloud-auth-plugin \
+    go gpg gpg-connect-agent gpgconf helm helm_ls hostname ipfs irssi kitty \
+    kubeconform kubectl node omnigraph pg_isready pinentry-mac podman psql \
+    rg rustup signal-desktop skhd watch yabai ykman yq zellij zsh; do
     test "$(command -v "$command")" = "$nix_profile/$command"
   done
   for agent in atuin-daemon skhd yabai postgresql-14; do
