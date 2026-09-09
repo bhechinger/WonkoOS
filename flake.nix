@@ -270,29 +270,33 @@
             }
             ''
               cp ${./Makefile} Makefile
+              mkdir bin
+              printf '%s\n' '#!/bin/sh' 'printf "%s\n" "$TEST_HOST"' > bin/hostname
+              chmod +x bin/hostname
 
-              make -n HOST=deepthought build switch boot > deepthought
+              PATH="$PWD/bin:$PATH" TEST_HOST=deepthought make -n build switch boot > deepthought
               grep -Fq 'nh os build -H deepthought .' deepthought
               grep -Fq 'nh home build . -c deepthought' deepthought
               grep -Fq 'nh home switch . -c deepthought' deepthought
 
-              make -n HOST=bob build switch boot > bob
+              PATH="$PWD/bin:$PATH" TEST_HOST=bob make -n build switch boot > bob
               grep -Fq 'nh os build -H bob --diff never .' bob
               grep -Fq 'nh os switch -H bob --diff never .' bob
 
-              make -n HOST=wintermute build switch > wintermute
+              PATH="$PWD/bin:$PATH" TEST_HOST=wintermute make -n build switch > wintermute
               grep -Fq 'nix build .#homeConfigurations.wintermute.activationPackage' wintermute
               ! grep -Fq 'ssh ' wintermute
 
-              make -n HOST=deepthought build-wintermute > wintermute-remote
+              PATH="$PWD/bin:$PATH" TEST_HOST=deepthought make -n build-wintermute > wintermute-remote
               grep -Fq -- '--eval-store daemon --store ssh-ng://wonko@wintermute.lan' wintermute-remote
 
-              ! make HOST=wintermute boot
-              ! make HOST=bob build-wintermute
-              ! make HOST=wintermute deploy-bob
-              ! make HOST=bob build-deepthought
-              ! make HOST=wintermute rollback-pwppp
-              ! make HOST=unknown build
+              ! env PATH="$PWD/bin:$PATH" TEST_HOST=wintermute make boot
+              ! env PATH="$PWD/bin:$PATH" TEST_HOST=bob make build-wintermute
+              ! env PATH="$PWD/bin:$PATH" TEST_HOST=wintermute make deploy-bob
+              ! env PATH="$PWD/bin:$PATH" TEST_HOST=bob make build-deepthought
+              ! env PATH="$PWD/bin:$PATH" TEST_HOST=wintermute make rollback-pwppp
+              ! env PATH="$PWD/bin:$PATH" TEST_HOST=unknown make build
+              ! env PATH="$PWD/bin:$PATH" TEST_HOST=wintermute make HOST=deepthought deploy-bob
 
               touch "$out"
             '';

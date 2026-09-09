@@ -1,7 +1,7 @@
 .PHONY: check-host hugepages-inputs refresh-pwppp refresh-gigglesomething refresh-packwiz boot switch build build-deepthought deploy-deepthought boot-deepthought build-bob deploy-bob boot-bob build-wintermute deploy-wintermute boot-wintermute build-minecraft stage-minecraft deploy-minecraft rollback-minecraft
 .PHONY: build-pwppp build-gigglesomething stage-pwppp stage-gigglesomething deploy-pwppp deploy-gigglesomething rollback-pwppp rollback-gigglesomething
 
-HOST := $(shell hostname -s)
+override HOST := $(shell hostname -s)
 SUPPORTED_HOSTS := deepthought bob wintermute
 BOB := wonko@bob.4amlunch.net
 BOB_SSH := ssh -F /home/wonko/.ssh/config -o ControlMaster=no -o ControlPath=none -T $(BOB)
