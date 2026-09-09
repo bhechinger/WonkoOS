@@ -10,6 +10,7 @@ let
   graphIds = [
     "dev"
     "gevulot"
+    "misc"
     "nix"
     "projects"
     "shared"

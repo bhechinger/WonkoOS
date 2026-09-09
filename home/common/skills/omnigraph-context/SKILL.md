@@ -25,7 +25,10 @@ Choose the graph and context prefix by the first matching rule:
   identifying GitHub repository `bhechinger/WonkoOS`; graph `nix`, prefix
   `nix:wonkoos:`.
 - `/home/wonko/nix/**`: graph `nix`, prefix `nix:`.
-- Everything else: graph `projects`, prefix `project:<key>:`, where `key` is
+- `~/projects/**`: graph `projects`, prefix `project:<key>:`, where `key` is
+  the first 16 lowercase hex characters of the SHA-256 of the origin URL, or
+  of the physical project path when no origin exists.
+- Everything else: graph `misc`, prefix `misc:<key>:`, where `key` is
   the first 16 lowercase hex characters of the SHA-256 of the origin URL, or
   of the physical project path when no origin exists.
 
