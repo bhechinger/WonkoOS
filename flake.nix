@@ -271,39 +271,48 @@
             ''
               cp ${./Makefile} Makefile
               mkdir bin
-              printf '%s\n' '#!/bin/sh' 'printf "%s\n" "$TEST_HOST"' > bin/hostname
+              printf '%s\n' '#!/bin/sh' 'printf "%s\n" deepthought' > bin/hostname
               chmod +x bin/hostname
+              for host in deepthought bob wintermute unknown; do
+                mkdir -p "hosts/$host"
+                sed "s|^override HOST :=.*$|override HOST := $host|" Makefile > "hosts/$host/Makefile"
+              done
 
-              PATH="$PWD/bin:$PATH" TEST_HOST=deepthought make -n build switch boot > deepthought
+              make -C hosts/deepthought --no-print-directory -n build switch boot > deepthought
               grep -Fq 'nh os build -H deepthought .' deepthought
               grep -Fq 'nh home build . -c deepthought' deepthought
               grep -Fq 'nh home switch . -c deepthought' deepthought
 
-              PATH="$PWD/bin:$PATH" TEST_HOST=bob make -n build switch boot > bob
+              make -C hosts/bob --no-print-directory -n build switch boot > bob
               grep -Fq 'nh os build -H bob --diff never .' bob
               grep -Fq 'nh os switch -H bob --diff never .' bob
               grep -Fq './scripts/generate_hugepages_inputs.sh' bob
 
-              PATH="$PWD/bin:$PATH" TEST_HOST=deepthought make -n build-bob > bob-remote
+              make -C hosts/deepthought --no-print-directory -n build-bob > bob-remote
               ! grep -Fq './scripts/generate_hugepages_inputs.sh' bob-remote
 
-              PATH="$PWD/bin:$PATH" TEST_HOST=wintermute make -n build switch > wintermute
+              make -C hosts/wintermute --no-print-directory -n build switch > wintermute
               grep -Fq 'nix build .#homeConfigurations.wintermute.activationPackage' wintermute
               ! grep -Fq 'ssh ' wintermute
 
-              PATH="$PWD/bin:$PATH" TEST_HOST=deepthought make -n build-wintermute > wintermute-remote
+              make -C hosts/deepthought --no-print-directory -n build-wintermute > wintermute-remote
               grep -Fq -- '--eval-store daemon --store ssh-ng://wonko@wintermute.lan' wintermute-remote
 
-              ! env PATH="$PWD/bin:$PATH" TEST_HOST=wintermute make boot
-              ! env PATH="$PWD/bin:$PATH" TEST_HOST=bob make build-wintermute
-              ! env PATH="$PWD/bin:$PATH" TEST_HOST=wintermute make deploy-bob
-              ! env PATH="$PWD/bin:$PATH" TEST_HOST=bob make build-deepthought
-              ! env PATH="$PWD/bin:$PATH" TEST_HOST=wintermute make rollback-pwppp
-              ! env PATH="$PWD/bin:$PATH" TEST_HOST=unknown make build
-              ! env PATH="$PWD/bin:$PATH" TEST_HOST=wintermute make HOST=deepthought deploy-bob
-              ! env PATH="$PWD/bin:$PATH" TEST_HOST=wintermute make --ignore-errors build-bob
-              ! env PATH="$PWD/bin:$PATH" TEST_HOST=wintermute make require_host= build-bob
-              ! env PATH="$PWD/bin:$PATH" TEST_HOST=wintermute make require_self= boot-bob
+              ! make -C hosts/wintermute --no-print-directory boot
+              ! make -C hosts/bob --no-print-directory build-wintermute
+              ! make -C hosts/wintermute --no-print-directory deploy-bob
+              ! make -C hosts/bob --no-print-directory build-deepthought
+              ! make -C hosts/wintermute --no-print-directory rollback-pwppp
+              ! make -C hosts/unknown --no-print-directory build
+              ! make -C hosts/wintermute --no-print-directory HOST=deepthought deploy-bob
+              ! make -C hosts/wintermute --no-print-directory --ignore-errors build-bob
+              ! make -C hosts/wintermute --no-print-directory require_host= build-bob
+              ! make -C hosts/wintermute --no-print-directory require_self= boot-bob
+              ! make -C hosts/wintermute --no-print-directory --eval='build-bob: override HOST := deepthought' --eval='build-bob: override require_host :=' -n build-bob
+
+              actual="$(cut -d. -f1 /proc/sys/kernel/hostname)"
+              detected="$(PATH="$PWD/bin:$PATH" make -f Makefile --no-print-directory -s --eval 'print-host: ; @printf "%s\n" "$(HOST)"' print-host)"
+              test "$detected" = "$actual"
 
               touch "$out"
             '';
