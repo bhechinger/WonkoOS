@@ -289,21 +289,24 @@ ps -p "$(head -n 1 "$postgres_data/postmaster.pid")" -o command= | \
   grep '^/nix/store/.*-postgresql-14\..*/bin/postgres'
 ```
 
-Yabai's optional scripting addition needs reduced System Integrity Protection
-and Authenticated Root settings. Check both before configuring it:
+Yabai's optional scripting addition needs Filesystem Protections, Debugging
+Restrictions, and NVRAM Protection disabled as described in the
+[upstream Apple Silicon instructions](https://github.com/asmvik/yabai/wiki/Disabling-System-Integrity-Protection),
+plus the arm64e preview ABI boot argument. Check both before configuring it:
 
 ```sh
 csrutil status
-csrutil authenticated-root status
+nvram boot-args | grep -E '(^|[[:space:]])-arm64e_preview_abi([[:space:]]|$)'
 ```
 
-If either remains fully enabled, skip the scripting-addition block; core Yabai
-continues to work, and changing those recovery-mode security settings is a
-separate decision. If the machine is already configured to permit the
-scripting addition, give the immutable Nix binary a digest-restricted sudoers
-entry. Recreate this entry after every Yabai package update. In Yabai 7.1.25,
-`--load-sa` installs and loads the addition; there is no separate
-`--install-sa` option:
+Authenticated Root can remain enabled. If `csrutil status` does not show the
+three required protections disabled, or the boot-argument check fails, skip
+the scripting-addition block; core Yabai continues to work, and changing those
+recovery-mode security settings is a separate decision. If the machine is
+already configured to permit the scripting addition, give the immutable Nix
+binary a digest-restricted sudoers entry. Recreate this entry after every Yabai
+package update. In Yabai 7.1.25, `--load-sa` installs and loads the addition;
+there is no separate `--install-sa` option:
 
 ```sh
 yabai_path="$(readlink "$HOME/.nix-profile/bin/yabai")"
@@ -350,6 +353,28 @@ Also verify the Nix PostgreSQL cluster, Yabai/skhd, Atuin daemon, GPG pinentry,
 Google Cloud CLI, Signal, Podman Desktop, Kitty, and Stremio after a fresh
 login. The Nix Podman package does not provide the privileged Docker-compatible
 `/var/run/docker.sock`; stop here if anything requires that socket.
+
+```sh
+for agent in atuin-daemon skhd yabai postgresql-14; do
+  launchctl print "gui/$(id -u)/org.nix-community.home.$agent" | \
+    grep 'state = running' >/dev/null
+done
+atuin daemon status >/dev/null
+gpg-connect-agent updatestartuptty /bye | grep -qx OK
+grep -Fqx \
+  'pinentry-program /Users/wonko/.nix-profile/bin/pinentry-mac' \
+  "$HOME/.gnupg/gpg-agent.conf"
+gcloud --version >/dev/null
+infocmp -x xterm-kitty >/dev/null
+for executable in \
+  "$HOME/Applications/Home Manager Apps/Podman Desktop.app/Contents/MacOS/Podman Desktop" \
+  "$HOME/Applications/Home Manager Apps/Signal.app/Contents/MacOS/Signal" \
+  "$HOME/Applications/Home Manager Apps/kitty.app/Contents/MacOS/kitty" \
+  /Applications/Stremio.app/Contents/MacOS/Stremio; do
+  test -x "$executable"
+  file "$executable" | grep 'Mach-O 64-bit executable arm64' >/dev/null
+done
+```
 
 If a check fails before PostgreSQL accepts writes, restore the saved shell
 files, unload the Nix agents, and reload the saved launch agents; do not
