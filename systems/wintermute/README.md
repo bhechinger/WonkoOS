@@ -779,7 +779,7 @@ rm -rf "$HOME/Library/Caches/Homebrew" "$HOME/Library/Logs/Homebrew"
 sudo rm -f /etc/paths.d/homebrew
 if [[ -e /Library/ScriptingAdditions/yabai.osax ||
   -L /Library/ScriptingAdditions/yabai.osax ]]; then
-  sudo "$HOME/.nix-profile/bin/yabai" --uninstall-sa
+  sudo rm -rf /Library/ScriptingAdditions/yabai.osax
 fi
 [[ ! -e /Library/ScriptingAdditions/yabai.osax &&
   ! -L /Library/ScriptingAdditions/yabai.osax ]]
