@@ -166,6 +166,44 @@ nix_postgres_socket=
 nix_postgres_running=0
 postgres_new=
 postgres_cutover_accepted=0
+home_manager_deployed=0
+home_manager_previous="$(readlink -f \
+  "$HOME/.local/state/nix/profiles/home-manager")"
+test -x "$home_manager_previous/activate"
+yabai_sudoers_original=0
+yabai_sudoers_touched=0
+original_user_shell="$(dscl . -read /Users/wonko UserShell | awk '{print $2}')"
+user_shell_changed=0
+launchd_service_state() {
+  local exit_code=0 output service="$1"
+  output="$(launchctl print "$service" 2>&1)" || exit_code=$?
+  case "$exit_code" in
+    0) printf 'loaded\n' ;;
+    113)
+      [[ "$output" == *'Could not find service'* ]] || return 1
+      printf 'absent\n'
+      ;;
+    *) return 1 ;;
+  esac
+}
+bootout_user_agent_if_loaded() {
+  local label="$1" plist="$2" state
+  state="$(launchd_service_state "gui/$(id -u)/$label")" || return 1
+  if [ "$state" = loaded ]; then
+    launchctl bootout "gui/$(id -u)" "$plist" || return 1
+  fi
+  test "$(launchd_service_state "gui/$(id -u)/$label")" = absent
+}
+start_user_agent() {
+  local label="$1" plist="$2" state
+  state="$(launchd_service_state "gui/$(id -u)/$label")" || return 1
+  case "$state" in
+    loaded) ;;
+    absent) launchctl bootstrap "gui/$(id -u)" "$plist" ;;
+    *) return 1 ;;
+  esac
+  test "$(launchd_service_state "gui/$(id -u)/$label")" = loaded
+}
 stop_postgres_cluster_if_running() {
   local data_dir="$2" pg_ctl_bin="$1" pg_status=0
   "$pg_ctl_bin" -D "$data_dir" status >/dev/null 2>&1 || pg_status=$?
@@ -178,12 +216,10 @@ stop_postgres_cluster_if_running() {
   "$pg_ctl_bin" -D "$data_dir" status >/dev/null 2>&1 || pg_status=$?
   [ "$pg_status" -eq 3 ]
 }
-restore_postgres_cutover() {
+restore_cutover() {
   local original_exit=$?
-  local attempt domain="gui/$(id -u)" quarantine rollback_exit=0
-  local safe_to_restart=1 socket_dir
-  local nix_label="$domain/org.nix-community.home.postgresql-14"
-  local old_label="$domain/homebrew.mxcl.postgresql@14"
+  local agent attempt backup domain="gui/$(id -u)" quarantine rollback_exit=0
+  local safe_to_restart=1 socket_dir target user_services_safe=1
   if [ "$#" -gt 0 ]; then
     original_exit="$1"
   fi
@@ -205,13 +241,11 @@ restore_postgres_cutover() {
       rmdir "$socket_dir" || rollback_exit=1
     fi
   done
-  if [ "$safe_to_restart" -eq 1 ]; then
-    if launchctl print "$nix_label" >/dev/null 2>&1; then
-      if ! launchctl bootout "$domain" \
-        "$HOME/Library/LaunchAgents/org.nix-community.home.postgresql-14.plist"; then
-        rollback_exit=1
-        safe_to_restart=0
-      fi
+  if [ "$safe_to_restart" -eq 1 ] && [ "$home_manager_deployed" -eq 1 ]; then
+    if ! bootout_user_agent_if_loaded org.nix-community.home.postgresql-14 \
+      "$HOME/Library/LaunchAgents/org.nix-community.home.postgresql-14.plist"; then
+      rollback_exit=1
+      safe_to_restart=0
     fi
   fi
   if [ "$safe_to_restart" -eq 1 ] && [ -n "$nix_postgres" ] &&
@@ -239,14 +273,62 @@ restore_postgres_cutover() {
       mv "$postgres_data" "$quarantine" || rollback_exit=1
     fi
   fi
-  if [ "$safe_to_restart" -eq 1 ]; then
-    if launchctl print "$old_label" >/dev/null 2>&1; then
-      launchctl kickstart -k "$old_label" || rollback_exit=1
-    else
-      launchctl bootstrap "$domain" \
-        "$HOME/Library/LaunchAgents/homebrew.mxcl.postgresql@14.plist" || \
+  if [ "$home_manager_deployed" -eq 1 ]; then
+    for agent in atuin-daemon skhd yabai; do
+      if ! bootout_user_agent_if_loaded "org.nix-community.home.$agent" \
+        "$HOME/Library/LaunchAgents/org.nix-community.home.$agent.plist"; then
         rollback_exit=1
+        user_services_safe=0
+      fi
+    done
+    if ! "$HOME/.nix-profile/bin/home-manager" switch --rollback ||
+      [ "$(readlink -f \
+        "$HOME/.local/state/nix/profiles/home-manager")" != \
+        "$home_manager_previous" ]; then
+      rollback_exit=1
+      safe_to_restart=0
+      user_services_safe=0
     fi
+  fi
+  for backup in .zprofile .gitconfig gpg-agent.conf config.toml skhdrc \
+    yabairc .zshrc .zshenv; do
+    case "$backup" in
+      .zprofile|.gitconfig|.zshrc|.zshenv) target="$HOME/$backup" ;;
+      gpg-agent.conf) target="$HOME/.gnupg/$backup" ;;
+      config.toml) target="$HOME/.config/atuin/$backup" ;;
+      skhdrc) target="$HOME/.config/skhd/$backup" ;;
+      yabairc) target="$HOME/.config/yabai/$backup" ;;
+    esac
+    if [ -e "$migration_dir/config/$backup" ]; then
+      rm -f "$target" && cp -p "$migration_dir/config/$backup" "$target" || \
+      rollback_exit=1
+    fi
+  done
+  /opt/homebrew/bin/gpgconf --kill gpg-agent || rollback_exit=1
+  if [ "$yabai_sudoers_touched" -eq 1 ]; then
+    if [ "$yabai_sudoers_original" -eq 1 ]; then
+      sudo install -o root -g wheel -m 0440 \
+        "$migration_dir/config/yabai-sudoers" \
+        /private/etc/sudoers.d/yabai || rollback_exit=1
+    else
+      sudo rm -f /private/etc/sudoers.d/yabai || rollback_exit=1
+    fi
+  fi
+  if [ "$user_shell_changed" -eq 1 ]; then
+    sudo dscl . -change /Users/wonko UserShell /bin/zsh \
+      "$original_user_shell" || rollback_exit=1
+  fi
+  if [ "$user_services_safe" -eq 1 ]; then
+    for agent in homebrew.mxcl.atuin com.koekeishiya.skhd \
+      com.koekeishiya.yabai; do
+      start_user_agent "$agent" \
+        "$HOME/Library/LaunchAgents/$agent.plist" || rollback_exit=1
+    done
+  fi
+  if [ "$safe_to_restart" -eq 1 ]; then
+    start_user_agent homebrew.mxcl.postgresql@14 \
+      "$HOME/Library/LaunchAgents/homebrew.mxcl.postgresql@14.plist" || \
+      rollback_exit=1
   fi
   if [ "$safe_to_restart" -eq 1 ]; then
     for attempt in {1..30}; do
@@ -266,7 +348,7 @@ restore_postgres_cutover() {
   fi
   return "$rollback_exit"
 }
-trap restore_postgres_cutover EXIT
+trap restore_cutover EXIT
 launchctl bootout "gui/$(id -u)" "$HOME/Library/LaunchAgents/homebrew.mxcl.postgresql@14.plist"
 "$postgres_bin/pg_controldata" "$postgres_source" | \
   grep 'Database cluster state:.*shut down'
@@ -298,10 +380,8 @@ postgres_socket=
 test ! -e "$postgres_data"
 
 for agent in homebrew.mxcl.atuin com.koekeishiya.skhd com.koekeishiya.yabai; do
-  if launchctl print "gui/$(id -u)/$agent" >/dev/null 2>&1; then
-    launchctl bootout "gui/$(id -u)" "$HOME/Library/LaunchAgents/$agent.plist"
-  fi
-  ! launchctl print "gui/$(id -u)/$agent" >/dev/null 2>&1
+  bootout_user_agent_if_loaded "$agent" \
+    "$HOME/Library/LaunchAgents/$agent.plist"
 done
 atuin_socket="$HOME/.local/share/atuin/atuin.sock"
 if [ -S "$atuin_socket" ]; then
@@ -316,6 +396,11 @@ remaining obsolete paths in user-owned configuration without replacing the
 rest of those files:
 
 ```sh
+home_manager_current="$(readlink -f \
+  "$HOME/.local/state/nix/profiles/home-manager")"
+test -x "$home_manager_current/activate"
+test "$home_manager_current" != "$home_manager_previous"
+home_manager_deployed=1
 git config --global --unset-all credential.https://github.com.helper || true
 git config --global --add credential.https://github.com.helper ''
 git config --global --add credential.https://github.com.helper '!gh auth git-credential'
@@ -447,7 +532,9 @@ yabai_sudoers=/private/etc/sudoers.d/yabai
 if [[ -e "$yabai_sudoers" || -L "$yabai_sudoers" ]]; then
   sudo cp "$yabai_sudoers" "$migration_dir/config/yabai-sudoers"
   sudo rm -f "$yabai_sudoers"
+  yabai_sudoers_original=1
 fi
+yabai_sudoers_touched=1
 ```
 
 When `yabai_sa_ready=1`, give the immutable Nix binary a digest-restricted
@@ -510,7 +597,7 @@ restore_nix_podman_state() {
     exit_to_preserve="$restore_exit"
   fi
   if [ "$postgres_cutover_accepted" -eq 0 ]; then
-    restore_postgres_cutover "$exit_to_preserve"
+    restore_cutover "$exit_to_preserve"
     return $?
   fi
   return "$exit_to_preserve"
@@ -626,10 +713,12 @@ verify_legacy_retired() {
 }
 ```
 
-If a check fails before PostgreSQL accepts writes, restore the saved shell
-files, unload the Nix agents, and reload the saved launch agents; do not
-uninstall Homebrew. If the Nix cluster has accepted a write, do not reload the
-old PostgreSQL agent: stop clients and reconcile or dump the Nix cluster first.
+Until `postgres_cutover_accepted=1`, the armed exit trap rolls Home Manager
+back to its captured generation, restores the saved configuration and sudoers
+state, unloads the Nix agents, and reloads the old launch agents. Do not
+uninstall Homebrew if that rollback runs. If the Nix cluster has accepted a
+write, do not reload the old PostgreSQL agent: stop clients and reconcile or
+dump the Nix cluster first.
 
 Confirm the login shell and the manually managed Stremio bundle do not depend
 on Homebrew. The conditional handles Wintermute if its account is ever switched
@@ -637,11 +726,15 @@ to Homebrew zsh before this migration runs:
 
 ```sh
 user_shell="$(dscl . -read /Users/wonko UserShell | awk '{print $2}')"
+test "$user_shell" = "$original_user_shell"
 if [ "$user_shell" = /opt/homebrew/bin/zsh ]; then
   sudo dscl . -change /Users/wonko UserShell "$user_shell" /bin/zsh
+  user_shell_changed=1
 fi
 test "$(dscl . -read /Users/wonko UserShell | awk '{print $2}')" = /bin/zsh
 test -d /Applications/Stremio.app && test ! -L /Applications/Stremio.app
+homebrew_casks=$'\n'"$(/opt/homebrew/bin/brew list --cask)"$'\n'
+[[ "$homebrew_casks" != *$'\nstremio\n'* ]]
 ```
 
 Once the cutover passes, download and inspect Homebrew's official uninstaller,
@@ -661,12 +754,14 @@ any remaining prefix contents and confirm that every entry is obsolete before
 continuing with the removal block:
 
 ```sh
-if [ -d /opt/homebrew ]; then
+if [[ -e /opt/homebrew || -L /opt/homebrew ]]; then
+  test -d /opt/homebrew && test ! -L /opt/homebrew
   find /opt/homebrew -mindepth 1 -print
 fi
 ```
 
-Remove only the verified obsolete files. Preserve `~/.config/gcloud`,
+Stop if `find` prints anything. Remove only individually identified obsolete
+entries, then rerun the inspection until the prefix is empty. Preserve `~/.config/gcloud`,
 `~/.rustup`, `~/.cargo`, `~/.ipfs`, `~/.local/share/containers`,
 `~/.config/containers`, all application-support data, the PostgreSQL backup,
 and `/Applications/Stremio.app`.
@@ -682,7 +777,12 @@ sudo rm -f /etc/paths.d/homebrew
 
 sudo /usr/local/podman/helper/wonko/podman-mac-helper uninstall
 test ! -e /var/run/docker.sock && test ! -L /var/run/docker.sock
-sudo launchctl bootout system /Library/LaunchDaemons/com.github.containers.podman.helper-wonko.plist 2>/dev/null || true
+podman_helper=system/com.github.containers.podman.helper-wonko
+if [ "$(launchd_service_state "$podman_helper")" = loaded ]; then
+  sudo launchctl bootout system \
+    /Library/LaunchDaemons/com.github.containers.podman.helper-wonko.plist
+fi
+test "$(launchd_service_state "$podman_helper")" = absent
 sudo rm -f /Library/LaunchDaemons/com.github.containers.podman.helper-wonko.plist \
   /private/var/run/podman-helper-wonko.socket
 sudo rm -rf /opt/podman /usr/local/podman/helper/wonko
@@ -690,8 +790,8 @@ sudo rmdir /usr/local/podman/helper /usr/local/podman 2>/dev/null || true
 sudo rm -f /etc/paths.d/podman-pkg /usr/local/etc/man.d/podman.man.conf
 sudo pkgutil --forget com.redhat.podman
 
-if [ -d /opt/homebrew ]; then
-  rm -rf /opt/homebrew/*(DN)
+if [[ -e /opt/homebrew || -L /opt/homebrew ]]; then
+  test -d /opt/homebrew && test ! -L /opt/homebrew
   test -z "$(ls -A /opt/homebrew)"
   sudo rmdir /opt/homebrew
 fi
