@@ -139,13 +139,20 @@ test "$("$postgres_bin/psql" -d postgres -Atqc \
   "select count(*) from pg_stat_activity where pid <> pg_backend_pid() and backend_type = 'client backend';")" = 0
 postgres_socket=
 postgres_source_running=0
+nix_postgres=
 nix_postgres_socket=
 nix_postgres_running=0
+postgres_new=
+postgres_cutover_accepted=0
 restore_postgres_cutover() {
   local original_exit=$?
-  local attempt domain="gui/$(id -u)" rollback_exit=0 socket_dir
+  local attempt domain="gui/$(id -u)" quarantine rollback_exit=0
+  local safe_to_restart=1 socket_dir
   local nix_label="$domain/org.nix-community.home.postgresql-14"
   local old_label="$domain/homebrew.mxcl.postgresql@14"
+  if [ "$#" -gt 0 ]; then
+    original_exit="$1"
+  fi
   trap - EXIT
   if [ "$nix_postgres_running" -eq 1 ]; then
     if "$nix_postgres/pg_ctl" -D "$postgres_new" status >/dev/null 2>&1; then
@@ -156,8 +163,10 @@ restore_postgres_cutover() {
   if [ "$postgres_source_running" -eq 1 ]; then
     if "$postgres_bin/pg_ctl" -D "$postgres_source" status \
       >/dev/null 2>&1; then
-      "$postgres_bin/pg_ctl" -D "$postgres_source" -m fast stop || \
+      if ! "$postgres_bin/pg_ctl" -D "$postgres_source" -m fast stop; then
         rollback_exit=1
+        safe_to_restart=0
+      fi
     fi
   fi
   for socket_dir in "$nix_postgres_socket" "$postgres_socket"; do
@@ -165,14 +174,34 @@ restore_postgres_cutover() {
       rmdir "$socket_dir" || rollback_exit=1
     fi
   done
-  if [ "$rollback_exit" -eq 0 ]; then
+  if [ "$safe_to_restart" -eq 1 ]; then
     if launchctl print "$nix_label" >/dev/null 2>&1; then
-      launchctl bootout "$domain" \
-        "$HOME/Library/LaunchAgents/org.nix-community.home.postgresql-14.plist" || \
+      if ! launchctl bootout "$domain" \
+        "$HOME/Library/LaunchAgents/org.nix-community.home.postgresql-14.plist"; then
         rollback_exit=1
+        safe_to_restart=0
+      fi
     fi
   fi
-  if [ "$rollback_exit" -eq 0 ]; then
+  if [ "$safe_to_restart" -eq 1 ] && [ -n "$postgres_new" ] &&
+    [[ -e "$postgres_new" || -L "$postgres_new" ]]; then
+    quarantine="$migration_dir/postgresql-14-new-unaccepted"
+    if [[ -e "$quarantine" || -L "$quarantine" ]]; then
+      rollback_exit=1
+    else
+      mv "$postgres_new" "$quarantine" || rollback_exit=1
+    fi
+  fi
+  if [ "$safe_to_restart" -eq 1 ] &&
+    [[ -e "$postgres_data" || -L "$postgres_data" ]]; then
+    quarantine="$migration_dir/postgresql-14-unaccepted"
+    if [[ -e "$quarantine" || -L "$quarantine" ]]; then
+      rollback_exit=1
+    else
+      mv "$postgres_data" "$quarantine" || rollback_exit=1
+    fi
+  fi
+  if [ "$safe_to_restart" -eq 1 ]; then
     if launchctl print "$old_label" >/dev/null 2>&1; then
       launchctl kickstart -k "$old_label" || rollback_exit=1
     else
@@ -181,7 +210,7 @@ restore_postgres_cutover() {
         rollback_exit=1
     fi
   fi
-  if [ "$rollback_exit" -eq 0 ]; then
+  if [ "$safe_to_restart" -eq 1 ]; then
     for attempt in {1..30}; do
       "$postgres_bin/pg_isready" -d postgres >/dev/null && break
       sleep 1
@@ -340,7 +369,6 @@ test "$("$nix_postgres/psql" -d postgres -Atqc \
   "select current_setting('data_directory');")" = "$postgres_data"
 ps -p "$(head -n 1 "$postgres_data/postmaster.pid")" -o command= | \
   grep '^/nix/store/.*-postgresql-14\..*/bin/postgres'
-trap - EXIT
 ```
 
 Yabai's optional scripting addition needs Filesystem Protections, Debugging
@@ -425,7 +453,7 @@ cannot pass only because an old process is still alive:
 podman="$HOME/.nix-profile/bin/podman"
 restore_nix_podman_state() {
   local original_exit=$?
-  local current_state restored_state restore_exit=0
+  local current_state exit_to_preserve restored_state restore_exit=0
   trap - EXIT
   if current_state="$("$podman" machine inspect --format '{{.State}}' \
     2>/dev/null)"; then
@@ -450,10 +478,15 @@ restore_nix_podman_state() {
     printf 'Failed to restore Podman machine state to %s\n' \
       "$podman_initial_state" >&2
   fi
-  if [ "$original_exit" -ne 0 ]; then
-    return "$original_exit"
+  exit_to_preserve="$original_exit"
+  if [ "$exit_to_preserve" -eq 0 ]; then
+    exit_to_preserve="$restore_exit"
   fi
-  return "$restore_exit"
+  if [ "$postgres_cutover_accepted" -eq 0 ]; then
+    restore_postgres_cutover "$exit_to_preserve"
+    return $?
+  fi
+  return "$exit_to_preserve"
 }
 trap restore_nix_podman_state EXIT
 if [ "$("$podman" machine inspect --format '{{.State}}')" = running ]; then
@@ -507,6 +540,7 @@ verify_nix_cutover() {
   done
 }
 verify_nix_cutover running
+postgres_cutover_accepted=1
 
 verify_legacy_retired() {
   local exit_code file grep_exit legacy_service_output
