@@ -2,6 +2,7 @@
 .PHONY: build-pwppp build-gigglesomething stage-pwppp stage-gigglesomething deploy-pwppp deploy-gigglesomething rollback-pwppp rollback-gigglesomething
 
 override SHELL := /bin/sh
+override .SHELLFLAGS := -c
 ifneq ($(wildcard /proc/sys/kernel/hostname),)
 override HOST := $(firstword $(subst ., ,$(file </proc/sys/kernel/hostname)))
 else

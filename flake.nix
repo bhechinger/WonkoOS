@@ -271,12 +271,14 @@
             ''
               cp ${./Makefile} Makefile
               mkdir bin
-              printf '%s\n' '#!/bin/sh' 'printf "%s\n" deepthought' > bin/hostname
+              printf '%s\n' '#!/bin/sh' 'printf "%s\n" wintermute' > bin/hostname
               chmod +x bin/hostname
               for host in deepthought bob wintermute unknown; do
                 mkdir -p "hosts/$host"
                 sed "s|^override HOST :=.*$|override HOST := $host|" Makefile > "hosts/$host/Makefile"
               done
+              mkdir -p hosts/darwin
+              sed -e 's|ifneq ($(wildcard /proc/sys/kernel/hostname),)|ifneq (,)|' -e "s|/bin/hostname|$PWD/bin/hostname|" Makefile > hosts/darwin/Makefile
 
               make -C hosts/deepthought --no-print-directory -n build switch boot > deepthought
               grep -Fq 'nh os build -H deepthought .' deepthought
@@ -309,6 +311,7 @@
               ! make -C hosts/wintermute --no-print-directory require_host= build-bob
               ! make -C hosts/wintermute --no-print-directory require_self= boot-bob
               ! make -C hosts/wintermute --no-print-directory --eval='build-bob: override HOST := deepthought' --eval='build-bob: override require_host :=' -n build-bob
+              ! make -C hosts/darwin --no-print-directory ".SHELLFLAGS=-c 'printf deepthought; #'" --eval='deploy-bob: override .SHELLFLAGS := -c' -n deploy-bob
 
               actual="$(cut -d. -f1 /proc/sys/kernel/hostname)"
               detected="$(PATH="$PWD/bin:$PATH" make -f Makefile --no-print-directory -s --eval 'print-host: ; @printf "%s\n" "$(HOST)"' print-host)"
