@@ -99,9 +99,25 @@ old_podman=/opt/podman/bin/podman
 podman_initial_state="$("$old_podman" machine inspect --format '{{.State}}')"
 podman_started_for_inventory=0
 restore_podman_state() {
+  local original_exit=$?
+  local current_state restore_exit=0
+  trap - EXIT
   if [ "$podman_started_for_inventory" -eq 1 ]; then
-    "$old_podman" machine stop
+    if current_state="$("$old_podman" machine inspect --format '{{.State}}' \
+      2>/dev/null)"; then
+      if [ "$current_state" != "$podman_initial_state" ]; then
+        "$old_podman" machine stop || restore_exit=1
+      fi
+      test "$("$old_podman" machine inspect --format '{{.State}}')" = \
+        "$podman_initial_state" || restore_exit=1
+    else
+      restore_exit=1
+    fi
   fi
+  if [ "$original_exit" -ne 0 ]; then
+    return "$original_exit"
+  fi
+  return "$restore_exit"
 }
 trap restore_podman_state EXIT
 case "$podman_initial_state" in
@@ -144,6 +160,18 @@ nix_postgres_socket=
 nix_postgres_running=0
 postgres_new=
 postgres_cutover_accepted=0
+stop_postgres_cluster_if_running() {
+  local data_dir="$2" pg_ctl_bin="$1" pg_status=0
+  "$pg_ctl_bin" -D "$data_dir" status >/dev/null 2>&1 || pg_status=$?
+  case "$pg_status" in
+    0) "$pg_ctl_bin" -D "$data_dir" -m fast stop || return 1 ;;
+    3) return 0 ;;
+    *) return 1 ;;
+  esac
+  pg_status=0
+  "$pg_ctl_bin" -D "$data_dir" status >/dev/null 2>&1 || pg_status=$?
+  [ "$pg_status" -eq 3 ]
+}
 restore_postgres_cutover() {
   local original_exit=$?
   local attempt domain="gui/$(id -u)" quarantine rollback_exit=0
@@ -154,20 +182,17 @@ restore_postgres_cutover() {
     original_exit="$1"
   fi
   trap - EXIT
-  if [ "$nix_postgres_running" -eq 1 ]; then
-    if "$nix_postgres/pg_ctl" -D "$postgres_new" status >/dev/null 2>&1; then
-      "$nix_postgres/pg_ctl" -D "$postgres_new" -m fast stop || \
-        rollback_exit=1
-    fi
+  if [ "$nix_postgres_running" -eq 1 ] &&
+    ! stop_postgres_cluster_if_running "$nix_postgres/pg_ctl" \
+      "$postgres_new"; then
+    rollback_exit=1
+    safe_to_restart=0
   fi
-  if [ "$postgres_source_running" -eq 1 ]; then
-    if "$postgres_bin/pg_ctl" -D "$postgres_source" status \
-      >/dev/null 2>&1; then
-      if ! "$postgres_bin/pg_ctl" -D "$postgres_source" -m fast stop; then
-        rollback_exit=1
-        safe_to_restart=0
-      fi
-    fi
+  if [ "$postgres_source_running" -eq 1 ] &&
+    ! stop_postgres_cluster_if_running "$postgres_bin/pg_ctl" \
+      "$postgres_source"; then
+    rollback_exit=1
+    safe_to_restart=0
   fi
   for socket_dir in "$nix_postgres_socket" "$postgres_socket"; do
     if [ -n "$socket_dir" ] && [ -d "$socket_dir" ]; then
@@ -540,7 +565,6 @@ verify_nix_cutover() {
   done
 }
 verify_nix_cutover running
-postgres_cutover_accepted=1
 
 verify_legacy_retired() {
   local exit_code file grep_exit legacy_service_output
@@ -623,6 +647,7 @@ curl -fsSLo /tmp/homebrew-uninstall.sh \
   https://raw.githubusercontent.com/Homebrew/install/HEAD/uninstall.sh
 less /tmp/homebrew-uninstall.sh
 NONINTERACTIVE=1 /bin/bash /tmp/homebrew-uninstall.sh --dry-run --path=/opt/homebrew
+postgres_cutover_accepted=1
 NONINTERACTIVE=1 /bin/bash /tmp/homebrew-uninstall.sh --path=/opt/homebrew
 ```
 
