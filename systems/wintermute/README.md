@@ -107,8 +107,8 @@ trap restore_podman_state EXIT
 case "$podman_initial_state" in
   running) ;;
   stopped)
-    "$old_podman" machine start
     podman_started_for_inventory=1
+    "$old_podman" machine start
     ;;
   *) exit 1 ;;
 esac
