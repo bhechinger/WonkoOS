@@ -208,7 +208,9 @@ sed -i '' '/\/opt\/homebrew\/bin\/brew shellenv/d' "$HOME/.zprofile"
 path_line='export PATH="$HOME/.nix-profile/bin:$PATH"'
 grep -Fqx "$path_line" "$HOME/.zprofile" || \
   printf '\n%s\n' "$path_line" >>"$HOME/.zprofile"
-export PATH="$HOME/.nix-profile/bin:$PATH"
+path=("$HOME/.nix-profile/bin" "${(@)path:#/opt/homebrew/*}")
+typeset -U path
+export PATH
 rehash
 gpgconf --kill gpg-agent
 test "$(/bin/zsh -lic 'command -v git')" = "$HOME/.nix-profile/bin/git"
@@ -372,6 +374,16 @@ cannot pass only because an old process is still alive:
 
 ```sh
 podman="$HOME/.nix-profile/bin/podman"
+restore_nix_podman_state() {
+  local current_state
+  current_state="$("$podman" machine inspect --format '{{.State}}' \
+    2>/dev/null || true)"
+  case "$podman_initial_state:$current_state" in
+    stopped:running) "$podman" machine stop || true ;;
+    running:stopped) "$podman" machine start || true ;;
+  esac
+}
+trap restore_nix_podman_state EXIT
 if [ "$("$podman" machine inspect --format '{{.State}}')" = running ]; then
   "$podman" machine stop
 fi
@@ -391,7 +403,7 @@ package does not provide the privileged Docker-compatible
 verify_nix_cutover() {
   local expected_podman_state="$1"
   local agent command executable nix_profile="$HOME/.nix-profile/bin"
-  for command in atuin gcloud gpg-connect-agent pg_isready pinentry-mac \
+  for command in atuin gcloud git gpg-connect-agent pg_isready pinentry-mac \
     podman psql skhd yabai; do
     test "$(command -v "$command")" = "$nix_profile/$command"
   done
@@ -423,6 +435,28 @@ verify_nix_cutover() {
   done
 }
 verify_nix_cutover running
+
+verify_homebrew_retired() {
+  local file nix_profile="$HOME/.nix-profile/bin"
+  ! command -v brew >/dev/null
+  test ! -e /opt/homebrew
+  test ! -e /etc/paths.d/homebrew
+  [[ "$PATH" != *'/opt/homebrew'* ]]
+  if "$nix_profile/git" config --global --list --show-origin | \
+    grep '/opt/homebrew' >/dev/null; then
+    return 1
+  fi
+  if launchctl print "gui/$(id -u)" | grep '/opt/homebrew' >/dev/null; then
+    return 1
+  fi
+  for file in "$HOME/.zprofile" "$HOME/.zshrc" "$HOME/.zshenv" \
+    "$HOME/.gnupg/gpg-agent.conf" "$HOME/.config/skhd/skhdrc" \
+    "$HOME/.config/yabai/yabairc"; do
+    if [ -e "$file" ] && grep '/opt/homebrew' "$file" >/dev/null; then
+      return 1
+    fi
+  done
+}
 ```
 
 If a check fails before PostgreSQL accepts writes, restore the saved shell
@@ -505,6 +539,8 @@ fi
 test "$("$podman" machine inspect --format '{{.State}}')" = \
   "$podman_initial_state"
 verify_nix_cutover "$podman_initial_state"
+verify_homebrew_retired
+trap - EXIT
 
 rm -rf "$HOME/.Trash/nix-managed-tool-cleanup-20260908/homebrew-kitty-cask" \
   "$HOME/.Trash/nix-managed-tool-cleanup-20260908/homebrew-kitty-bin-link" \
@@ -521,11 +557,12 @@ migration_dir="$HOME/Backups/WonkoOS/wintermute-homebrew-YYYYMMDD-HHMMSS"
 podman_initial_state="$(<"$migration_dir/podman-initial-state.txt")"
 ```
 
-Then rerun the `verify_nix_cutover` definition above followed by
-`verify_nix_cutover "$podman_initial_state"`. This confirms that launchd did
-not merely preserve the processes from the migration session.
+Then rerun the `verify_nix_cutover` and `verify_homebrew_retired` definitions
+above followed by `verify_nix_cutover "$podman_initial_state"` and
+`verify_homebrew_retired`. This confirms that launchd did not merely preserve
+the processes from the migration session.
 
 The migration is complete only when `brew` no longer resolves, `/opt/homebrew`
 and `/etc/paths.d/homebrew` are absent, no active shell/Git/GPG/launchd file
 references `/opt/homebrew`, the Nix agents survive a logout, and Stremio still
-launches from `/Applications/Stremio.app`.
+exists intact at `/Applications/Stremio.app`.
