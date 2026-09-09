@@ -293,9 +293,21 @@
               make -C hosts/deepthought --no-print-directory -n build-bob > bob-remote
               ! grep -Fq './scripts/generate_hugepages_inputs.sh' bob-remote
 
+              make -C hosts/deepthought --no-print-directory -n BOB=evil.invalid BOB_SSH='printf BOB_BYPASS' deploy-bob > bob-overrides
+              grep -Fq 'ssh-ng://wonko@bob.4amlunch.net' bob-overrides
+              ! grep -Eq 'evil\.invalid|BOB_BYPASS' bob-overrides
+
+              make -C hosts/deepthought --no-print-directory -n BOB=evil.invalid BOB_SSH='printf BOB_BYPASS' MINECRAFT_PROFILE='MINECRAFT_BYPASS' rollback-pwppp > minecraft-overrides
+              grep -Fq 'ssh wonko@bob.4amlunch.net' minecraft-overrides
+              ! grep -Eq 'evil\.invalid|BOB_BYPASS|MINECRAFT_BYPASS' minecraft-overrides
+
               make -C hosts/wintermute --no-print-directory -n build switch > wintermute
-              grep -Fq 'nix build .#homeConfigurations.wintermute.activationPackage' wintermute
+              grep -Fq 'nix build .\#homeConfigurations.wintermute.activationPackage' wintermute
               ! grep -Fq 'ssh ' wintermute
+
+              make -C hosts/wintermute --no-print-directory -n MAKE='printf MAKE_BYPASS' WINTERMUTE_BUILD='printf BUILD_BYPASS' WINTERMUTE_ACTIVATE='printf ACTIVATE_BYPASS' deploy-wintermute > wintermute-overrides
+              grep -Fq 'nix build .\#homeConfigurations.wintermute.activationPackage' wintermute-overrides
+              ! grep -Eq 'MAKE_BYPASS|BUILD_BYPASS|ACTIVATE_BYPASS|ssh ' wintermute-overrides
 
               make -C hosts/deepthought --no-print-directory -n build-wintermute > wintermute-remote
               grep -Fq -- '--eval-store daemon --store ssh-ng://wonko@wintermute.lan' wintermute-remote
