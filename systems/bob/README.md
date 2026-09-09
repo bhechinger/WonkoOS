@@ -78,8 +78,9 @@ there and add `/nfs/Plex` as the media library. Then set Dashboard > Networking
 through `/dev/dri/renderD128`; Jellyfin state is included in the hourly `/var`
 backup.
 
-OmniGraph serves general `projects`, company-specific `gevulot`, Nix-specific
-`nix`, explicitly cross-scope `shared`, and retained legacy `dev` graphs. The
+OmniGraph serves `projects` for work under `~/projects`, catch-all `misc`,
+company-specific `gevulot`, Nix-specific `nix`, explicitly cross-scope
+`shared`, and retained legacy `dev` graphs. The
 hostname is private: Nginx proxies it to the loopback-only service, internal
 DNS points it at Bob, and it is absent from Cloudflare Tunnel and public DNS.
 Home Manager installs the CLI, its operator configuration, and a user-scoped
