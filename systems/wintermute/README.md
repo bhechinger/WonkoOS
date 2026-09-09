@@ -208,7 +208,8 @@ sed -i '' '/\/opt\/homebrew\/bin\/brew shellenv/d' "$HOME/.zprofile"
 path_line='export PATH="$HOME/.nix-profile/bin:$PATH"'
 grep -Fqx "$path_line" "$HOME/.zprofile" || \
   printf '\n%s\n' "$path_line" >>"$HOME/.zprofile"
-path=("$HOME/.nix-profile/bin" "${(@)path:#/opt/homebrew/*}")
+path=("${(@)path:#/opt/homebrew/*}")
+path=("$HOME/.nix-profile/bin" "${(@)path:#/opt/podman/*}")
 typeset -U path
 export PATH
 rehash
@@ -378,13 +379,36 @@ cannot pass only because an old process is still alive:
 ```sh
 podman="$HOME/.nix-profile/bin/podman"
 restore_nix_podman_state() {
-  local current_state
-  current_state="$("$podman" machine inspect --format '{{.State}}' \
-    2>/dev/null || true)"
-  case "$podman_initial_state:$current_state" in
-    stopped:running) "$podman" machine stop || true ;;
-    running:stopped) "$podman" machine start || true ;;
-  esac
+  local original_exit=$?
+  local current_state restored_state restore_exit=0
+  trap - EXIT
+  if current_state="$("$podman" machine inspect --format '{{.State}}' \
+    2>/dev/null)"; then
+    if [ "$podman_initial_state" = stopped ] && \
+      [ "$current_state" != stopped ]; then
+      "$podman" machine stop || restore_exit=1
+    elif [ "$podman_initial_state" = running ] && \
+      [ "$current_state" != running ]; then
+      "$podman" machine start || restore_exit=1
+    fi
+  else
+    restore_exit=1
+  fi
+  if [ "$restore_exit" -eq 0 ] &&
+    restored_state="$("$podman" machine inspect --format '{{.State}}' \
+      2>/dev/null)"; then
+    [ "$restored_state" = "$podman_initial_state" ] || restore_exit=1
+  else
+    restore_exit=1
+  fi
+  if [ "$restore_exit" -ne 0 ]; then
+    printf 'Failed to restore Podman machine state to %s\n' \
+      "$podman_initial_state" >&2
+  fi
+  if [ "$original_exit" -ne 0 ]; then
+    return "$original_exit"
+  fi
+  return "$restore_exit"
 }
 trap restore_nix_podman_state EXIT
 if [ "$("$podman" machine inspect --format '{{.State}}')" = running ]; then
