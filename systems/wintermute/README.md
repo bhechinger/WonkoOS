@@ -303,10 +303,22 @@ Authenticated Root can remain enabled. If `csrutil status` does not show the
 three required protections disabled, or the boot-argument check fails, skip
 the scripting-addition block; core Yabai continues to work, and changing those
 recovery-mode security settings is a separate decision. If the machine is
-already configured to permit the scripting addition, give the immutable Nix
-binary a digest-restricted sudoers entry. Recreate this entry after every Yabai
-package update. In Yabai 7.1.25, `--load-sa` installs and loads the addition;
-there is no separate `--install-sa` option:
+already configured to permit the scripting addition, continue below. In either
+case, first archive and remove any sudoers rule that still grants access to the
+Homebrew binary:
+
+```sh
+legacy_yabai_sudoers=/private/etc/sudoers.d/yabai
+if sudo grep -q '/opt/homebrew' "$legacy_yabai_sudoers" 2>/dev/null; then
+  sudo cp "$legacy_yabai_sudoers" "$migration_dir/config/yabai-sudoers"
+  sudo rm -f "$legacy_yabai_sudoers"
+fi
+```
+
+For a machine configured to permit the scripting addition, give the immutable
+Nix binary a digest-restricted sudoers entry. Recreate this entry after every
+Yabai package update. In Yabai 7.1.25, `--load-sa` installs and loads the
+addition; there is no separate `--install-sa` option:
 
 ```sh
 yabai_path="$(readlink "$HOME/.nix-profile/bin/yabai")"
@@ -350,30 +362,34 @@ compare_podman_inventory "$podman" "$migration_dir/podman-nix-before-purge"
 ```
 
 Also verify the Nix PostgreSQL cluster, Yabai/skhd, Atuin daemon, GPG pinentry,
-Google Cloud CLI, Signal, Podman Desktop, Kitty, and Stremio after a fresh
-login. The Nix Podman package does not provide the privileged Docker-compatible
+Google Cloud CLI, Signal, Podman Desktop, Kitty, and Stremio. The Nix Podman
+package does not provide the privileged Docker-compatible
 `/var/run/docker.sock`; stop here if anything requires that socket.
 
 ```sh
-for agent in atuin-daemon skhd yabai postgresql-14; do
-  launchctl print "gui/$(id -u)/org.nix-community.home.$agent" | \
-    grep 'state = running' >/dev/null
-done
-atuin daemon status >/dev/null
-gpg-connect-agent updatestartuptty /bye | grep -qx OK
-grep -Fqx \
-  'pinentry-program /Users/wonko/.nix-profile/bin/pinentry-mac' \
-  "$HOME/.gnupg/gpg-agent.conf"
-gcloud --version >/dev/null
-infocmp -x xterm-kitty >/dev/null
-for executable in \
-  "$HOME/Applications/Home Manager Apps/Podman Desktop.app/Contents/MacOS/Podman Desktop" \
-  "$HOME/Applications/Home Manager Apps/Signal.app/Contents/MacOS/Signal" \
-  "$HOME/Applications/Home Manager Apps/kitty.app/Contents/MacOS/kitty" \
-  /Applications/Stremio.app/Contents/MacOS/Stremio; do
-  test -x "$executable"
-  file "$executable" | grep 'Mach-O 64-bit executable arm64' >/dev/null
-done
+verify_nix_cutover() {
+  local agent executable
+  for agent in atuin-daemon skhd yabai postgresql-14; do
+    launchctl print "gui/$(id -u)/org.nix-community.home.$agent" | \
+      grep 'state = running' >/dev/null
+  done
+  atuin daemon status >/dev/null
+  gpg-connect-agent updatestartuptty /bye | grep -qx OK
+  grep -Fqx \
+    'pinentry-program /Users/wonko/.nix-profile/bin/pinentry-mac' \
+    "$HOME/.gnupg/gpg-agent.conf"
+  gcloud --version >/dev/null
+  infocmp -x xterm-kitty >/dev/null
+  for executable in \
+    "$HOME/Applications/Home Manager Apps/Podman Desktop.app/Contents/MacOS/Podman Desktop" \
+    "$HOME/Applications/Home Manager Apps/Signal.app/Contents/MacOS/Signal" \
+    "$HOME/Applications/Home Manager Apps/kitty.app/Contents/MacOS/kitty" \
+    /Applications/Stremio.app/Contents/MacOS/Stremio; do
+    test -x "$executable"
+    file "$executable" | grep 'Mach-O 64-bit executable arm64' >/dev/null
+  done
+}
+verify_nix_cutover
 ```
 
 If a check fails before PostgreSQL accepts writes, restore the saved shell
@@ -455,12 +471,17 @@ if [ "$podman_initial_state" = stopped ]; then
 fi
 test "$("$podman" machine inspect --format '{{.State}}')" = \
   "$podman_initial_state"
+verify_nix_cutover
 
 rm -rf "$HOME/.Trash/nix-managed-tool-cleanup-20260908/homebrew-kitty-cask" \
   "$HOME/.Trash/nix-managed-tool-cleanup-20260908/homebrew-kitty-bin-link" \
   "$HOME/.Trash/nix-managed-tool-cleanup-20260908/homebrew-kitten-bin-link" \
   "$HOME/.Trash/nix-managed-tool-cleanup-20260908/homebrew-kitty-0.44.0.app"
 ```
+
+Log out and back in, then rerun the `verify_nix_cutover` definition and call
+above. This confirms that launchd did not merely preserve the processes from
+the migration session.
 
 The migration is complete only when `brew` no longer resolves, `/opt/homebrew`
 and `/etc/paths.d/homebrew` are absent, no active shell/Git/GPG/launchd file
