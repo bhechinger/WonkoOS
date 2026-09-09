@@ -200,6 +200,7 @@
         pkgs = darwinPkgs;
         extraSpecialArgs.unstable-pkgs = darwinUnstablePkgs;
         modules = [
+          inputs.sops-nix.homeManagerModules.sops
           ./home/wintermute
         ];
       };
