@@ -329,9 +329,12 @@ Homebrew binary:
 
 ```sh
 legacy_yabai_sudoers=/private/etc/sudoers.d/yabai
-if sudo grep -q '/opt/homebrew' "$legacy_yabai_sudoers" 2>/dev/null; then
-  sudo cp "$legacy_yabai_sudoers" "$migration_dir/config/yabai-sudoers"
-  sudo rm -f "$legacy_yabai_sudoers"
+if [ -e "$legacy_yabai_sudoers" ]; then
+  legacy_yabai_sudoers_contents="$(sudo cat "$legacy_yabai_sudoers")"
+  if [[ "$legacy_yabai_sudoers_contents" == *'/opt/homebrew'* ]]; then
+    sudo cp "$legacy_yabai_sudoers" "$migration_dir/config/yabai-sudoers"
+    sudo rm -f "$legacy_yabai_sudoers"
+  fi
 fi
 ```
 
@@ -436,26 +439,58 @@ verify_nix_cutover() {
 }
 verify_nix_cutover running
 
-verify_homebrew_retired() {
-  local file nix_profile="$HOME/.nix-profile/bin"
-  ! command -v brew >/dev/null
-  test ! -e /opt/homebrew
-  test ! -e /etc/paths.d/homebrew
-  [[ "$PATH" != *'/opt/homebrew'* ]]
-  if "$nix_profile/git" config --global --list --show-origin | \
-    grep '/opt/homebrew' >/dev/null; then
+verify_legacy_retired() {
+  local exit_code file grep_exit legacy_service_output
+  local git_config launchd_config receipts
+  local nix_profile="$HOME/.nix-profile/bin"
+  if command -v brew >/dev/null; then
     return 1
   fi
-  if launchctl print "gui/$(id -u)" | grep '/opt/homebrew' >/dev/null; then
+  for file in /opt/homebrew /etc/paths.d/homebrew /opt/podman \
+    /usr/local/podman /usr/local/podman/helper/wonko \
+    /Library/LaunchDaemons/com.github.containers.podman.helper-wonko.plist \
+    /private/var/run/podman-helper-wonko.socket /etc/paths.d/podman-pkg \
+    /usr/local/etc/man.d/podman.man.conf /var/run/docker.sock; do
+    [[ ! -e "$file" && ! -L "$file" ]] || return 1
+  done
+  [[ "$PATH" != *'/opt/homebrew'* && "$PATH" != *'/opt/podman'* ]] || \
+    return 1
+  git_config="$("$nix_profile/git" config --global --list --show-origin)" || \
+    return 1
+  launchd_config="$(launchctl print "gui/$(id -u)")" || return 1
+  if [[ "$git_config" == *'/opt/homebrew'* ||
+    "$launchd_config" == *'/opt/homebrew'* ||
+    "$launchd_config" == *'/opt/podman'* ]]; then
     return 1
   fi
   for file in "$HOME/.zprofile" "$HOME/.zshrc" "$HOME/.zshenv" \
     "$HOME/.gnupg/gpg-agent.conf" "$HOME/.config/skhd/skhdrc" \
     "$HOME/.config/yabai/yabairc"; do
-    if [ -e "$file" ] && grep '/opt/homebrew' "$file" >/dev/null; then
-      return 1
+    if [ -e "$file" ]; then
+      grep_exit=0
+      grep -E '/opt/(homebrew|podman)' "$file" >/dev/null || grep_exit=$?
+      case "$grep_exit" in
+        0) return 1 ;;
+        1) ;;
+        *) return "$grep_exit" ;;
+      esac
     fi
   done
+  exit_code=0
+  legacy_service_output="$(launchctl print \
+    system/com.github.containers.podman.helper-wonko 2>&1)" || exit_code=$?
+  case "$exit_code" in
+    0) return 1 ;;
+    113)
+      [[ "$legacy_service_output" == \
+        *'Could not find service "com.github.containers.podman.helper-wonko"'* \
+      ]] || return 1
+      ;;
+    *) return 1 ;;
+  esac
+  receipts="$(pkgutil --pkgs)" || return 1
+  receipts=$'\n'"$receipts"$'\n'
+  [[ "$receipts" != *$'\ncom.redhat.podman\n'* ]] || return 1
 }
 ```
 
@@ -539,7 +574,7 @@ fi
 test "$("$podman" machine inspect --format '{{.State}}')" = \
   "$podman_initial_state"
 verify_nix_cutover "$podman_initial_state"
-verify_homebrew_retired
+verify_legacy_retired
 trap - EXIT
 
 rm -rf "$HOME/.Trash/nix-managed-tool-cleanup-20260908/homebrew-kitty-cask" \
@@ -557,9 +592,9 @@ migration_dir="$HOME/Backups/WonkoOS/wintermute-homebrew-YYYYMMDD-HHMMSS"
 podman_initial_state="$(<"$migration_dir/podman-initial-state.txt")"
 ```
 
-Then rerun the `verify_nix_cutover` and `verify_homebrew_retired` definitions
+Then rerun the `verify_nix_cutover` and `verify_legacy_retired` definitions
 above followed by `verify_nix_cutover "$podman_initial_state"` and
-`verify_homebrew_retired`. This confirms that launchd did not merely preserve
+`verify_legacy_retired`. This confirms that launchd did not merely preserve
 the processes from the migration session.
 
 The migration is complete only when `brew` no longer resolves, `/opt/homebrew`
