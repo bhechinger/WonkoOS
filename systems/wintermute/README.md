@@ -84,13 +84,17 @@ capture_podman_inventory() {
   "$podman_cli" system connection list --format \
     '{{.Name}}|{{.URI}}|{{.Default}}|{{.ReadWrite}}' | \
     /usr/bin/sort >"${prefix}-connections.txt"
-  "$podman_cli" ps -a --format '{{.ID}}|{{.Names}}|{{.Image}}' | \
+  "$podman_cli" ps -a --no-trunc --format \
+    '{{.ID}}|{{.Names}}|{{.Image}}|{{.State}}' | \
     /usr/bin/sort >"${prefix}-containers.txt"
+  "$podman_cli" ps --no-trunc --format '{{.ID}}' | \
+    /usr/bin/sort >"${prefix}-running-containers.txt"
 }
 compare_podman_inventory() {
   local podman_cli="$1" prefix="$2" inventory
   capture_podman_inventory "$podman_cli" "$prefix"
-  for inventory in machines machine-configs connections containers; do
+  for inventory in machines machine-configs connections containers \
+    running-containers; do
     /usr/bin/cmp "$migration_dir/podman-original-${inventory}.txt" \
       "${prefix}-${inventory}.txt"
   done
@@ -98,6 +102,30 @@ compare_podman_inventory() {
 old_podman=/opt/podman/bin/podman
 podman_initial_state="$("$old_podman" machine inspect --format '{{.State}}')"
 podman_started_for_inventory=0
+restore_podman_containers_with_cli() {
+  local container podman_cli="$1"
+  local current="$migration_dir/podman-current-running-containers.txt"
+  local extra="$migration_dir/podman-extra-running-containers.txt"
+  local missing="$migration_dir/podman-missing-running-containers.txt"
+  "$podman_cli" ps --no-trunc --format '{{.ID}}' | \
+    /usr/bin/sort >"$current" || return 1
+  /usr/bin/comm -13 \
+    "$migration_dir/podman-original-running-containers.txt" \
+    "$current" >"$extra" || return 1
+  while IFS= read -r container; do
+    [ -z "$container" ] || "$podman_cli" stop "$container" || return 1
+  done <"$extra"
+  /usr/bin/comm -23 \
+    "$migration_dir/podman-original-running-containers.txt" \
+    "$current" >"$missing" || return 1
+  while IFS= read -r container; do
+    [ -z "$container" ] || "$podman_cli" start "$container" || return 1
+  done <"$missing"
+  "$podman_cli" ps --no-trunc --format '{{.ID}}' | \
+    /usr/bin/sort >"$current" || return 1
+  /usr/bin/cmp "$migration_dir/podman-original-running-containers.txt" \
+    "$current"
+}
 restore_podman_with_cli() {
   local current_state podman_cli="$1" wanted_state="$2"
   current_state="$("$podman_cli" machine inspect --format '{{.State}}')" || \
@@ -110,7 +138,10 @@ restore_podman_with_cli() {
     esac
   fi
   test "$("$podman_cli" machine inspect --format '{{.State}}')" = \
-    "$wanted_state"
+    "$wanted_state" || return 1
+  if [ "$wanted_state" = running ]; then
+    restore_podman_containers_with_cli "$podman_cli"
+  fi
 }
 restore_podman_state() {
   local original_exit=$?
@@ -611,6 +642,7 @@ if [ "$("$podman" machine inspect --format '{{.State}}')" = running ]; then
 fi
 test "$("$podman" machine inspect --format '{{.State}}')" = stopped
 "$podman" machine start
+restore_podman_containers_with_cli "$podman"
 "$podman" info
 "$podman" ps -a
 compare_podman_inventory "$podman" "$migration_dir/podman-nix-before-purge"
@@ -807,6 +839,7 @@ fi
 
 "$podman" machine stop
 "$podman" machine start
+restore_podman_containers_with_cli "$podman"
 "$podman" info
 "$podman" ps -a
 compare_podman_inventory "$podman" "$migration_dir/podman-nix-after-purge"
@@ -859,10 +892,11 @@ migration_dir="$HOME/Backups/WonkoOS/wintermute-homebrew-YYYYMMDD-HHMMSS"
 podman_initial_state="$(<"$migration_dir/podman-initial-state.txt")"
 ```
 
-Then rerun the `verify_nix_cutover` and `verify_legacy_retired` definitions
-above followed by `verify_nix_cutover "$podman_initial_state"` and
-`verify_legacy_retired`. This confirms that launchd did not merely preserve
-the processes from the migration session.
+Then rerun the `launchd_service_state`, `verify_nix_cutover`, and
+`verify_legacy_retired` definitions above followed by
+`verify_nix_cutover "$podman_initial_state"` and `verify_legacy_retired`.
+This confirms that launchd did not merely preserve the processes from the
+migration session.
 
 The migration is complete only when `brew` no longer resolves, `/opt/homebrew`
 and `/etc/paths.d/homebrew` are absent, no active shell/Git/GPG/launchd file
