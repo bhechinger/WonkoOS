@@ -180,6 +180,11 @@ for agent in homebrew.mxcl.atuin com.koekeishiya.skhd com.koekeishiya.yabai; do
   fi
   ! launchctl print "gui/$(id -u)/$agent" >/dev/null 2>&1
 done
+atuin_socket="$HOME/.local/share/atuin/atuin.sock"
+if [ -S "$atuin_socket" ]; then
+  test -z "$(/usr/sbin/lsof -nP "$atuin_socket")"
+  rm -f "$atuin_socket"
+fi
 mv "$HOME/.zshrc" "$HOME/.zshenv" "$migration_dir/config/"
 ```
 
@@ -199,7 +204,11 @@ sed -i '' 's|^pinentry-program .*|pinentry-program /Users/wonko/.nix-profile/bin
 sed -i '' 's|/Applications/kitty.app/Contents/MacOS/kitty|/Users/wonko/.nix-profile/bin/kitty|' \
   "$HOME/.config/skhd/skhdrc"
 sed -i '' '/\/opt\/homebrew\/bin\/brew shellenv/d' "$HOME/.zprofile"
+path_line='export PATH="$HOME/.nix-profile/bin:$PATH"'
+grep -Fqx "$path_line" "$HOME/.zprofile" || \
+  printf '\n%s\n' "$path_line" >>"$HOME/.zprofile"
 gpgconf --kill gpg-agent
+test "$(/bin/zsh -lic 'command -v git')" = "$HOME/.nix-profile/bin/git"
 ```
 
 Initialize a fresh cluster with the Nix PostgreSQL binaries in a temporary
@@ -280,8 +289,21 @@ ps -p "$(head -n 1 "$postgres_data/postmaster.pid")" -o command= | \
   grep '^/nix/store/.*-postgresql-14\..*/bin/postgres'
 ```
 
-Yabai's scripting addition needs a digest-restricted sudoers entry for the
-immutable Nix binary. Recreate this entry after every Yabai package update:
+Yabai's optional scripting addition needs reduced System Integrity Protection
+and Authenticated Root settings. Check both before configuring it:
+
+```sh
+csrutil status
+csrutil authenticated-root status
+```
+
+If either remains fully enabled, skip the scripting-addition block; core Yabai
+continues to work, and changing those recovery-mode security settings is a
+separate decision. If the machine is already configured to permit the
+scripting addition, give the immutable Nix binary a digest-restricted sudoers
+entry. Recreate this entry after every Yabai package update. In Yabai 7.1.25,
+`--load-sa` installs and loads the addition; there is no separate
+`--install-sa` option:
 
 ```sh
 yabai_path="$(readlink "$HOME/.nix-profile/bin/yabai")"
@@ -293,10 +315,16 @@ sudo visudo -cf "$sudoers_file"
 sudo install -o root -g wheel -m 0440 "$sudoers_file" /private/etc/sudoers.d/yabai
 rm "$sudoers_file"
 sudo "$yabai_path" --uninstall-sa 2>/dev/null || true
-sudo "$yabai_path" --install-sa
 sudo "$yabai_path" --load-sa
+```
+
+Restart and verify the managed agents whether or not the scripting addition is
+enabled:
+
+```sh
 launchctl kickstart -k "gui/$(id -u)/org.nix-community.home.yabai"
 launchctl kickstart -k "gui/$(id -u)/org.nix-community.home.skhd"
+yabai -m query --spaces >/dev/null
 ```
 
 If macOS requests it, authorize the Nix-profile Yabai and skhd executables in
@@ -352,6 +380,16 @@ NONINTERACTIVE=1 /bin/bash /tmp/homebrew-uninstall.sh --dry-run --path=/opt/home
 NONINTERACTIVE=1 /bin/bash /tmp/homebrew-uninstall.sh --path=/opt/homebrew
 ```
 
+The uninstaller preserves files that were not installed by Homebrew. Inspect
+any remaining prefix contents and confirm that every entry is obsolete before
+continuing with the removal block:
+
+```sh
+if [ -d /opt/homebrew ]; then
+  find /opt/homebrew -mindepth 1 -maxdepth 3 -print
+fi
+```
+
 Remove only the verified obsolete files. Preserve `~/.config/gcloud`,
 `~/.rustup`, `~/.cargo`, `~/.ipfs`, `~/.local/share/containers`,
 `~/.config/containers`, all application-support data, the PostgreSQL backup,
@@ -375,6 +413,12 @@ sudo rm -rf /opt/podman /usr/local/podman/helper/wonko
 sudo rmdir /usr/local/podman/helper /usr/local/podman 2>/dev/null || true
 sudo rm -f /etc/paths.d/podman-pkg /usr/local/etc/man.d/podman.man.conf
 sudo pkgutil --forget com.redhat.podman
+
+if [ -d /opt/homebrew ]; then
+  rm -rf /opt/homebrew/*(DN)
+  test -z "$(ls -A /opt/homebrew)"
+  sudo rmdir /opt/homebrew
+fi
 
 "$podman" machine stop
 "$podman" machine start
