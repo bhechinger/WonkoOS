@@ -166,7 +166,6 @@ nix_postgres_socket=
 nix_postgres_running=0
 postgres_new=
 postgres_cutover_accepted=0
-home_manager_deployed=0
 home_manager_previous="$(readlink -f \
   "$HOME/.local/state/nix/profiles/home-manager")"
 test -x "$home_manager_previous/activate"
@@ -218,12 +217,22 @@ stop_postgres_cluster_if_running() {
 }
 restore_cutover() {
   local original_exit=$?
-  local agent attempt backup domain="gui/$(id -u)" quarantine rollback_exit=0
-  local safe_to_restart=1 socket_dir target user_services_safe=1
+  local active_home_manager agent attempt backup domain="gui/$(id -u)"
+  local home_manager_changed=0 quarantine rollback_exit=0 safe_to_restart=1
+  local socket_dir target user_services_safe=1
   if [ "$#" -gt 0 ]; then
     original_exit="$1"
   fi
   trap - EXIT
+  if ! active_home_manager="$(readlink -f \
+    "$HOME/.local/state/nix/profiles/home-manager")" ||
+    [ ! -x "$active_home_manager/activate" ]; then
+    rollback_exit=1
+    safe_to_restart=0
+    user_services_safe=0
+  elif [ "$active_home_manager" != "$home_manager_previous" ]; then
+    home_manager_changed=1
+  fi
   if [ "$nix_postgres_running" -eq 1 ] &&
     ! stop_postgres_cluster_if_running "$nix_postgres/pg_ctl" \
       "$postgres_new"; then
@@ -241,7 +250,7 @@ restore_cutover() {
       rmdir "$socket_dir" || rollback_exit=1
     fi
   done
-  if [ "$safe_to_restart" -eq 1 ] && [ "$home_manager_deployed" -eq 1 ]; then
+  if [ "$safe_to_restart" -eq 1 ] && [ "$home_manager_changed" -eq 1 ]; then
     if ! bootout_user_agent_if_loaded org.nix-community.home.postgresql-14 \
       "$HOME/Library/LaunchAgents/org.nix-community.home.postgresql-14.plist"; then
       rollback_exit=1
@@ -273,7 +282,7 @@ restore_cutover() {
       mv "$postgres_data" "$quarantine" || rollback_exit=1
     fi
   fi
-  if [ "$home_manager_deployed" -eq 1 ]; then
+  if [ "$home_manager_changed" -eq 1 ]; then
     for agent in atuin-daemon skhd yabai; do
       if ! bootout_user_agent_if_loaded "org.nix-community.home.$agent" \
         "$HOME/Library/LaunchAgents/org.nix-community.home.$agent.plist"; then
@@ -400,7 +409,6 @@ home_manager_current="$(readlink -f \
   "$HOME/.local/state/nix/profiles/home-manager")"
 test -x "$home_manager_current/activate"
 test "$home_manager_current" != "$home_manager_previous"
-home_manager_deployed=1
 git config --global --unset-all credential.https://github.com.helper || true
 git config --global --add credential.https://github.com.helper ''
 git config --global --add credential.https://github.com.helper '!gh auth git-credential'
