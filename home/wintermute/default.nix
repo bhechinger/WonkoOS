@@ -1,4 +1,9 @@
-{ config, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 {
   imports = [
@@ -9,6 +14,10 @@
   home.homeDirectory = "/Users/wonko";
   home.packages = [ pkgs.kitty ];
   home.file.".terminfo".source = "${pkgs.kitty.terminfo}/share/terminfo";
+  launchd.agents.sops-nix.config = {
+    StandardOutPath = lib.mkForce "${config.home.homeDirectory}/Library/Logs/sops-nix.stdout.log";
+    StandardErrorPath = lib.mkForce "${config.home.homeDirectory}/Library/Logs/sops-nix.stderr.log";
+  };
   programs.home-manager.enable = true;
 
   sops = {

@@ -19,7 +19,9 @@ make deploy-wintermute
 ```
 
 The deploy target activates the exact generation returned by the build target;
-Wintermute does not need a repository checkout.
+Wintermute does not need a repository checkout. The `wonko` account must have
+an active macOS GUI login because Home Manager bootstraps its user LaunchAgents
+into that login's `gui/UID` launchd domain.
 
 The OmniGraph credential is an encrypted SOPS secret in the repository and is
 decrypted to `~/.omnigraph/credentials` during Home Manager activation. The
