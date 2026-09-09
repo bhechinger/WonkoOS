@@ -165,8 +165,10 @@ nix_postgres=
 nix_postgres_socket=
 nix_postgres_running=0
 postgres_new=
+postgres_new_owned=0
+postgres_data_owned=0
 postgres_cutover_accepted=0
-home_manager_previous="$(readlink -f \
+home_manager_previous="$(/bin/realpath \
   "$HOME/.local/state/nix/profiles/home-manager")"
 test -x "$home_manager_previous/activate"
 yabai_sudoers_original=0
@@ -224,7 +226,7 @@ restore_cutover() {
     original_exit="$1"
   fi
   trap - EXIT
-  if ! active_home_manager="$(readlink -f \
+  if ! active_home_manager="$(/bin/realpath \
     "$HOME/.local/state/nix/profiles/home-manager")" ||
     [ ! -x "$active_home_manager/activate" ]; then
     rollback_exit=1
@@ -257,14 +259,16 @@ restore_cutover() {
       safe_to_restart=0
     fi
   fi
-  if [ "$safe_to_restart" -eq 1 ] && [ -n "$nix_postgres" ] &&
+  if [ "$safe_to_restart" -eq 1 ] && [ "$postgres_data_owned" -eq 1 ] &&
+    [ -n "$nix_postgres" ] &&
     [[ -d "$postgres_data" || -L "$postgres_data" ]] &&
     ! stop_postgres_cluster_if_running "$nix_postgres/pg_ctl" \
       "$postgres_data"; then
     rollback_exit=1
     safe_to_restart=0
   fi
-  if [ "$safe_to_restart" -eq 1 ] && [ -n "$postgres_new" ] &&
+  if [ "$safe_to_restart" -eq 1 ] && [ "$postgres_new_owned" -eq 1 ] &&
+    [ -n "$postgres_new" ] &&
     [[ -e "$postgres_new" || -L "$postgres_new" ]]; then
     quarantine="$migration_dir/postgresql-14-new-unaccepted"
     if [[ -e "$quarantine" || -L "$quarantine" ]]; then
@@ -273,7 +277,7 @@ restore_cutover() {
       mv "$postgres_new" "$quarantine" || rollback_exit=1
     fi
   fi
-  if [ "$safe_to_restart" -eq 1 ] &&
+  if [ "$safe_to_restart" -eq 1 ] && [ "$postgres_data_owned" -eq 1 ] &&
     [[ -e "$postgres_data" || -L "$postgres_data" ]]; then
     quarantine="$migration_dir/postgresql-14-unaccepted"
     if [[ -e "$quarantine" || -L "$quarantine" ]]; then
@@ -291,7 +295,7 @@ restore_cutover() {
       fi
     done
     if ! "$HOME/.nix-profile/bin/home-manager" switch --rollback ||
-      [ "$(readlink -f \
+      [ "$(/bin/realpath \
         "$HOME/.local/state/nix/profiles/home-manager")" != \
         "$home_manager_previous" ]; then
       rollback_exit=1
@@ -309,18 +313,27 @@ restore_cutover() {
       yabairc) target="$HOME/.config/yabai/$backup" ;;
     esac
     if [ -e "$migration_dir/config/$backup" ]; then
-      rm -f "$target" && cp -p "$migration_dir/config/$backup" "$target" || \
-      rollback_exit=1
+      if ! rm -f "$target" ||
+        ! cp -p "$migration_dir/config/$backup" "$target"; then
+        rollback_exit=1
+        user_services_safe=0
+      fi
     fi
   done
   /opt/homebrew/bin/gpgconf --kill gpg-agent || rollback_exit=1
   if [ "$yabai_sudoers_touched" -eq 1 ]; then
     if [ "$yabai_sudoers_original" -eq 1 ]; then
-      sudo install -o root -g wheel -m 0440 \
+      if ! sudo install -o root -g wheel -m 0440 \
         "$migration_dir/config/yabai-sudoers" \
-        /private/etc/sudoers.d/yabai || rollback_exit=1
+        /private/etc/sudoers.d/yabai; then
+        rollback_exit=1
+        user_services_safe=0
+      fi
     else
-      sudo rm -f /private/etc/sudoers.d/yabai || rollback_exit=1
+      if ! sudo rm -f /private/etc/sudoers.d/yabai; then
+        rollback_exit=1
+        user_services_safe=0
+      fi
     fi
   fi
   if [ "$user_shell_changed" -eq 1 ]; then
@@ -386,7 +399,7 @@ rmdir "$postgres_socket"
 postgres_socket=
 "$postgres_bin/pg_controldata" "$postgres_source" | \
   grep 'Database cluster state:.*shut down'
-test ! -e "$postgres_data"
+[[ ! -e "$postgres_data" && ! -L "$postgres_data" ]]
 
 for agent in homebrew.mxcl.atuin com.koekeishiya.skhd com.koekeishiya.yabai; do
   bootout_user_agent_if_loaded "$agent" \
@@ -405,7 +418,7 @@ remaining obsolete paths in user-owned configuration without replacing the
 rest of those files:
 
 ```sh
-home_manager_current="$(readlink -f \
+home_manager_current="$(/bin/realpath \
   "$HOME/.local/state/nix/profiles/home-manager")"
 test -x "$home_manager_current/activate"
 test "$home_manager_current" != "$home_manager_previous"
@@ -441,7 +454,9 @@ and retains its dumped attributes:
 ```sh
 nix_postgres="$HOME/.nix-profile/bin"
 postgres_new="${postgres_data}.new"
-test ! -e "$postgres_data" && test ! -e "$postgres_new"
+[[ ! -e "$postgres_data" && ! -L "$postgres_data" ]]
+[[ ! -e "$postgres_new" && ! -L "$postgres_new" ]]
+postgres_new_owned=1
 mkdir -p "$(dirname "$postgres_data")"
 "$nix_postgres/initdb" -D "$postgres_new" --encoding=UTF8 \
   --locale=en_US.UTF-8 --username=wonko
@@ -490,6 +505,8 @@ nix_postgres_running=0
 rmdir "$nix_postgres_socket"
 nix_postgres_socket=
 mv "$postgres_new" "$postgres_data"
+postgres_new_owned=0
+postgres_data_owned=1
 launchctl kickstart -k "gui/$(id -u)/org.nix-community.home.postgresql-14"
 for attempt in {1..30}; do
   "$nix_postgres/pg_isready" -d postgres && break
@@ -532,8 +549,7 @@ Authenticated Root can remain enabled. If `csrutil status` does not show the
 three required protections disabled, or the boot-argument check fails, the
 commands set `yabai_sa_ready=0`; core Yabai continues to work, and changing
 those recovery-mode security settings is a separate decision. In either case,
-first archive and remove any existing Yabai sudoers rule. The eligible path
-below recreates it for the current immutable Nix binary:
+first archive and remove any existing Yabai sudoers rule:
 
 ```sh
 yabai_sudoers=/private/etc/sudoers.d/yabai
@@ -545,29 +561,8 @@ fi
 yabai_sudoers_touched=1
 ```
 
-When `yabai_sa_ready=1`, give the immutable Nix binary a digest-restricted
-sudoers entry. Recreate this entry after every Yabai package update. In Yabai
-7.1.25, `--load-sa` installs and loads the addition; there is no separate
-`--install-sa` option:
-
-```sh
-if (( yabai_sa_ready )); then
-  yabai_path="$(readlink "$HOME/.nix-profile/bin/yabai")"
-  yabai_hash="$(shasum -a 256 "$yabai_path" | awk '{print $1}')"
-  sudoers_file="$(mktemp)"
-  printf 'wonko ALL = (root) NOPASSWD: sha256:%s %s --load-sa\n' \
-    "$yabai_hash" "$yabai_path" >"$sudoers_file"
-  sudo visudo -cf "$sudoers_file"
-  sudo install -o root -g wheel -m 0440 "$sudoers_file" \
-    /private/etc/sudoers.d/yabai
-  rm "$sudoers_file"
-  sudo "$yabai_path" --uninstall-sa 2>/dev/null || true
-  sudo "$yabai_path" --load-sa
-fi
-```
-
-Restart and verify the managed agents whether or not the scripting addition is
-enabled:
+Do not replace the scripting addition until after accepting the cutover.
+Restart and verify the managed core agents first:
 
 ```sh
 launchctl kickstart -k "gui/$(id -u)/org.nix-community.home.yabai"
@@ -782,6 +777,12 @@ rm -f "$HOME/Library/LaunchAgents/homebrew.mxcl.atuin.plist" \
 sudo rm -rf "/Applications/Podman Desktop.app" "/Applications/Signal.app"
 rm -rf "$HOME/Library/Caches/Homebrew" "$HOME/Library/Logs/Homebrew"
 sudo rm -f /etc/paths.d/homebrew
+if [[ -e /Library/ScriptingAdditions/yabai.osax ||
+  -L /Library/ScriptingAdditions/yabai.osax ]]; then
+  sudo "$HOME/.nix-profile/bin/yabai" --uninstall-sa
+fi
+[[ ! -e /Library/ScriptingAdditions/yabai.osax &&
+  ! -L /Library/ScriptingAdditions/yabai.osax ]]
 
 sudo /usr/local/podman/helper/wonko/podman-mac-helper uninstall
 test ! -e /var/run/docker.sock && test ! -L /var/run/docker.sock
@@ -817,7 +818,32 @@ test "$("$podman" machine inspect --format '{{.State}}')" = \
 verify_nix_cutover "$podman_initial_state"
 verify_legacy_retired
 trap - EXIT
+```
 
+With the core cutover accepted, optionally install the Nix Yabai scripting
+addition when `yabai_sa_ready=1`. Give only the immutable Nix binary a
+digest-restricted sudoers entry, and recreate it after each Yabai package
+update. In Yabai 7.1.25, `--load-sa` installs and loads the addition; there is
+no separate `--install-sa` option:
+
+```sh
+if (( yabai_sa_ready )); then
+  yabai_path="$(/usr/bin/readlink "$HOME/.nix-profile/bin/yabai")"
+  yabai_hash="$(shasum -a 256 "$yabai_path" | awk '{print $1}')"
+  sudoers_file="$(mktemp)"
+  printf 'wonko ALL = (root) NOPASSWD: sha256:%s %s --load-sa\n' \
+    "$yabai_hash" "$yabai_path" >"$sudoers_file"
+  sudo visudo -cf "$sudoers_file"
+  sudo install -o root -g wheel -m 0440 "$sudoers_file" \
+    /private/etc/sudoers.d/yabai
+  rm "$sudoers_file"
+  sudo "$yabai_path" --load-sa
+fi
+```
+
+Finally, remove the old Kitty files that were previously moved to the Trash:
+
+```sh
 rm -rf "$HOME/.Trash/nix-managed-tool-cleanup-20260908/homebrew-kitty-cask" \
   "$HOME/.Trash/nix-managed-tool-cleanup-20260908/homebrew-kitty-bin-link" \
   "$HOME/.Trash/nix-managed-tool-cleanup-20260908/homebrew-kitten-bin-link" \
