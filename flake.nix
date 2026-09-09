@@ -282,6 +282,10 @@
               PATH="$PWD/bin:$PATH" TEST_HOST=bob make -n build switch boot > bob
               grep -Fq 'nh os build -H bob --diff never .' bob
               grep -Fq 'nh os switch -H bob --diff never .' bob
+              grep -Fq './scripts/generate_hugepages_inputs.sh' bob
+
+              PATH="$PWD/bin:$PATH" TEST_HOST=deepthought make -n build-bob > bob-remote
+              ! grep -Fq './scripts/generate_hugepages_inputs.sh' bob-remote
 
               PATH="$PWD/bin:$PATH" TEST_HOST=wintermute make -n build switch > wintermute
               grep -Fq 'nix build .#homeConfigurations.wintermute.activationPackage' wintermute
@@ -297,6 +301,9 @@
               ! env PATH="$PWD/bin:$PATH" TEST_HOST=wintermute make rollback-pwppp
               ! env PATH="$PWD/bin:$PATH" TEST_HOST=unknown make build
               ! env PATH="$PWD/bin:$PATH" TEST_HOST=wintermute make HOST=deepthought deploy-bob
+              ! env PATH="$PWD/bin:$PATH" TEST_HOST=wintermute make --ignore-errors build-bob
+              ! env PATH="$PWD/bin:$PATH" TEST_HOST=wintermute make require_host= build-bob
+              ! env PATH="$PWD/bin:$PATH" TEST_HOST=wintermute make require_self= boot-bob
 
               touch "$out"
             '';

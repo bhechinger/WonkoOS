@@ -19,18 +19,12 @@ WINTERMUTE_ACTIVATE = $(WINTERMUTE_SSH) "$$generation/activate"
 endif
 MINECRAFT_PROFILE := /nix/var/nix/profiles/per-user/root/minecraft
 
-define require_host
-@if [ "$(HOST)" != "deepthought" ] && [ "$(HOST)" != "$(1)" ]; then \
-	printf '%s\n' "Only deepthought or $(1) may run this target (current host: $(HOST))." >&2; \
-	exit 2; \
-fi
+override define require_host
+$(if $(filter $(HOST),deepthought $(1)),,$(error Only deepthought or $(1) may run this target (current host: $(HOST)).))
 endef
 
-define require_self
-@if [ "$(HOST)" != "$(1)" ]; then \
-	printf '%s\n' "This target must run on $(1) (current host: $(HOST))." >&2; \
-	exit 2; \
-fi
+override define require_self
+$(if $(filter $(HOST),$(1)),,$(error This target must run on $(1) (current host: $(HOST)).))
 endef
 
 check-host:
@@ -79,6 +73,10 @@ boot-deepthought:
 	$(call require_self,deepthought)
 	@$(MAKE) --no-print-directory hugepages-inputs
 	nh os boot -H deepthought .
+
+ifeq ($(HOST),bob)
+build-bob deploy-bob boot-bob: hugepages-inputs
+endif
 
 build-bob:
 	$(call require_host,bob)
