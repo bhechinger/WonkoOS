@@ -4,10 +4,6 @@
   inputs = {
     nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.2605"; # Stable Nixpkgs
     unstable-nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1"; # Unstable Nixpkgs
-    pipewire-src = {
-      url = "path:/home/wonko/src/pipewire";
-      flake = false;
-    };
     linux_7_0.url = "github:NixOS/nixpkgs/709592197675b569aeaf6a68eb66365226a7c718";
     determinate = {
       url = "https://flakehub.com/f/DeterminateSystems/determinate/3"; # Determinate 3.*
@@ -62,7 +58,6 @@
       system = "x86_64-linux";
       darwinSystem = "aarch64-darwin";
       codexVersion = "0.153.0";
-      useSaffireFfado = false;
       hyprlandFix = "d8504461f0e9f95a5df9a0cdc0723d0ca6332888";
       pkgs = import nixpkgs {
         inherit system;
@@ -171,7 +166,7 @@
           inherit system;
 
           specialArgs = {
-            inherit inputs unstable-pkgs useSaffireFfado;
+            inherit inputs unstable-pkgs;
           };
 
           modules = [
@@ -187,9 +182,8 @@
             inputs
             hyprlandFix
             unstable-pkgs
-            useSaffireFfado
             ;
-          inherit (inputs) auto-splice pipewire-src spotify-midi-control;
+          inherit (inputs) auto-splice spotify-midi-control;
         };
         modules = [
           ./home/deepthought
@@ -210,6 +204,7 @@
       };
 
       formatter.${system} = pkgs.nixfmt-tree;
+      formatter.${darwinSystem} = darwinPkgs.nixfmt-tree;
 
       checks.${system} = {
         bob = self.nixosConfigurations.bob.config.system.build.toplevel;
@@ -267,6 +262,40 @@
           ${lib.getExe pkgs.python3} ${./scripts/cloudflare-tunnel-sync.py} --self-test
           touch "$out"
         '';
+
+        host-workflows =
+          pkgs.runCommand "host-workflows-test"
+            {
+              nativeBuildInputs = [ pkgs.gnumake ];
+            }
+            ''
+              cp ${./Makefile} Makefile
+
+              make -n HOST=deepthought build switch boot > deepthought
+              grep -Fq 'nh os build -H deepthought .' deepthought
+              grep -Fq 'nh home build . -c deepthought' deepthought
+              grep -Fq 'nh home switch . -c deepthought' deepthought
+
+              make -n HOST=bob build switch boot > bob
+              grep -Fq 'nh os build -H bob --diff never .' bob
+              grep -Fq 'nh os switch -H bob --diff never .' bob
+
+              make -n HOST=wintermute build switch > wintermute
+              grep -Fq 'nix build .#homeConfigurations.wintermute.activationPackage' wintermute
+              ! grep -Fq 'ssh ' wintermute
+
+              make -n HOST=deepthought build-wintermute > wintermute-remote
+              grep -Fq -- '--eval-store daemon --store ssh-ng://wonko@wintermute.lan' wintermute-remote
+
+              ! make HOST=wintermute boot
+              ! make HOST=bob build-wintermute
+              ! make HOST=wintermute deploy-bob
+              ! make HOST=bob build-deepthought
+              ! make HOST=wintermute rollback-pwppp
+              ! make HOST=unknown build
+
+              touch "$out"
+            '';
 
         storage-layout = import ./checks/storage-layout.nix { inherit self lib pkgs; };
 

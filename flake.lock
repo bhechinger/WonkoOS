@@ -475,18 +475,6 @@
         "type": "github"
       }
     },
-    "pipewire-src": {
-      "flake": false,
-      "locked": {
-        "narHash": "sha256-oZLgKnyYe5+HBCtZBZ3QhWGIF4CE5tHYA4LfFw1KkVM=",
-        "path": "/home/wonko/src/pipewire",
-        "type": "path"
-      },
-      "original": {
-        "path": "/home/wonko/src/pipewire",
-        "type": "path"
-      }
-    },
     "playit-nixos-module": {
       "inputs": {
         "flake-parts": "flake-parts_3",
@@ -519,7 +507,6 @@
         "musnix": "musnix",
         "nix-minecraft": "nix-minecraft",
         "nixpkgs": "nixpkgs_2",
-        "pipewire-src": "pipewire-src",
         "playit-nixos-module": "playit-nixos-module",
         "sops-nix": "sops-nix",
         "spotify-midi-control": "spotify-midi-control",

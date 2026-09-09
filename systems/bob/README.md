@@ -249,13 +249,16 @@ must not be enabled against randomly encrypted swap.
 
 ## Build, deploy, and verify
 
-The local Makefile chooses the flake configuration from the hostname:
+From Bob's `~/nix/WonkoOS` checkout, the root Makefile selects Bob from the
+hostname:
 
 ```sh
 make build
 make switch
-make deploy-bob
 ```
+
+From Deepthought, use `make build-bob` and `make deploy-bob`. Bob cannot build
+or deploy Deepthought or Wintermute.
 
 After deploying Bob, verify the native services and their listeners:
 
