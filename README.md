@@ -23,6 +23,16 @@ Deepthought may build and deploy the other hosts with `make build-bob`,
 and Wintermute may use only their own explicit host targets; cross-host targets
 fail before invoking Nix or SSH.
 
+## Generations and input updates
+
+`make generations` lists the local host's retained NixOS and Home Manager
+generations with the WonkoOS revision and any associated GitHub pull request.
+Older generations without revision metadata are shown as legacy generations.
+
+Run `make update` from a clean `main` branch to update every flake input. It
+creates and validates a lockfile-only branch, pushes it, opens a pull request,
+and returns to `main`. It never merges the pull request.
+
 ## Storage installation
 
 The `deepthought` disko layout manages only the two local NVMe drives. It never

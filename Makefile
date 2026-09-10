@@ -1,4 +1,4 @@
-.PHONY: hugepages-inputs refresh-pwppp refresh-gigglesomething refresh-packwiz boot switch build build-deepthought deploy-deepthought boot-deepthought build-bob deploy-bob boot-bob build-wintermute deploy-wintermute boot-wintermute build-minecraft stage-minecraft deploy-minecraft rollback-minecraft
+.PHONY: hugepages-inputs refresh-pwppp refresh-gigglesomething refresh-packwiz boot switch build generations update build-deepthought deploy-deepthought boot-deepthought build-bob deploy-bob boot-bob build-wintermute deploy-wintermute boot-wintermute build-minecraft stage-minecraft deploy-minecraft rollback-minecraft
 .PHONY: build-pwppp build-gigglesomething stage-pwppp stage-gigglesomething deploy-pwppp deploy-gigglesomething rollback-pwppp rollback-gigglesomething
 
 override SHELL := /bin/sh
@@ -34,8 +34,14 @@ build: build-$(HOST)
 switch: deploy-$(HOST)
 
 boot: boot-$(HOST)
+
+generations:
+	./scripts/generations.sh "$(HOST)"
+
+update:
+	./scripts/update-flake.sh
 else
-build switch boot:
+build switch boot generations update:
 	$(error Unsupported host '$(HOST)'; expected one of: deepthought bob wintermute.)
 endif
 

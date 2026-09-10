@@ -59,6 +59,12 @@
       darwinSystem = "aarch64-darwin";
       codexVersion = "0.153.0";
       hyprlandFix = "d8504461f0e9f95a5df9a0cdc0723d0ca6332888";
+      wonkoosRevision = self.rev or (self.dirtyRev or "unknown");
+      wonkoosShortRevision = self.shortRev or (self.dirtyShortRev or "unknown");
+      revisionModule = {
+        system.configurationRevision = wonkoosRevision;
+        system.nixos.tags = [ "wonkoos-${wonkoosShortRevision}" ];
+      };
       pkgs = import nixpkgs {
         inherit system;
         config.allowUnfree = true;
@@ -158,6 +164,7 @@
           };
 
           modules = [
+            revisionModule
             ./systems/bob/default.nix
           ];
         };
@@ -170,6 +177,7 @@
           };
 
           modules = [
+            revisionModule
             ./systems/deepthought/default.nix
           ];
         };
@@ -182,6 +190,7 @@
             inputs
             hyprlandFix
             unstable-pkgs
+            wonkoosRevision
             ;
           inherit (inputs) auto-splice spotify-midi-control;
         };
@@ -192,7 +201,10 @@
 
       homeConfigurations.wintermute = inputs.home-manager.lib.homeManagerConfiguration {
         pkgs = darwinPkgs;
-        extraSpecialArgs.unstable-pkgs = darwinUnstablePkgs;
+        extraSpecialArgs = {
+          unstable-pkgs = darwinUnstablePkgs;
+          inherit wonkoosRevision;
+        };
         modules = [
           inputs.sops-nix.homeManagerModules.sops
           ./home/wintermute
@@ -210,6 +222,23 @@
         bob = self.nixosConfigurations.bob.config.system.build.toplevel;
         nixos = self.nixosConfigurations.deepthought.config.system.build.toplevel;
         home = self.homeConfigurations.deepthought.activationPackage;
+
+        provenance =
+          assert self.nixosConfigurations.bob.config.system.configurationRevision == wonkoosRevision;
+          assert self.nixosConfigurations.deepthought.config.system.configurationRevision == wonkoosRevision;
+          assert builtins.elem "wonkoos-${wonkoosShortRevision}"
+            self.nixosConfigurations.bob.config.system.nixos.tags;
+          assert builtins.elem "wonkoos-${wonkoosShortRevision}"
+            self.nixosConfigurations.deepthought.config.system.nixos.tags;
+          assert
+            self.homeConfigurations.deepthought.config.home.file.".config/wonkoos/revision".text
+            == "${wonkoosRevision}\n";
+          assert
+            self.homeConfigurations.wintermute.config.home.file.".config/wonkoos/revision".text
+            == "${wonkoosRevision}\n";
+          pkgs.runCommand "provenance-check" { } ''
+            touch "$out"
+          '';
 
         hyprland-config =
           let
@@ -241,6 +270,25 @@
               bash -n ${./scripts/opnsense-dns-sync.sh} ${./scripts/opnsense-dns-sync-test.sh}
               shellcheck -s bash ${./scripts/opnsense-dns-sync.sh} ${./scripts/opnsense-dns-sync-test.sh}
               bash ${./scripts/opnsense-dns-sync-test.sh} ${./scripts/opnsense-dns-sync.sh}
+              touch "$out"
+            '';
+
+        repository-workflows =
+          pkgs.runCommand "repository-workflows-test"
+            {
+              nativeBuildInputs = with pkgs; [
+                git
+                shellcheck
+              ];
+            }
+            ''
+              shellcheck -s sh \
+                ${./scripts/generations.sh} \
+                ${./scripts/update-flake.sh} \
+                ${./scripts/repository-workflows-test.sh}
+              sh ${./scripts/repository-workflows-test.sh} \
+                ${./scripts/generations.sh} \
+                ${./scripts/update-flake.sh}
               touch "$out"
             '';
 
@@ -305,6 +353,12 @@
               grep -Fq 'nix build .\#homeConfigurations.wintermute.activationPackage' wintermute
               ! grep -Fq 'ssh ' wintermute
 
+              for host in deepthought bob wintermute; do
+                make -C "hosts/$host" --no-print-directory -n generations update > "maintenance-$host"
+                grep -Fq './scripts/generations.sh' "maintenance-$host"
+                grep -Fq './scripts/update-flake.sh' "maintenance-$host"
+              done
+
               make -C hosts/wintermute --no-print-directory -n MAKE='printf MAKE_BYPASS' WINTERMUTE_BUILD='printf BUILD_BYPASS' WINTERMUTE_ACTIVATE='printf ACTIVATE_BYPASS' deploy-wintermute > wintermute-overrides
               grep -Fq 'nix build .\#homeConfigurations.wintermute.activationPackage' wintermute-overrides
               ! grep -Eq 'MAKE_BYPASS|BUILD_BYPASS|ACTIVATE_BYPASS|ssh ' wintermute-overrides
@@ -318,6 +372,8 @@
               ! make -C hosts/bob --no-print-directory build-deepthought
               ! make -C hosts/wintermute --no-print-directory rollback-pwppp
               ! make -C hosts/unknown --no-print-directory build
+              ! make -C hosts/unknown --no-print-directory generations
+              ! make -C hosts/unknown --no-print-directory update
               ! make -C hosts/wintermute --no-print-directory HOST=deepthought deploy-bob
               ! make -C hosts/wintermute --no-print-directory --ignore-errors build-bob
               ! make -C hosts/wintermute --no-print-directory require_host= build-bob

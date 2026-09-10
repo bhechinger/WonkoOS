@@ -1,4 +1,5 @@
-_: {
+{ wonkoosRevision, ... }:
+{
   imports = [ ./codex.nix ];
 
   home = {
@@ -7,4 +8,6 @@ _: {
   };
 
   manual.manpages.enable = false;
+
+  home.file.".config/wonkoos/revision".text = "${wonkoosRevision}\n";
 }
