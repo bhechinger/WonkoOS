@@ -1,0 +1,13 @@
+name = "CC: Create Redstone Link"
+filename = "cccredstonelink-0.1.1.jar"
+side = "both"
+
+[download]
+url = "https://cdn.modrinth.com/data/zDWcAhSD/versions/XcFaJqfR/cccredstonelink-0.1.1.jar"
+hash-format = "sha512"
+hash = "1d048b8cc573a56f5ae4504b1a0ab254c97955e038907c76a773640994f1ee73f06c398044daa94d1ec64338faf9c7f031dbe379a4e6a0657877761e1b071aa2"
+
+[update]
+[update.modrinth]
+mod-id = "zDWcAhSD"
+version = "XcFaJqfR"

@@ -1,11 +1,11 @@
 name = "pwppp"
-version = "1.1.12"
+version = "1.1.13"
 pack-format = "packwiz:1.1.0"
 
 [index]
 file = "index.toml"
 hash-format = "sha256"
-hash = "b2b653ca35b23a12e1c10de4cf18785890969e4de0dda4de5b5ded96fd96b2f7"
+hash = "21f9dd164a8d4b15a9dfbf196a3218e168e98348b4a7e2d9a1d70226a4a618e1"
 
 [versions]
 minecraft = "1.21.1"

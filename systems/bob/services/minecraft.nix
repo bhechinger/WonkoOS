@@ -177,7 +177,7 @@ let
     version = packVersion;
     src = packSource;
     side = "server";
-    packHash = "sha256-c0LgbqF+8TvyOk94BQtW8BHsyZayeiR8hrc+3UtMjdU=";
+    packHash = "sha256-440W3fQBN3u0z8balSOgm8l9Ye6K7/8N4zuvHr9s45Q=";
   };
   gigglesomethingServerPack = pkgs.fetchPackwizModpack {
     pname = "gigglesomething-server";
@@ -208,9 +208,8 @@ let
         unzip -p "$jar" "$entry" | gzip -t
       '';
 
-  # Packwiz bundles non-CurseForge entries as JARs. Use matching CurseForge file
-  # IDs in the client artifact while retaining reliable Modrinth downloads for
-  # the native server build and Packwiz clients.
+  # Prefer matching CurseForge file IDs where available; Packwiz bundles the
+  # remaining Modrinth entries as JARs in the client artifact.
   clientOxidizedMetadata = pkgs.writeText "create-oxidized.pw.toml" ''
     name = "Create: Oxidized"
     filename = "create_oxidized-0.1.3.jar"
@@ -257,17 +256,41 @@ let
     project-id = 953729
   '';
 
-  clientPack = pkgs.runCommand clientPackFileName { nativeBuildInputs = [ pkgs.packwiz ]; } ''
-    export HOME="$TMPDIR"
-    cp -r ${packSource} pack
-    chmod -R u+w pack
-    cd pack
-    cp ${clientOxidizedMetadata} mods/create-oxidized.pw.toml
-    cp ${clientDesignDecorMetadata} mods/create-design-n-decor.pw.toml
-    cp ${pwpppServerList} servers.dat
-    packwiz refresh
-    packwiz curseforge export --output "$out"
-  '';
+  clientPack =
+    pkgs.runCommand clientPackFileName
+      {
+        nativeBuildInputs = [
+          pkgs.packwiz
+          pkgs.python3
+        ];
+      }
+      ''
+        export HOME="$TMPDIR"
+        cp -r ${packSource} pack
+        chmod -R u+w pack
+        cd pack
+        cp ${clientOxidizedMetadata} mods/create-oxidized.pw.toml
+        cp ${clientDesignDecorMetadata} mods/create-design-n-decor.pw.toml
+        cp ${pwpppServerList} servers.dat
+        ${lib.getExe pkgs.python3} - ${serverPack}/mods <<'PY'
+        from pathlib import Path
+        import shutil
+        import sys
+        import tomllib
+
+        server_mods = Path(sys.argv[1])
+        for metadata_path in Path("mods").glob("*.pw.toml"):
+            with metadata_path.open("rb") as handle:
+                metadata = tomllib.load(handle)
+            if "curseforge" not in metadata.get("update", {}):
+                shutil.copy2(
+                    server_mods / metadata["filename"],
+                    Path("mods") / metadata["filename"],
+                )
+        PY
+        packwiz refresh
+        packwiz curseforge export --output "$out"
+      '';
   gigglesomethingClientPack =
     pkgs.runCommand gigglesomethingClientPackFileName
       {
@@ -407,6 +430,7 @@ let
     unused_overrides = set(overrides)
     server_expected = {}
     client_expected = Counter()
+    client_bundled_expected = set()
     mapped_server_hashes = {}
 
     for metadata_path in source.rglob("*.pw.toml"):
@@ -430,9 +454,8 @@ let
         if curseforge is None:
             override = overrides.get(metadata["name"])
             if override is None:
-                raise SystemExit(
-                    f"client file lacks CurseForge metadata: {destination_string}"
-                )
+                client_bundled_expected.add(f"overrides/{destination_string}")
+                continue
             unused_overrides.remove(metadata["name"])
             if override["filename"] != metadata["filename"]:
                 raise SystemExit(
@@ -482,19 +505,18 @@ let
                 f"client manifest mismatch\nmissing: {missing}\nunexpected: {unexpected}"
             )
 
-        bundled_mods = sorted(
+        bundled_mods = {
             name
             for name in names
             if name.startswith("overrides/mods/") and name.endswith(".jar")
-        )
-        if bundled_mods:
-            raise SystemExit(f"client ZIP bundles non-CurseForge mods: {bundled_mods}")
+        }
+        fail_set("client bundled mods", client_bundled_expected, bundled_mods)
 
         override_expected = {
             f"overrides/{entry['file']}"
             for entry in index["files"]
             if not entry.get("metafile", False)
-        } | {"overrides/servers.dat"}
+        } | client_bundled_expected | {"overrides/servers.dat"}
         override_actual = {
             name
             for name in names
@@ -503,7 +525,9 @@ let
         fail_set("client overrides", override_expected, override_actual)
         for archive_path in override_expected:
             source_path = (
-                server_list
+                server / archive_path.removeprefix("overrides/")
+                if archive_path in client_bundled_expected
+                else server_list
                 if archive_path == "overrides/servers.dat"
                 else source / archive_path.removeprefix("overrides/")
             )
