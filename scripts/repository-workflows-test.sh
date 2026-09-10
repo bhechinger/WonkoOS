@@ -1,0 +1,190 @@
+#!/bin/sh
+set -eu
+
+generation_script=$(cd "$(dirname "$1")" && pwd -P)/$(basename "$1")
+update_script=$(cd "$(dirname "$2")" && pwd -P)/$(basename "$2")
+test_root=$(mktemp -d)
+trap 'rm -rf -- "$test_root"' EXIT HUP INT TERM
+fake_bin=$test_root/bin
+mkdir -p "$fake_bin" "$test_root/home-current/home-files/.config/wonkoos" "$test_root/home-legacy"
+printf '%s\n' 1111111111111111111111111111111111111111-dirty \
+	>"$test_root/home-current/home-files/.config/wonkoos/revision"
+
+cat >"$fake_bin/nixos-rebuild" <<'EOF'
+#!/bin/sh
+test "$1" = list-generations
+printf '%s\n' \
+	'Generation  Build-date           NixOS version  Kernel  Configuration Revision  Specialisation  Current' \
+	'2           2026-09-10 12:00:00  26.05          7.0.1   2222222222222222222222222222222222222222  []  False' \
+	'1           2026-09-09 11:00:00  26.05          7.0.1   Unknown                                   []  True'
+EOF
+cat >"$fake_bin/home-manager" <<'EOF'
+#!/bin/sh
+test "$1" = generations
+printf '%s\n' \
+	"2026-09-10 12:01 : id 4 -> $TEST_ROOT/home-current (current)" \
+	"2026-09-09 11:01 : id 3 -> $TEST_ROOT/home-legacy"
+EOF
+cat >"$fake_bin/gh" <<'EOF'
+#!/bin/sh
+case "$1 $2" in
+auth\ status)
+	exit 0
+	;;
+pr\ create)
+	printf '%s\n' "$*" >>"$GH_LOG"
+	printf '%s\n' https://github.com/bhechinger/WonkoOS/pull/99
+	exit 0
+	;;
+esac
+case "$*" in
+*1111111111111111111111111111111111111111*)
+	printf '%s\n' "$*" >>"$GH_LOG"
+	printf '%s\n' '#7,#9'
+	;;
+*2222222222222222222222222222222222222222*)
+	printf '%s\n' "$*" >>"$GH_LOG"
+	exit 1
+	;;
+esac
+EOF
+cat >"$fake_bin/nix" <<'EOF'
+#!/bin/sh
+case "$*" in
+'flake update')
+	case "${NIX_MODE:-change}" in
+	change | check-fail)
+		printf '%s\n' updated >>flake.lock
+		;;
+	extra)
+		printf '%s\n' updated >>flake.lock
+		printf '%s\n' unexpected >unexpected-file
+		;;
+	nochange)
+		;;
+	esac
+	;;
+'flake check --all-systems --no-build')
+	printf '%s\n' "$*" >>"$NIX_LOG"
+	test "${NIX_MODE:-change}" != check-fail
+	;;
+*)
+	printf 'Unexpected nix invocation: %s\n' "$*" >&2
+	exit 1
+	;;
+esac
+EOF
+cat >"$fake_bin/date" <<'EOF'
+#!/bin/sh
+test "$*" = '-u +%Y%m%d-%H%M%S'
+printf '%s\n' 20260910-120000
+EOF
+chmod +x "$fake_bin"/*
+
+GH_LOG=$test_root/generation-gh.log
+TEST_ROOT=$test_root
+export GH_LOG TEST_ROOT
+: >"$GH_LOG"
+PATH="$fake_bin:$PATH" sh "$generation_script" deepthought >"$test_root/generations"
+grep -Fq 'nixos 2' "$test_root/generations"
+grep -Fq '2222222222222222222222222222222222222222' "$test_root/generations"
+grep -Fq 'unavailable' "$test_root/generations"
+grep -Fq 'nixos 1' "$test_root/generations"
+grep -Fq 'legacy' "$test_root/generations"
+grep -Fq 'home  4' "$test_root/generations"
+grep -Fq '#7,#9 + dirty' "$test_root/generations"
+test "$(grep -c 1111111111111111111111111111111111111111 "$GH_LOG")" -eq 1
+if PATH="$fake_bin:$PATH" sh "$generation_script" unknown >/dev/null 2>&1; then
+	printf 'generation script accepted an unsupported host\n' >&2
+	exit 1
+fi
+
+new_repo() {
+	name=$1
+	origin=$test_root/$name-origin.git
+	seed=$test_root/$name-seed
+	work=$test_root/$name-work
+	git init --bare -q --initial-branch=main "$origin"
+	git init -q -b main "$seed"
+	git -C "$seed" config user.name Test
+	git -C "$seed" config user.email test@example.invalid
+	git -C "$seed" config commit.gpgsign false
+	printf '%s\n' base >"$seed/flake.lock"
+	git -C "$seed" add flake.lock
+	git -C "$seed" commit -q -m base
+	git -C "$seed" remote add origin "$origin"
+	git -C "$seed" push -q -u origin main
+	git clone -q "$origin" "$work"
+	git -C "$work" config user.name Test
+	git -C "$work" config user.email test@example.invalid
+	git -C "$work" config commit.gpgsign false
+	TEST_REPO=$work
+}
+
+run_update() {
+	(
+		cd "$TEST_REPO"
+		PATH="$fake_bin:$PATH" NIX_MODE=$1 GH_LOG=$GH_LOG NIX_LOG=$NIX_LOG sh "$update_script"
+	)
+}
+
+GH_LOG=$test_root/update-gh.log
+NIX_LOG=$test_root/update-nix.log
+export GH_LOG NIX_LOG
+
+new_repo success
+: >"$GH_LOG"
+: >"$NIX_LOG"
+run_update change
+test "$(git -C "$TEST_REPO" branch --show-current)" = main
+update_branch=$(git -C "$TEST_REPO" for-each-ref --format='%(refname:short)' 'refs/heads/feat/update-flake-lock-*')
+test -n "$update_branch"
+test "$(git -C "$TEST_REPO" diff --name-only main..."$update_branch")" = flake.lock
+git --git-dir="$origin" show-ref --verify --quiet "refs/heads/$update_branch"
+grep -Fq 'pr create --repo bhechinger/WonkoOS --base main' "$GH_LOG"
+grep -Fq 'flake check --all-systems --no-build' "$NIX_LOG"
+
+new_repo nochange
+run_update nochange
+test "$(git -C "$TEST_REPO" branch --show-current)" = main
+test -z "$(git -C "$TEST_REPO" for-each-ref --format='%(refname:short)' 'refs/heads/feat/update-flake-lock-*')"
+
+new_repo dirty
+printf '%s\n' dirty >>"$TEST_REPO/flake.lock"
+if run_update change >/dev/null 2>&1; then
+	printf 'update script accepted a dirty worktree\n' >&2
+	exit 1
+fi
+test "$(git -C "$TEST_REPO" branch --show-current)" = main
+
+new_repo wrong-branch
+git -C "$TEST_REPO" switch -q -c work
+if run_update change >/dev/null 2>&1; then
+	printf 'update script accepted a non-main branch\n' >&2
+	exit 1
+fi
+test "$(git -C "$TEST_REPO" branch --show-current)" = work
+
+new_repo extra
+: >"$GH_LOG"
+if run_update extra >/dev/null 2>&1; then
+	printf 'update script accepted an extra changed file\n' >&2
+	exit 1
+fi
+case "$(git -C "$TEST_REPO" branch --show-current)" in
+feat/update-flake-lock-*) ;;
+*) exit 1 ;;
+esac
+test ! -s "$GH_LOG"
+
+new_repo check-fail
+: >"$GH_LOG"
+if run_update check-fail >/dev/null 2>&1; then
+	printf 'update script ignored a failed flake check\n' >&2
+	exit 1
+fi
+case "$(git -C "$TEST_REPO" branch --show-current)" in
+feat/update-flake-lock-*) ;;
+*) exit 1 ;;
+esac
+test ! -s "$GH_LOG"
