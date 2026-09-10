@@ -448,7 +448,7 @@ assert minecraft.enable;
 assert minecraft.autoStart;
 assert minecraft.serverProperties.server-ip == "127.0.0.11";
 assert minecraft.serverProperties.server-port == 25566;
-assert minecraft.serverProperties.motd == "A NEOFORGE server on 1.21.1\\nrunning pwppp 1.1.12";
+assert minecraft.serverProperties.motd == "A NEOFORGE server on 1.21.1\\nrunning pwppp 1.1.13";
 assert minecraft.serverProperties.online-mode;
 assert minecraft.serverProperties.white-list;
 assert minecraft.serverProperties.enforce-whitelist;
