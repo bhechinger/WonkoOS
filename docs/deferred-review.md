@@ -3,6 +3,12 @@
 These findings were reviewed on 2026-07-11 and deliberately deferred. Their
 implementations remain unchanged.
 
+## Disabled CPU mitigations
+
+`deepthought` passes `mitigations=off`, disabling CPU vulnerability mitigations.
+
+Review if the host's threat model changes.
+
 ## Runtime-derived hugepage configuration
 
 The Make targets sample SysV shared-memory state into
