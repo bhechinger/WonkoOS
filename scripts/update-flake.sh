@@ -32,6 +32,7 @@ if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]; then
 	printf 'Local main does not exactly match origin/main.\n' >&2
 	exit 1
 fi
+base=$(git rev-parse HEAD)
 
 branch=feat/update-flake-lock-$(date -u +%Y%m%d-%H%M%S)
 git switch -c "$branch"
@@ -49,16 +50,33 @@ if [ "$changes" != ' M flake.lock' ]; then
 	exit 1
 fi
 
-nix flake check --all-systems --no-build
 git add flake.lock
 git commit -m 'flake: update inputs'
-if [ -n "$(git status --porcelain)" ] || [ "$(git diff-tree --no-commit-id --name-only -r HEAD)" != flake.lock ]; then
+parents=$(git rev-parse HEAD^@)
+if [ -n "$(git status --porcelain)" ] || [ "$parents" != "$base" ] || [ "$(git diff --name-only "$base" HEAD)" != flake.lock ]; then
 	printf 'The update commit contains or left changes beyond flake.lock; leaving %s for inspection.\n' "$branch" >&2
+	exit 1
+fi
+head=$(git rev-parse HEAD)
+nix flake check --all-systems --no-build --no-update-lock-file
+if [ "$(git rev-parse HEAD)" != "$head" ] || [ -n "$(git status --porcelain)" ]; then
+	printf 'Validation changed the update commit or worktree; leaving %s for inspection.\n' "$branch" >&2
 	exit 1
 fi
 git push --set-upstream origin "$branch"
 pr_url=$(gh pr create --repo "$repository" --base main --head "$branch" \
 	--title 'flake: update inputs' \
-	--body 'Automated flake input update. Validation: nix flake check --all-systems --no-build.')
+	--body 'Automated flake input update. Validation: nix flake check --all-systems --no-build --no-update-lock-file.')
+git push --force-with-lease="refs/heads/main:$base" origin "$head:refs/heads/main"
+if [ "$(gh pr view "$pr_url" --json state --jq .state)" != MERGED ]; then
+	printf 'main now contains %s, but GitHub did not mark %s merged; leaving %s for inspection.\n' "$head" "$pr_url" "$branch" >&2
+	exit 1
+fi
 git switch main
-printf 'Opened %s\n' "$pr_url"
+git pull --ff-only origin main
+if ! git push origin --delete "$branch"; then
+	remote_branch=$(git ls-remote --heads origin "$branch")
+	[ -z "$remote_branch" ] || exit 1
+fi
+git branch -d "$branch"
+printf 'Merged %s\n' "$pr_url"

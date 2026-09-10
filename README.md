@@ -30,8 +30,11 @@ generations with the WonkoOS revision and any associated GitHub pull request.
 Older generations without revision metadata are shown as legacy generations.
 
 Run `make update` from a clean `main` branch to update every flake input. It
-creates and validates a lockfile-only branch, pushes it, opens a pull request,
-and returns to `main`. It never merges the pull request.
+creates and validates a lockfile-only branch, opens and merges its pull request,
+deletes the branch, then returns to an updated `main`. The merge is an atomic
+fast-forward of the base to the exact validated commit. If it fails or `main`
+advances, or GitHub does not recognize the PR as merged, the update branch and
+its pushed commit remain available for inspection.
 
 ## Storage installation
 

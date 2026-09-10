@@ -36,6 +36,18 @@ pr\ create)
 	printf '%s\n' https://github.com/bhechinger/WonkoOS/pull/99
 	exit 0
 	;;
+pr\ view)
+	printf '%s\n' "$*" >>"$GH_LOG"
+	branch=$(git branch --show-current)
+	main=$(git ls-remote origin refs/heads/main | awk '{ print $1 }')
+	head=$(git ls-remote origin "refs/heads/$branch" | awk '{ print $1 }')
+	if [ -n "$head" ] && [ "$main" = "$head" ]; then
+		printf '%s\n' MERGED
+	else
+		printf '%s\n' OPEN
+	fi
+	exit 0
+	;;
 esac
 case "$*" in
 *1111111111111111111111111111111111111111*)
@@ -53,7 +65,7 @@ cat >"$fake_bin/nix" <<'EOF'
 case "$*" in
 'flake update')
 	case "${NIX_MODE:-change}" in
-	change | check-fail)
+	change | check-fail | check-rewrite)
 		printf '%s\n' updated >>flake.lock
 		;;
 	extra)
@@ -64,8 +76,11 @@ case "$*" in
 		;;
 	esac
 	;;
-'flake check --all-systems --no-build')
-	printf '%s\n' "$*" >>"$NIX_LOG"
+'flake check --all-systems --no-build --no-update-lock-file')
+	printf '%s %s\n' "$*" "$(git rev-parse HEAD)" >>"$NIX_LOG"
+	if [ "${NIX_MODE:-change}" = check-rewrite ]; then
+		printf '%s\n' rewritten-after-commit >>flake.lock
+	fi
 	test "${NIX_MODE:-change}" != check-fail
 	;;
 *)
@@ -137,12 +152,13 @@ new_repo success
 : >"$NIX_LOG"
 run_update change
 test "$(git -C "$TEST_REPO" branch --show-current)" = main
-update_branch=$(git -C "$TEST_REPO" for-each-ref --format='%(refname:short)' 'refs/heads/feat/update-flake-lock-*')
-test -n "$update_branch"
-test "$(git -C "$TEST_REPO" diff --name-only main..."$update_branch")" = flake.lock
-git --git-dir="$origin" show-ref --verify --quiet "refs/heads/$update_branch"
+test -z "$(git -C "$TEST_REPO" for-each-ref --format='%(refname:short)' 'refs/heads/feat/update-flake-lock-*')"
+test -z "$(git --git-dir="$origin" for-each-ref --format='%(refname:short)' 'refs/heads/feat/update-flake-lock-*')"
+grep -Fq updated "$TEST_REPO/flake.lock"
 grep -Fq 'pr create --repo bhechinger/WonkoOS --base main' "$GH_LOG"
-grep -Fq 'flake check --all-systems --no-build' "$NIX_LOG"
+grep -Fq 'pr view https://github.com/bhechinger/WonkoOS/pull/99 --json state --jq .state' "$GH_LOG"
+grep -Fq 'flake check --all-systems --no-build --no-update-lock-file' "$NIX_LOG"
+test "$(git -C "$TEST_REPO" rev-parse main)" = "$(awk '/^flake check --all-systems --no-build --no-update-lock-file / { print $6 }' "$NIX_LOG")"
 
 new_repo nochange
 run_update nochange
@@ -189,6 +205,19 @@ feat/update-flake-lock-*) ;;
 esac
 test ! -s "$GH_LOG"
 
+new_repo check-rewrite
+: >"$GH_LOG"
+if run_update check-rewrite >/dev/null 2>&1; then
+	printf 'update script accepted a lockfile rewritten during validation\n' >&2
+	exit 1
+fi
+case "$(git -C "$TEST_REPO" branch --show-current)" in
+feat/update-flake-lock-*) ;;
+*) exit 1 ;;
+esac
+test ! -s "$GH_LOG"
+test -z "$(git --git-dir="$origin" for-each-ref --format='%(refname:short)' 'refs/heads/feat/update-flake-lock-*')"
+
 new_repo hook
 hook_dir=$test_root/hooks
 mkdir "$hook_dir"
@@ -210,3 +239,108 @@ feat/update-flake-lock-*) ;;
 esac
 test ! -s "$GH_LOG"
 test -z "$(git --git-dir="$origin" for-each-ref --format='%(refname:short)' 'refs/heads/feat/update-flake-lock-*')"
+
+new_repo post-commit-hook
+hook_dir=$test_root/post-commit-hooks
+mkdir "$hook_dir"
+cat >"$hook_dir/post-commit" <<'EOF'
+#!/bin/sh
+printf '%s\n' unexpected >injected-file
+git add injected-file
+git commit --no-verify -q -m injected
+printf '%s\n' hidden-update >flake.lock
+git add flake.lock
+git commit --no-verify -q -m hide-injection
+EOF
+chmod +x "$hook_dir/post-commit"
+git -C "$TEST_REPO" config core.hooksPath "$hook_dir"
+: >"$GH_LOG"
+if run_update change >/dev/null 2>&1; then
+	printf 'update script accepted a commit chain injected by a post-commit hook\n' >&2
+	exit 1
+fi
+case "$(git -C "$TEST_REPO" branch --show-current)" in
+feat/update-flake-lock-*) ;;
+*) exit 1 ;;
+esac
+test ! -s "$GH_LOG"
+test -z "$(git --git-dir="$origin" for-each-ref --format='%(refname:short)' 'refs/heads/feat/update-flake-lock-*')"
+
+new_repo lock-hook
+hook_dir=$test_root/lock-hooks
+mkdir "$hook_dir"
+cat >"$hook_dir/pre-commit" <<'EOF'
+#!/bin/sh
+printf '%s\n' hook-updated >flake.lock
+git add flake.lock
+EOF
+chmod +x "$hook_dir/pre-commit"
+git -C "$TEST_REPO" config core.hooksPath "$hook_dir"
+: >"$GH_LOG"
+: >"$NIX_LOG"
+run_update change
+test "$(git -C "$TEST_REPO" show main:flake.lock)" = hook-updated
+test "$(git -C "$TEST_REPO" rev-parse main)" = "$(awk '/^flake check --all-systems --no-build --no-update-lock-file / { print $6 }' "$NIX_LOG")"
+
+new_repo base-move
+base=$(git -C "$TEST_REPO" rev-parse main)
+hook_dir=$test_root/base-move-hooks
+mkdir "$hook_dir"
+cat >"$hook_dir/pre-push" <<'EOF'
+#!/bin/sh
+while read -r _ _ remote_ref _; do
+	if [ "$remote_ref" = refs/heads/main ]; then
+		base=$(git rev-parse main)
+		tree=$(git rev-parse 'main^{tree}')
+		moved=$(printf '%s\n' 'advance main' | git commit-tree "$tree" -p "$base")
+		git push --no-verify -q origin "$moved:refs/heads/main"
+	fi
+done
+EOF
+chmod +x "$hook_dir/pre-push"
+git -C "$TEST_REPO" config core.hooksPath "$hook_dir"
+: >"$GH_LOG"
+if run_update change >/dev/null 2>&1; then
+	printf 'update script merged onto an unvalidated base\n' >&2
+	exit 1
+fi
+case "$(git -C "$TEST_REPO" branch --show-current)" in
+feat/update-flake-lock-*) ;;
+*) exit 1 ;;
+esac
+test "$base" != "$(git --git-dir="$origin" rev-parse refs/heads/main)"
+base_move_branch=$(git -C "$TEST_REPO" branch --show-current)
+test "$(git -C "$TEST_REPO" rev-parse HEAD)" = "$(git --git-dir="$origin" rev-parse "refs/heads/$base_move_branch")"
+
+new_repo head-move
+hook_dir=$test_root/head-move-hooks
+mkdir "$hook_dir"
+cat >"$hook_dir/pre-push" <<'EOF'
+#!/bin/sh
+while read -r _ _ remote_ref _; do
+	if [ "$remote_ref" = refs/heads/main ]; then
+		branch=$(git branch --show-current)
+		head=$(git rev-parse HEAD)
+		tree=$(git rev-parse 'HEAD^{tree}')
+		moved=$(printf '%s\n' 'advance PR head' | git commit-tree "$tree" -p "$head")
+		git push --no-verify -q origin "$moved:refs/heads/$branch"
+	fi
+done
+EOF
+chmod +x "$hook_dir/pre-push"
+git -C "$TEST_REPO" config core.hooksPath "$hook_dir"
+: >"$GH_LOG"
+: >"$NIX_LOG"
+if run_update change >/dev/null 2>&1; then
+	printf 'update script reported an unrecognized PR merge\n' >&2
+	exit 1
+fi
+case "$(git -C "$TEST_REPO" branch --show-current)" in
+feat/update-flake-lock-*) ;;
+*) exit 1 ;;
+esac
+validated_head=$(awk '/^flake check --all-systems --no-build --no-update-lock-file / { print $6 }' "$NIX_LOG")
+head_move_branch=$(git -C "$TEST_REPO" branch --show-current)
+test "$(git --git-dir="$origin" rev-parse refs/heads/main)" = "$validated_head"
+test "$(git --git-dir="$origin" rev-parse "refs/heads/$head_move_branch^")" = "$validated_head"
+grep -Fq 'pr view https://github.com/bhechinger/WonkoOS/pull/99 --json state --jq .state' "$GH_LOG"
