@@ -52,6 +52,10 @@ fi
 nix flake check --all-systems --no-build
 git add flake.lock
 git commit -m 'flake: update inputs'
+if [ -n "$(git status --porcelain)" ] || [ "$(git diff-tree --no-commit-id --name-only -r HEAD)" != flake.lock ]; then
+	printf 'The update commit contains or left changes beyond flake.lock; leaving %s for inspection.\n' "$branch" >&2
+	exit 1
+fi
 git push --set-upstream origin "$branch"
 pr_url=$(gh pr create --repo "$repository" --base main --head "$branch" \
 	--title 'flake: update inputs' \

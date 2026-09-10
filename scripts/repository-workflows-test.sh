@@ -188,3 +188,25 @@ feat/update-flake-lock-*) ;;
 *) exit 1 ;;
 esac
 test ! -s "$GH_LOG"
+
+new_repo hook
+hook_dir=$test_root/hooks
+mkdir "$hook_dir"
+cat >"$hook_dir/pre-commit" <<'EOF'
+#!/bin/sh
+printf '%s\n' injected >injected-file
+git add injected-file
+EOF
+chmod +x "$hook_dir/pre-commit"
+git -C "$TEST_REPO" config core.hooksPath "$hook_dir"
+: >"$GH_LOG"
+if run_update change >/dev/null 2>&1; then
+	printf 'update script accepted a file injected by a commit hook\n' >&2
+	exit 1
+fi
+case "$(git -C "$TEST_REPO" branch --show-current)" in
+feat/update-flake-lock-*) ;;
+*) exit 1 ;;
+esac
+test ! -s "$GH_LOG"
+test -z "$(git --git-dir="$origin" for-each-ref --format='%(refname:short)' 'refs/heads/feat/update-flake-lock-*')"

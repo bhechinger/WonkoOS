@@ -31,9 +31,9 @@ Treat the host named below as the operational owner of its services.
 
 `make update` is a user-operated, non-agent workflow. Agents must not run,
 review, or manage it unless the user explicitly requests that involvement.
-Pull requests created by this target are exempt from the workflow below only
-when their sole changed file is `flake.lock`; any additional change requires
-the full workflow.
+Pull requests created by this target require neither adversarial review nor CI
+readiness handling and are exempt from the workflow below when their sole
+changed file is `flake.lock`; any additional change requires the full workflow.
 
 For every code change:
 
