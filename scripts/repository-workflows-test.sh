@@ -88,7 +88,7 @@ case "$*" in
 	esac
 	;;
 'flake check --all-systems --no-build')
-	printf '%s\n' "$*" >>"$NIX_LOG"
+	printf '%s %s\n' "$*" "$(git rev-parse HEAD)" >>"$NIX_LOG"
 	test "${NIX_MODE:-change}" != check-fail
 	;;
 *)
@@ -167,6 +167,8 @@ grep -Fq updated "$TEST_REPO/flake.lock"
 grep -Fq 'pr create --repo bhechinger/WonkoOS --base main' "$GH_LOG"
 grep -Fq 'pr merge https://github.com/bhechinger/WonkoOS/pull/99 --squash --delete-branch --match-head-commit' "$GH_LOG"
 grep -Fq 'flake check --all-systems --no-build' "$NIX_LOG"
+validated_head=$(awk '/^flake check --all-systems --no-build / { print $5 }' "$NIX_LOG")
+grep -Fq -- "--match-head-commit $validated_head" "$GH_LOG"
 
 new_repo nochange
 run_update nochange
@@ -235,6 +237,23 @@ esac
 test ! -s "$GH_LOG"
 test -z "$(git --git-dir="$origin" for-each-ref --format='%(refname:short)' 'refs/heads/feat/update-flake-lock-*')"
 
+new_repo lock-hook
+hook_dir=$test_root/lock-hooks
+mkdir "$hook_dir"
+cat >"$hook_dir/pre-commit" <<'EOF'
+#!/bin/sh
+printf '%s\n' hook-updated >flake.lock
+git add flake.lock
+EOF
+chmod +x "$hook_dir/pre-commit"
+git -C "$TEST_REPO" config core.hooksPath "$hook_dir"
+: >"$GH_LOG"
+: >"$NIX_LOG"
+run_update change
+test "$(git -C "$TEST_REPO" show main:flake.lock)" = hook-updated
+validated_head=$(awk '/^flake check --all-systems --no-build / { print $5 }' "$NIX_LOG")
+grep -Fq -- "--match-head-commit $validated_head" "$GH_LOG"
+
 new_repo merge-fail
 : >"$GH_LOG"
 if run_update change merge-fail >/dev/null 2>&1; then
@@ -246,4 +265,6 @@ feat/update-flake-lock-*) ;;
 *) exit 1 ;;
 esac
 test "$(git -C "$TEST_REPO" show main:flake.lock)" = base
+merge_branch=$(git -C "$TEST_REPO" branch --show-current)
+test "$(git -C "$TEST_REPO" rev-parse HEAD)" = "$(git --git-dir="$origin" rev-parse "refs/heads/$merge_branch")"
 grep -Fq 'pr merge https://github.com/bhechinger/WonkoOS/pull/99 --squash --delete-branch --match-head-commit' "$GH_LOG"

@@ -32,7 +32,8 @@ Older generations without revision metadata are shown as legacy generations.
 Run `make update` from a clean `main` branch to update every flake input. It
 creates and validates a lockfile-only branch, opens and squash-merges its pull
 request, deletes the branch, then returns to an updated `main`. The merge is
-guarded against any change to the commit that passed validation.
+guarded against any change to the commit that passed validation. If merging
+fails, the update branch and its pushed commit remain available for inspection.
 
 ## Storage installation
 
