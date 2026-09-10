@@ -57,12 +57,16 @@ if [ -n "$(git status --porcelain)" ] || [ "$parents" != "$base" ] || [ "$(git d
 	printf 'The update commit contains or left changes beyond flake.lock; leaving %s for inspection.\n' "$branch" >&2
 	exit 1
 fi
-nix flake check --all-systems --no-build
 head=$(git rev-parse HEAD)
+nix flake check --all-systems --no-build --no-update-lock-file
+if [ "$(git rev-parse HEAD)" != "$head" ] || [ -n "$(git status --porcelain)" ]; then
+	printf 'Validation changed the update commit or worktree; leaving %s for inspection.\n' "$branch" >&2
+	exit 1
+fi
 git push --set-upstream origin "$branch"
 pr_url=$(gh pr create --repo "$repository" --base main --head "$branch" \
 	--title 'flake: update inputs' \
-	--body 'Automated flake input update. Validation: nix flake check --all-systems --no-build.')
+	--body 'Automated flake input update. Validation: nix flake check --all-systems --no-build --no-update-lock-file.')
 git push --force-with-lease="refs/heads/main:$base" origin "$head:refs/heads/main"
 if [ "$(gh pr view "$pr_url" --json state --jq .state)" != MERGED ]; then
 	printf 'main now contains %s, but GitHub did not mark %s merged; leaving %s for inspection.\n' "$head" "$pr_url" "$branch" >&2

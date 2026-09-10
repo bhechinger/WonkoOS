@@ -65,7 +65,7 @@ cat >"$fake_bin/nix" <<'EOF'
 case "$*" in
 'flake update')
 	case "${NIX_MODE:-change}" in
-	change | check-fail)
+	change | check-fail | check-rewrite)
 		printf '%s\n' updated >>flake.lock
 		;;
 	extra)
@@ -76,8 +76,11 @@ case "$*" in
 		;;
 	esac
 	;;
-'flake check --all-systems --no-build')
+'flake check --all-systems --no-build --no-update-lock-file')
 	printf '%s %s\n' "$*" "$(git rev-parse HEAD)" >>"$NIX_LOG"
+	if [ "${NIX_MODE:-change}" = check-rewrite ]; then
+		printf '%s\n' rewritten-after-commit >>flake.lock
+	fi
 	test "${NIX_MODE:-change}" != check-fail
 	;;
 *)
@@ -154,8 +157,8 @@ test -z "$(git --git-dir="$origin" for-each-ref --format='%(refname:short)' 'ref
 grep -Fq updated "$TEST_REPO/flake.lock"
 grep -Fq 'pr create --repo bhechinger/WonkoOS --base main' "$GH_LOG"
 grep -Fq 'pr view https://github.com/bhechinger/WonkoOS/pull/99 --json state --jq .state' "$GH_LOG"
-grep -Fq 'flake check --all-systems --no-build' "$NIX_LOG"
-test "$(git -C "$TEST_REPO" rev-parse main)" = "$(awk '/^flake check --all-systems --no-build / { print $5 }' "$NIX_LOG")"
+grep -Fq 'flake check --all-systems --no-build --no-update-lock-file' "$NIX_LOG"
+test "$(git -C "$TEST_REPO" rev-parse main)" = "$(awk '/^flake check --all-systems --no-build --no-update-lock-file / { print $6 }' "$NIX_LOG")"
 
 new_repo nochange
 run_update nochange
@@ -201,6 +204,19 @@ feat/update-flake-lock-*) ;;
 *) exit 1 ;;
 esac
 test ! -s "$GH_LOG"
+
+new_repo check-rewrite
+: >"$GH_LOG"
+if run_update check-rewrite >/dev/null 2>&1; then
+	printf 'update script accepted a lockfile rewritten during validation\n' >&2
+	exit 1
+fi
+case "$(git -C "$TEST_REPO" branch --show-current)" in
+feat/update-flake-lock-*) ;;
+*) exit 1 ;;
+esac
+test ! -s "$GH_LOG"
+test -z "$(git --git-dir="$origin" for-each-ref --format='%(refname:short)' 'refs/heads/feat/update-flake-lock-*')"
 
 new_repo hook
 hook_dir=$test_root/hooks
@@ -264,7 +280,7 @@ git -C "$TEST_REPO" config core.hooksPath "$hook_dir"
 : >"$NIX_LOG"
 run_update change
 test "$(git -C "$TEST_REPO" show main:flake.lock)" = hook-updated
-test "$(git -C "$TEST_REPO" rev-parse main)" = "$(awk '/^flake check --all-systems --no-build / { print $5 }' "$NIX_LOG")"
+test "$(git -C "$TEST_REPO" rev-parse main)" = "$(awk '/^flake check --all-systems --no-build --no-update-lock-file / { print $6 }' "$NIX_LOG")"
 
 new_repo base-move
 base=$(git -C "$TEST_REPO" rev-parse main)
@@ -323,7 +339,7 @@ case "$(git -C "$TEST_REPO" branch --show-current)" in
 feat/update-flake-lock-*) ;;
 *) exit 1 ;;
 esac
-validated_head=$(awk '/^flake check --all-systems --no-build / { print $5 }' "$NIX_LOG")
+validated_head=$(awk '/^flake check --all-systems --no-build --no-update-lock-file / { print $6 }' "$NIX_LOG")
 head_move_branch=$(git -C "$TEST_REPO" branch --show-current)
 test "$(git --git-dir="$origin" rev-parse refs/heads/main)" = "$validated_head"
 test "$(git --git-dir="$origin" rev-parse "refs/heads/$head_move_branch^")" = "$validated_head"
