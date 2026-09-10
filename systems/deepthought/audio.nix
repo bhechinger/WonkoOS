@@ -1,42 +1,27 @@
 {
-  inputs,
-  lib,
   pkgs,
   unstable-pkgs,
-  useSaffireFfado,
   ...
 }:
-
-let
-  ffadoPipewire = import ../../common/pipewire-ffado {
-    pkgs = unstable-pkgs;
-    pipewire-src = inputs.pipewire-src;
-  };
-in
 {
   security.rtkit.enable = true;
 
   musnix = {
     enable = true;
-    ffado.enable = true;
     soundcardPciId = "06:00.0";
     rtcqs.enable = true;
     rtirq = {
       resetAll = 1;
       prioLow = 0;
       enable = true;
-      nameList = if useSaffireFfado then "rtc0" else "rtc0 firewire_ohci";
-    }
-    // lib.optionalAttrs useSaffireFfado {
-      prioHigh = 95;
-      highList = "firewire_ohci s-firewi";
+      nameList = "rtc0 firewire_ohci";
     };
   };
 
   services = {
     pipewire = {
       enable = true;
-      package = if useSaffireFfado then ffadoPipewire else unstable-pkgs.pipewire;
+      package = unstable-pkgs.pipewire;
       audio.enable = true;
       wireplumber.enable = true;
       alsa = {

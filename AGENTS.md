@@ -1,7 +1,8 @@
 # Repository instructions
 
-Do all work concerning `bob` on `deepthought`, including editing, testing,
-committing, and pushing. Never push `bob` work from another host.
+The repository may be edited, tested, committed, and pushed from `deepthought`,
+`bob`, or `wintermute`. Only `deepthought` may build or deploy another host;
+`bob` and `wintermute` may build and deploy only themselves.
 
 ## Scope and routing
 
@@ -12,11 +13,12 @@ Treat the host named below as the operational owner of its services.
   `systems/sierra/README.md` and `systems/sierra/*.sh`; administer it over SSH.
   Make DNS changes only on Sierra's primary, never on Bob's secondary.
 - `bob` owns the server workloads. Use `systems/bob/README.md` and
-  `systems/bob/services/`; work on and deploy them only from `deepthought`.
-- `deepthought` is the workstation and build/deployment host. Use
+  `systems/bob/services/`; deploy them from Bob itself or from `deepthought`.
+- `deepthought` is the workstation and cross-host build/deployment host. Use
   `systems/deepthought/`, `home/`, and the root `Makefile`.
 - `wintermute` is the Apple Silicon macOS laptop. Use
-  `systems/wintermute/README.md` and `homeConfigurations.wintermute`.
+  `systems/wintermute/README.md` and `homeConfigurations.wintermute`; deploy it
+  from Wintermute itself or from `deepthought`.
 - `basket` owns NAS storage and its HTTPS endpoint. Use
   `systems/basket/README.md` and `systems/basket/*.sh`; administer it over SSH.
 - Cloudflare and Playit are external control planes reconciled from

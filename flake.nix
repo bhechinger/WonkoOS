@@ -4,10 +4,6 @@
   inputs = {
     nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.2605"; # Stable Nixpkgs
     unstable-nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1"; # Unstable Nixpkgs
-    pipewire-src = {
-      url = "path:/home/wonko/src/pipewire";
-      flake = false;
-    };
     linux_7_0.url = "github:NixOS/nixpkgs/709592197675b569aeaf6a68eb66365226a7c718";
     determinate = {
       url = "https://flakehub.com/f/DeterminateSystems/determinate/3"; # Determinate 3.*
@@ -62,7 +58,6 @@
       system = "x86_64-linux";
       darwinSystem = "aarch64-darwin";
       codexVersion = "0.153.0";
-      useSaffireFfado = false;
       hyprlandFix = "d8504461f0e9f95a5df9a0cdc0723d0ca6332888";
       pkgs = import nixpkgs {
         inherit system;
@@ -171,7 +166,7 @@
           inherit system;
 
           specialArgs = {
-            inherit inputs unstable-pkgs useSaffireFfado;
+            inherit inputs unstable-pkgs;
           };
 
           modules = [
@@ -187,9 +182,8 @@
             inputs
             hyprlandFix
             unstable-pkgs
-            useSaffireFfado
             ;
-          inherit (inputs) auto-splice pipewire-src spotify-midi-control;
+          inherit (inputs) auto-splice spotify-midi-control;
         };
         modules = [
           ./home/deepthought
@@ -210,6 +204,7 @@
       };
 
       formatter.${system} = pkgs.nixfmt-tree;
+      formatter.${darwinSystem} = darwinPkgs.nixfmt-tree;
 
       checks.${system} = {
         bob = self.nixosConfigurations.bob.config.system.build.toplevel;
@@ -267,6 +262,75 @@
           ${lib.getExe pkgs.python3} ${./scripts/cloudflare-tunnel-sync.py} --self-test
           touch "$out"
         '';
+
+        host-workflows =
+          pkgs.runCommand "host-workflows-test"
+            {
+              nativeBuildInputs = [ pkgs.gnumake ];
+            }
+            ''
+              cp ${./Makefile} Makefile
+              mkdir bin
+              printf '%s\n' '#!/bin/sh' 'printf "%s\n" wintermute' > bin/hostname
+              chmod +x bin/hostname
+              for host in deepthought bob wintermute unknown; do
+                mkdir -p "hosts/$host"
+                sed "s|^override HOST :=.*$|override HOST := $host|" Makefile > "hosts/$host/Makefile"
+              done
+              mkdir -p hosts/darwin
+              sed -e 's|ifneq ($(wildcard /proc/sys/kernel/hostname),)|ifneq (,)|' -e "s|/bin/hostname|$PWD/bin/hostname|" Makefile > hosts/darwin/Makefile
+
+              make -C hosts/deepthought --no-print-directory -n build switch boot > deepthought
+              grep -Fq 'nh os build -H deepthought .' deepthought
+              grep -Fq 'nh home build . -c deepthought' deepthought
+              grep -Fq 'nh home switch . -c deepthought' deepthought
+
+              make -C hosts/bob --no-print-directory -n build switch boot > bob
+              grep -Fq 'nh os build -H bob --diff never .' bob
+              grep -Fq 'nh os switch -H bob --diff never .' bob
+              grep -Fq './scripts/generate_hugepages_inputs.sh' bob
+
+              make -C hosts/deepthought --no-print-directory -n build-bob > bob-remote
+              ! grep -Fq './scripts/generate_hugepages_inputs.sh' bob-remote
+
+              make -C hosts/deepthought --no-print-directory -n BOB=evil.invalid BOB_SSH='printf BOB_BYPASS' deploy-bob > bob-overrides
+              grep -Fq 'ssh-ng://wonko@bob.4amlunch.net' bob-overrides
+              ! grep -Eq 'evil\.invalid|BOB_BYPASS' bob-overrides
+
+              make -C hosts/deepthought --no-print-directory -n BOB=evil.invalid BOB_SSH='printf BOB_BYPASS' MINECRAFT_PROFILE='MINECRAFT_BYPASS' rollback-pwppp > minecraft-overrides
+              grep -Fq 'ssh wonko@bob.4amlunch.net' minecraft-overrides
+              ! grep -Eq 'evil\.invalid|BOB_BYPASS|MINECRAFT_BYPASS' minecraft-overrides
+
+              make -C hosts/wintermute --no-print-directory -n build switch > wintermute
+              grep -Fq 'nix build .\#homeConfigurations.wintermute.activationPackage' wintermute
+              ! grep -Fq 'ssh ' wintermute
+
+              make -C hosts/wintermute --no-print-directory -n MAKE='printf MAKE_BYPASS' WINTERMUTE_BUILD='printf BUILD_BYPASS' WINTERMUTE_ACTIVATE='printf ACTIVATE_BYPASS' deploy-wintermute > wintermute-overrides
+              grep -Fq 'nix build .\#homeConfigurations.wintermute.activationPackage' wintermute-overrides
+              ! grep -Eq 'MAKE_BYPASS|BUILD_BYPASS|ACTIVATE_BYPASS|ssh ' wintermute-overrides
+
+              make -C hosts/deepthought --no-print-directory -n build-wintermute > wintermute-remote
+              grep -Fq -- '--eval-store daemon --store ssh-ng://wonko@wintermute.lan' wintermute-remote
+
+              ! make -C hosts/wintermute --no-print-directory boot
+              ! make -C hosts/bob --no-print-directory build-wintermute
+              ! make -C hosts/wintermute --no-print-directory deploy-bob
+              ! make -C hosts/bob --no-print-directory build-deepthought
+              ! make -C hosts/wintermute --no-print-directory rollback-pwppp
+              ! make -C hosts/unknown --no-print-directory build
+              ! make -C hosts/wintermute --no-print-directory HOST=deepthought deploy-bob
+              ! make -C hosts/wintermute --no-print-directory --ignore-errors build-bob
+              ! make -C hosts/wintermute --no-print-directory require_host= build-bob
+              ! make -C hosts/wintermute --no-print-directory require_self= boot-bob
+              ! make -C hosts/wintermute --no-print-directory --eval='build-bob: override HOST := deepthought' --eval='build-bob: override require_host :=' -n build-bob
+              ! make -C hosts/darwin --no-print-directory ".SHELLFLAGS=-c 'printf deepthought; #'" --eval='deploy-bob: override .SHELLFLAGS := -c' -n deploy-bob
+
+              actual="$(cut -d. -f1 /proc/sys/kernel/hostname)"
+              detected="$(PATH="$PWD/bin:$PATH" make -f Makefile --no-print-directory -s --eval 'print-host: ; @printf "%s\n" "$(HOST)"' print-host)"
+              test "$detected" = "$actual"
+
+              touch "$out"
+            '';
 
         storage-layout = import ./checks/storage-layout.nix { inherit self lib pkgs; };
 

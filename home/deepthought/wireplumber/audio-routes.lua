@@ -1,10 +1,5 @@
 local reconcile_delay_ms = 500
 
-local unlinked_nodes = {
-  audiofire_ffado_input = true,
-  audiofire_ffado_output = true,
-}
-
 local desired_links = {
   -- Connect Ardour and the nanoKONTROL2 in both directions for Mackie feedback.
   { output = "nanoKONTROL2:nanoKONTROL2 _ CTRL", input = "ardour:mackie control in" },
@@ -35,26 +30,11 @@ local desired_links = {
   { output = "ardour:auditioner/audio_out 2", input = "Pro24-004de0:playback_FR" },
   { output = "ardour:Click/audio_out 1",      input = "Pro24-004de0:playback_FL" },
   { output = "ardour:Click/audio_out 2",      input = "Pro24-004de0:playback_FR" },
-  { output = "ardour:Master/audio_out 1",     input = "Saffire Pro 24 FFADO Output:00130e0401c04de0_1394/In:01 (Mixer/In:17)_in" },
-  { output = "ardour:Master/audio_out 2",     input = "Saffire Pro 24 FFADO Output:00130e0401c04de0_1394/In:02 (Mixer/In:18)_in" },
-  { output = "ardour:auditioner/audio_out 1", input = "Saffire Pro 24 FFADO Output:00130e0401c04de0_1394/In:01 (Mixer/In:17)_in" },
-  { output = "ardour:auditioner/audio_out 2", input = "Saffire Pro 24 FFADO Output:00130e0401c04de0_1394/In:02 (Mixer/In:18)_in" },
-  { output = "ardour:Click/audio_out 1",      input = "Saffire Pro 24 FFADO Output:00130e0401c04de0_1394/In:01 (Mixer/In:17)_in" },
-  { output = "ardour:Click/audio_out 2",      input = "Saffire Pro 24 FFADO Output:00130e0401c04de0_1394/In:02 (Mixer/In:18)_in" },
 
   -- Feed the Saffire inputs into Ardour
   { output = "Pro24-004de0:capture_AUX0",     input = "ardour:Mic/audio_in 1" },
   { output = "Pro24-004de0:capture_AUX4",     input = "ardour:Mac/audio_in 1" },
   { output = "Pro24-004de0:capture_AUX5",     input = "ardour:Mac/audio_in 2" },
-  { output = "Saffire Pro 24 FFADO Input:00130e0401c04de0_1394/Out:01 (Anlg/In:03)_out",  input = "ardour:Mic/audio_in 1" },
-  { output = "Saffire Pro 24 FFADO Input:00130e0401c04de0_1394/Out:05 (SPDIF/In:01)_out", input = "ardour:Mac/audio_in 1" },
-  { output = "Saffire Pro 24 FFADO Input:00130e0401c04de0_1394/Out:06 (SPDIF/In:02)_out", input = "ardour:Mac/audio_in 2" },
-}
-
-local nodes = ObjectManager {
-  Interest {
-    type = "node",
-  }
 }
 
 local ports = ObjectManager {
@@ -135,32 +115,7 @@ local function remove_competing_links(output_port, desired_input_port)
   end
 end
 
-local function port_is_unlinked(port)
-  if not port then
-    return false
-  end
-
-  local node = nodes:lookup {
-    Constraint { "object.id", "equals", port.properties["node.id"] },
-  }
-
-  return node and unlinked_nodes[node.properties["node.name"]] or false
-end
-
-local function remove_unwanted_links()
-  for link in links:iterate() do
-    local output_port = lookup_port(link.properties["link.output.port"])
-    local input_port = lookup_port(link.properties["link.input.port"])
-
-    if port_is_unlinked(output_port) or port_is_unlinked(input_port) then
-      remove_link(link)
-    end
-  end
-end
-
 local function reconcile_links()
-  remove_unwanted_links()
-
   for _, desired_link in ipairs(desired_links) do
     local input_port = find_port(desired_link.input, "in")
 
@@ -190,14 +145,11 @@ local function schedule_reconcile()
   end)
 end
 
-nodes:connect("object-added", schedule_reconcile)
-nodes:connect("object-removed", schedule_reconcile)
 ports:connect("object-added", schedule_reconcile)
 ports:connect("object-removed", schedule_reconcile)
 links:connect("object-added", schedule_reconcile)
 links:connect("object-removed", schedule_reconcile)
 
-nodes:activate()
 ports:activate()
 links:activate()
 

@@ -2,6 +2,27 @@
 
 This is the NixOS configuration of all (eventually) my machines.
 
+## Build and deploy
+
+Clone the repository to `~/nix/WonkoOS` on Deepthought, Bob, and Wintermute.
+From the repository root, the common commands select the local host using its
+short hostname:
+
+```sh
+make build
+make switch
+make boot
+```
+
+`make build` and `make switch` manage NixOS plus Home Manager on Deepthought,
+NixOS on Bob, and Home Manager on Wintermute. `make boot` applies only to the
+two NixOS hosts and fails explicitly on Wintermute.
+
+Deepthought may build and deploy the other hosts with `make build-bob`,
+`make deploy-bob`, `make build-wintermute`, and `make deploy-wintermute`. Bob
+and Wintermute may use only their own explicit host targets; cross-host targets
+fail before invoking Nix or SSH.
+
 ## Storage installation
 
 The `deepthought` disko layout manages only the two local NVMe drives. It never
