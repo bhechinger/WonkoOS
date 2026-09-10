@@ -33,7 +33,18 @@ auth\ status)
 	;;
 pr\ create)
 	printf '%s\n' "$*" >>"$GH_LOG"
+	if [ "${GH_MODE:-success}" = base-move ]; then
+		base=$(git rev-parse main)
+		tree=$(git rev-parse 'main^{tree}')
+		moved=$(printf '%s\n' 'advance main' | git commit-tree "$tree" -p "$base")
+		git push -q origin "$moved:refs/heads/main"
+	fi
 	printf '%s\n' https://github.com/bhechinger/WonkoOS/pull/99
+	exit 0
+	;;
+pr\ view)
+	printf '%s\n' "$*" >>"$GH_LOG"
+	git ls-remote origin refs/heads/main | awk '{ print $1 }'
 	exit 0
 	;;
 pr\ merge)
@@ -253,6 +264,26 @@ run_update change
 test "$(git -C "$TEST_REPO" show main:flake.lock)" = hook-updated
 validated_head=$(awk '/^flake check --all-systems --no-build / { print $5 }' "$NIX_LOG")
 grep -Fq -- "--match-head-commit $validated_head" "$GH_LOG"
+
+new_repo base-move
+base=$(git -C "$TEST_REPO" rev-parse main)
+: >"$GH_LOG"
+if run_update change base-move >/dev/null 2>&1; then
+	printf 'update script merged onto an unvalidated base\n' >&2
+	exit 1
+fi
+case "$(git -C "$TEST_REPO" branch --show-current)" in
+feat/update-flake-lock-*) ;;
+*) exit 1 ;;
+esac
+test "$base" != "$(git --git-dir="$origin" rev-parse refs/heads/main)"
+base_move_branch=$(git -C "$TEST_REPO" branch --show-current)
+test "$(git -C "$TEST_REPO" rev-parse HEAD)" = "$(git --git-dir="$origin" rev-parse "refs/heads/$base_move_branch")"
+grep -Fq 'pr view https://github.com/bhechinger/WonkoOS/pull/99 --json baseRefOid --jq .baseRefOid' "$GH_LOG"
+if grep -Fq 'pr merge ' "$GH_LOG"; then
+	printf 'update script invoked merge after the base moved\n' >&2
+	exit 1
+fi
 
 new_repo merge-fail
 : >"$GH_LOG"

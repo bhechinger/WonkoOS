@@ -32,6 +32,7 @@ if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]; then
 	printf 'Local main does not exactly match origin/main.\n' >&2
 	exit 1
 fi
+base=$(git rev-parse HEAD)
 
 branch=feat/update-flake-lock-$(date -u +%Y%m%d-%H%M%S)
 git switch -c "$branch"
@@ -61,6 +62,12 @@ git push --set-upstream origin "$branch"
 pr_url=$(gh pr create --repo "$repository" --base main --head "$branch" \
 	--title 'flake: update inputs' \
 	--body 'Automated flake input update. Validation: nix flake check --all-systems --no-build.')
+current_base=$(gh pr view "$pr_url" --json baseRefOid --jq .baseRefOid)
+if [ "$current_base" != "$base" ]; then
+	printf 'main advanced after validation; leaving %s and %s for inspection.\n' "$branch" "$pr_url" >&2
+	exit 1
+fi
+# ponytail: GitHub only guards the head here; require up-to-date branches if this race matters.
 gh pr merge "$pr_url" --squash --delete-branch --match-head-commit "$head"
 git switch main
 git pull --ff-only origin main
