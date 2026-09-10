@@ -142,7 +142,7 @@ test -z "$(git --git-dir="$origin" for-each-ref --format='%(refname:short)' 'ref
 grep -Fq updated "$TEST_REPO/flake.lock"
 grep -Fq 'pr create --repo bhechinger/WonkoOS --base main' "$GH_LOG"
 grep -Fq 'flake check --all-systems --no-build' "$NIX_LOG"
-test "$(git -C "$TEST_REPO" rev-parse 'main^2')" = "$(awk '/^flake check --all-systems --no-build / { print $5 }' "$NIX_LOG")"
+test "$(git -C "$TEST_REPO" rev-parse main)" = "$(awk '/^flake check --all-systems --no-build / { print $5 }' "$NIX_LOG")"
 
 new_repo nochange
 run_update nochange
@@ -211,6 +211,32 @@ esac
 test ! -s "$GH_LOG"
 test -z "$(git --git-dir="$origin" for-each-ref --format='%(refname:short)' 'refs/heads/feat/update-flake-lock-*')"
 
+new_repo post-commit-hook
+hook_dir=$test_root/post-commit-hooks
+mkdir "$hook_dir"
+cat >"$hook_dir/post-commit" <<'EOF'
+#!/bin/sh
+printf '%s\n' unexpected >injected-file
+git add injected-file
+git commit --no-verify -q -m injected
+printf '%s\n' hidden-update >flake.lock
+git add flake.lock
+git commit --no-verify -q -m hide-injection
+EOF
+chmod +x "$hook_dir/post-commit"
+git -C "$TEST_REPO" config core.hooksPath "$hook_dir"
+: >"$GH_LOG"
+if run_update change >/dev/null 2>&1; then
+	printf 'update script accepted a commit chain injected by a post-commit hook\n' >&2
+	exit 1
+fi
+case "$(git -C "$TEST_REPO" branch --show-current)" in
+feat/update-flake-lock-*) ;;
+*) exit 1 ;;
+esac
+test ! -s "$GH_LOG"
+test -z "$(git --git-dir="$origin" for-each-ref --format='%(refname:short)' 'refs/heads/feat/update-flake-lock-*')"
+
 new_repo lock-hook
 hook_dir=$test_root/lock-hooks
 mkdir "$hook_dir"
@@ -225,7 +251,7 @@ git -C "$TEST_REPO" config core.hooksPath "$hook_dir"
 : >"$NIX_LOG"
 run_update change
 test "$(git -C "$TEST_REPO" show main:flake.lock)" = hook-updated
-test "$(git -C "$TEST_REPO" rev-parse 'main^2')" = "$(awk '/^flake check --all-systems --no-build / { print $5 }' "$NIX_LOG")"
+test "$(git -C "$TEST_REPO" rev-parse main)" = "$(awk '/^flake check --all-systems --no-build / { print $5 }' "$NIX_LOG")"
 
 new_repo base-move
 base=$(git -C "$TEST_REPO" rev-parse main)

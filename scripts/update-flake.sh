@@ -52,7 +52,8 @@ fi
 
 git add flake.lock
 git commit -m 'flake: update inputs'
-if [ -n "$(git status --porcelain)" ] || [ "$(git diff-tree --no-commit-id --name-only -r HEAD)" != flake.lock ]; then
+parents=$(git rev-parse HEAD^@)
+if [ -n "$(git status --porcelain)" ] || [ "$parents" != "$base" ] || [ "$(git diff --name-only "$base" HEAD)" != flake.lock ]; then
 	printf 'The update commit contains or left changes beyond flake.lock; leaving %s for inspection.\n' "$branch" >&2
 	exit 1
 fi
@@ -62,9 +63,7 @@ git push --set-upstream origin "$branch"
 pr_url=$(gh pr create --repo "$repository" --base main --head "$branch" \
 	--title 'flake: update inputs' \
 	--body 'Automated flake input update. Validation: nix flake check --all-systems --no-build.')
-tree=$(git rev-parse "$head^{tree}")
-merge=$(printf 'Merge %s\n' "$pr_url" | git commit-tree "$tree" -p "$base" -p "$head")
-git push --force-with-lease="refs/heads/main:$base" origin "$merge:refs/heads/main"
+git push --force-with-lease="refs/heads/main:$base" origin "$head:refs/heads/main"
 git switch main
 git pull --ff-only origin main
 git push origin --delete "$branch"
