@@ -36,6 +36,29 @@ pr\ create)
 	printf '%s\n' https://github.com/bhechinger/WonkoOS/pull/99
 	exit 0
 	;;
+pr\ merge)
+	printf '%s\n' "$*" >>"$GH_LOG"
+	shift 2
+	expected=
+	while [ "$#" -gt 0 ]; do
+		if [ "$1" = --match-head-commit ]; then
+			shift
+			expected=$1
+		fi
+		shift
+	done
+	test "$expected" = "$(git rev-parse HEAD)"
+	if [ "${GH_MODE:-success}" = merge-fail ]; then
+		exit 1
+	fi
+	branch=$(git branch --show-current)
+	git push -q origin HEAD:main
+	git push -q origin --delete "$branch"
+	git switch -q main
+	git pull -q --ff-only origin main
+	git branch -D "$branch" >/dev/null
+	exit 0
+	;;
 esac
 case "$*" in
 *1111111111111111111111111111111111111111*)
@@ -122,9 +145,10 @@ new_repo() {
 }
 
 run_update() {
+	gh_mode=${2:-success}
 	(
 		cd "$TEST_REPO"
-		PATH="$fake_bin:$PATH" NIX_MODE=$1 GH_LOG=$GH_LOG NIX_LOG=$NIX_LOG sh "$update_script"
+		PATH="$fake_bin:$PATH" NIX_MODE=$1 GH_MODE=$gh_mode GH_LOG=$GH_LOG NIX_LOG=$NIX_LOG sh "$update_script"
 	)
 }
 
@@ -137,11 +161,11 @@ new_repo success
 : >"$NIX_LOG"
 run_update change
 test "$(git -C "$TEST_REPO" branch --show-current)" = main
-update_branch=$(git -C "$TEST_REPO" for-each-ref --format='%(refname:short)' 'refs/heads/feat/update-flake-lock-*')
-test -n "$update_branch"
-test "$(git -C "$TEST_REPO" diff --name-only main..."$update_branch")" = flake.lock
-git --git-dir="$origin" show-ref --verify --quiet "refs/heads/$update_branch"
+test -z "$(git -C "$TEST_REPO" for-each-ref --format='%(refname:short)' 'refs/heads/feat/update-flake-lock-*')"
+test -z "$(git --git-dir="$origin" for-each-ref --format='%(refname:short)' 'refs/heads/feat/update-flake-lock-*')"
+grep -Fq updated "$TEST_REPO/flake.lock"
 grep -Fq 'pr create --repo bhechinger/WonkoOS --base main' "$GH_LOG"
+grep -Fq 'pr merge https://github.com/bhechinger/WonkoOS/pull/99 --squash --delete-branch --match-head-commit' "$GH_LOG"
 grep -Fq 'flake check --all-systems --no-build' "$NIX_LOG"
 
 new_repo nochange
@@ -210,3 +234,16 @@ feat/update-flake-lock-*) ;;
 esac
 test ! -s "$GH_LOG"
 test -z "$(git --git-dir="$origin" for-each-ref --format='%(refname:short)' 'refs/heads/feat/update-flake-lock-*')"
+
+new_repo merge-fail
+: >"$GH_LOG"
+if run_update change merge-fail >/dev/null 2>&1; then
+	printf 'update script ignored a failed merge\n' >&2
+	exit 1
+fi
+case "$(git -C "$TEST_REPO" branch --show-current)" in
+feat/update-flake-lock-*) ;;
+*) exit 1 ;;
+esac
+test "$(git -C "$TEST_REPO" show main:flake.lock)" = base
+grep -Fq 'pr merge https://github.com/bhechinger/WonkoOS/pull/99 --squash --delete-branch --match-head-commit' "$GH_LOG"

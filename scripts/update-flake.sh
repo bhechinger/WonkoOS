@@ -56,9 +56,12 @@ if [ -n "$(git status --porcelain)" ] || [ "$(git diff-tree --no-commit-id --nam
 	printf 'The update commit contains or left changes beyond flake.lock; leaving %s for inspection.\n' "$branch" >&2
 	exit 1
 fi
+head=$(git rev-parse HEAD)
 git push --set-upstream origin "$branch"
 pr_url=$(gh pr create --repo "$repository" --base main --head "$branch" \
 	--title 'flake: update inputs' \
 	--body 'Automated flake input update. Validation: nix flake check --all-systems --no-build.')
+gh pr merge "$pr_url" --squash --delete-branch --match-head-commit "$head"
 git switch main
-printf 'Opened %s\n' "$pr_url"
+git pull --ff-only origin main
+printf 'Merged %s\n' "$pr_url"
