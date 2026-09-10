@@ -62,13 +62,11 @@ git push --set-upstream origin "$branch"
 pr_url=$(gh pr create --repo "$repository" --base main --head "$branch" \
 	--title 'flake: update inputs' \
 	--body 'Automated flake input update. Validation: nix flake check --all-systems --no-build.')
-current_base=$(gh pr view "$pr_url" --json baseRefOid --jq .baseRefOid)
-if [ "$current_base" != "$base" ]; then
-	printf 'main advanced after validation; leaving %s and %s for inspection.\n' "$branch" "$pr_url" >&2
-	exit 1
-fi
-# ponytail: GitHub only guards the head here; require up-to-date branches if this race matters.
-gh pr merge "$pr_url" --squash --delete-branch --match-head-commit "$head"
+tree=$(git rev-parse "$head^{tree}")
+merge=$(printf 'Merge %s\n' "$pr_url" | git commit-tree "$tree" -p "$base" -p "$head")
+git push --force-with-lease="refs/heads/main:$base" origin "$merge:refs/heads/main"
 git switch main
 git pull --ff-only origin main
+git push origin --delete "$branch"
+git branch -d "$branch"
 printf 'Merged %s\n' "$pr_url"

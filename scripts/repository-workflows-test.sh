@@ -33,41 +33,7 @@ auth\ status)
 	;;
 pr\ create)
 	printf '%s\n' "$*" >>"$GH_LOG"
-	if [ "${GH_MODE:-success}" = base-move ]; then
-		base=$(git rev-parse main)
-		tree=$(git rev-parse 'main^{tree}')
-		moved=$(printf '%s\n' 'advance main' | git commit-tree "$tree" -p "$base")
-		git push -q origin "$moved:refs/heads/main"
-	fi
 	printf '%s\n' https://github.com/bhechinger/WonkoOS/pull/99
-	exit 0
-	;;
-pr\ view)
-	printf '%s\n' "$*" >>"$GH_LOG"
-	git ls-remote origin refs/heads/main | awk '{ print $1 }'
-	exit 0
-	;;
-pr\ merge)
-	printf '%s\n' "$*" >>"$GH_LOG"
-	shift 2
-	expected=
-	while [ "$#" -gt 0 ]; do
-		if [ "$1" = --match-head-commit ]; then
-			shift
-			expected=$1
-		fi
-		shift
-	done
-	test "$expected" = "$(git rev-parse HEAD)"
-	if [ "${GH_MODE:-success}" = merge-fail ]; then
-		exit 1
-	fi
-	branch=$(git branch --show-current)
-	git push -q origin HEAD:main
-	git push -q origin --delete "$branch"
-	git switch -q main
-	git pull -q --ff-only origin main
-	git branch -D "$branch" >/dev/null
 	exit 0
 	;;
 esac
@@ -156,10 +122,9 @@ new_repo() {
 }
 
 run_update() {
-	gh_mode=${2:-success}
 	(
 		cd "$TEST_REPO"
-		PATH="$fake_bin:$PATH" NIX_MODE=$1 GH_MODE=$gh_mode GH_LOG=$GH_LOG NIX_LOG=$NIX_LOG sh "$update_script"
+		PATH="$fake_bin:$PATH" NIX_MODE=$1 GH_LOG=$GH_LOG NIX_LOG=$NIX_LOG sh "$update_script"
 	)
 }
 
@@ -176,10 +141,8 @@ test -z "$(git -C "$TEST_REPO" for-each-ref --format='%(refname:short)' 'refs/he
 test -z "$(git --git-dir="$origin" for-each-ref --format='%(refname:short)' 'refs/heads/feat/update-flake-lock-*')"
 grep -Fq updated "$TEST_REPO/flake.lock"
 grep -Fq 'pr create --repo bhechinger/WonkoOS --base main' "$GH_LOG"
-grep -Fq 'pr merge https://github.com/bhechinger/WonkoOS/pull/99 --squash --delete-branch --match-head-commit' "$GH_LOG"
 grep -Fq 'flake check --all-systems --no-build' "$NIX_LOG"
-validated_head=$(awk '/^flake check --all-systems --no-build / { print $5 }' "$NIX_LOG")
-grep -Fq -- "--match-head-commit $validated_head" "$GH_LOG"
+test "$(git -C "$TEST_REPO" rev-parse 'main^2')" = "$(awk '/^flake check --all-systems --no-build / { print $5 }' "$NIX_LOG")"
 
 new_repo nochange
 run_update nochange
@@ -262,13 +225,27 @@ git -C "$TEST_REPO" config core.hooksPath "$hook_dir"
 : >"$NIX_LOG"
 run_update change
 test "$(git -C "$TEST_REPO" show main:flake.lock)" = hook-updated
-validated_head=$(awk '/^flake check --all-systems --no-build / { print $5 }' "$NIX_LOG")
-grep -Fq -- "--match-head-commit $validated_head" "$GH_LOG"
+test "$(git -C "$TEST_REPO" rev-parse 'main^2')" = "$(awk '/^flake check --all-systems --no-build / { print $5 }' "$NIX_LOG")"
 
 new_repo base-move
 base=$(git -C "$TEST_REPO" rev-parse main)
+hook_dir=$test_root/base-move-hooks
+mkdir "$hook_dir"
+cat >"$hook_dir/pre-push" <<'EOF'
+#!/bin/sh
+while read -r _ _ remote_ref _; do
+	if [ "$remote_ref" = refs/heads/main ]; then
+		base=$(git rev-parse main)
+		tree=$(git rev-parse 'main^{tree}')
+		moved=$(printf '%s\n' 'advance main' | git commit-tree "$tree" -p "$base")
+		git push --no-verify -q origin "$moved:refs/heads/main"
+	fi
+done
+EOF
+chmod +x "$hook_dir/pre-push"
+git -C "$TEST_REPO" config core.hooksPath "$hook_dir"
 : >"$GH_LOG"
-if run_update change base-move >/dev/null 2>&1; then
+if run_update change >/dev/null 2>&1; then
 	printf 'update script merged onto an unvalidated base\n' >&2
 	exit 1
 fi
@@ -279,23 +256,3 @@ esac
 test "$base" != "$(git --git-dir="$origin" rev-parse refs/heads/main)"
 base_move_branch=$(git -C "$TEST_REPO" branch --show-current)
 test "$(git -C "$TEST_REPO" rev-parse HEAD)" = "$(git --git-dir="$origin" rev-parse "refs/heads/$base_move_branch")"
-grep -Fq 'pr view https://github.com/bhechinger/WonkoOS/pull/99 --json baseRefOid --jq .baseRefOid' "$GH_LOG"
-if grep -Fq 'pr merge ' "$GH_LOG"; then
-	printf 'update script invoked merge after the base moved\n' >&2
-	exit 1
-fi
-
-new_repo merge-fail
-: >"$GH_LOG"
-if run_update change merge-fail >/dev/null 2>&1; then
-	printf 'update script ignored a failed merge\n' >&2
-	exit 1
-fi
-case "$(git -C "$TEST_REPO" branch --show-current)" in
-feat/update-flake-lock-*) ;;
-*) exit 1 ;;
-esac
-test "$(git -C "$TEST_REPO" show main:flake.lock)" = base
-merge_branch=$(git -C "$TEST_REPO" branch --show-current)
-test "$(git -C "$TEST_REPO" rev-parse HEAD)" = "$(git --git-dir="$origin" rev-parse "refs/heads/$merge_branch")"
-grep -Fq 'pr merge https://github.com/bhechinger/WonkoOS/pull/99 --squash --delete-branch --match-head-commit' "$GH_LOG"
