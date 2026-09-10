@@ -1,16 +1,10 @@
 {
-  lib,
   pkgs,
-  inputs,
   ...
 }:
 
 let
   hugepages = import ../../common/hugepages.nix (import ./hugepages-inputs.nix);
-  legacyPkgs = import inputs.linux_7_0 {
-    system = pkgs.stdenv.hostPlatform.system;
-    config.allowUnfree = true;
-  };
 in
 {
   boot = {
@@ -61,10 +55,8 @@ in
     extraModulePackages = [ ];
     # kernelPackages = pkgs.linuxPackages_xanmod_latest;
     # kernelPackages = pkgs.linuxPackages_6_18;
-    # 7.0 is EOL; pinned solely until ZFS supports a maintained 7.x kernel.
-    kernelPackages = legacyPkgs.linuxPackages_7_0;
+    kernelPackages = pkgs.linuxPackages_7_2;
     zfs = {
-      package = legacyPkgs.zfs_2_4;
       forceImportRoot = false;
       extraPools = [
         "zpool"
