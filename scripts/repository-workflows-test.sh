@@ -36,6 +36,18 @@ pr\ create)
 	printf '%s\n' https://github.com/bhechinger/WonkoOS/pull/99
 	exit 0
 	;;
+pr\ view)
+	printf '%s\n' "$*" >>"$GH_LOG"
+	branch=$(git branch --show-current)
+	main=$(git ls-remote origin refs/heads/main | awk '{ print $1 }')
+	head=$(git ls-remote origin "refs/heads/$branch" | awk '{ print $1 }')
+	if [ -n "$head" ] && [ "$main" = "$head" ]; then
+		printf '%s\n' MERGED
+	else
+		printf '%s\n' OPEN
+	fi
+	exit 0
+	;;
 esac
 case "$*" in
 *1111111111111111111111111111111111111111*)
@@ -141,6 +153,7 @@ test -z "$(git -C "$TEST_REPO" for-each-ref --format='%(refname:short)' 'refs/he
 test -z "$(git --git-dir="$origin" for-each-ref --format='%(refname:short)' 'refs/heads/feat/update-flake-lock-*')"
 grep -Fq updated "$TEST_REPO/flake.lock"
 grep -Fq 'pr create --repo bhechinger/WonkoOS --base main' "$GH_LOG"
+grep -Fq 'pr view https://github.com/bhechinger/WonkoOS/pull/99 --json state --jq .state' "$GH_LOG"
 grep -Fq 'flake check --all-systems --no-build' "$NIX_LOG"
 test "$(git -C "$TEST_REPO" rev-parse main)" = "$(awk '/^flake check --all-systems --no-build / { print $5 }' "$NIX_LOG")"
 
@@ -282,3 +295,36 @@ esac
 test "$base" != "$(git --git-dir="$origin" rev-parse refs/heads/main)"
 base_move_branch=$(git -C "$TEST_REPO" branch --show-current)
 test "$(git -C "$TEST_REPO" rev-parse HEAD)" = "$(git --git-dir="$origin" rev-parse "refs/heads/$base_move_branch")"
+
+new_repo head-move
+hook_dir=$test_root/head-move-hooks
+mkdir "$hook_dir"
+cat >"$hook_dir/pre-push" <<'EOF'
+#!/bin/sh
+while read -r _ _ remote_ref _; do
+	if [ "$remote_ref" = refs/heads/main ]; then
+		branch=$(git branch --show-current)
+		head=$(git rev-parse HEAD)
+		tree=$(git rev-parse 'HEAD^{tree}')
+		moved=$(printf '%s\n' 'advance PR head' | git commit-tree "$tree" -p "$head")
+		git push --no-verify -q origin "$moved:refs/heads/$branch"
+	fi
+done
+EOF
+chmod +x "$hook_dir/pre-push"
+git -C "$TEST_REPO" config core.hooksPath "$hook_dir"
+: >"$GH_LOG"
+: >"$NIX_LOG"
+if run_update change >/dev/null 2>&1; then
+	printf 'update script reported an unrecognized PR merge\n' >&2
+	exit 1
+fi
+case "$(git -C "$TEST_REPO" branch --show-current)" in
+feat/update-flake-lock-*) ;;
+*) exit 1 ;;
+esac
+validated_head=$(awk '/^flake check --all-systems --no-build / { print $5 }' "$NIX_LOG")
+head_move_branch=$(git -C "$TEST_REPO" branch --show-current)
+test "$(git --git-dir="$origin" rev-parse refs/heads/main)" = "$validated_head"
+test "$(git --git-dir="$origin" rev-parse "refs/heads/$head_move_branch^")" = "$validated_head"
+grep -Fq 'pr view https://github.com/bhechinger/WonkoOS/pull/99 --json state --jq .state' "$GH_LOG"

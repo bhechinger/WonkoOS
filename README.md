@@ -33,8 +33,8 @@ Run `make update` from a clean `main` branch to update every flake input. It
 creates and validates a lockfile-only branch, opens and merges its pull request,
 deletes the branch, then returns to an updated `main`. The merge is an atomic
 fast-forward of the base to the exact validated commit. If it fails or `main`
-advances, the update branch and its pushed commit remain available for
-inspection.
+advances, or GitHub does not recognize the PR as merged, the update branch and
+its pushed commit remain available for inspection.
 
 ## Storage installation
 

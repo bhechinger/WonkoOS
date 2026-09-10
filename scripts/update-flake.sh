@@ -64,8 +64,15 @@ pr_url=$(gh pr create --repo "$repository" --base main --head "$branch" \
 	--title 'flake: update inputs' \
 	--body 'Automated flake input update. Validation: nix flake check --all-systems --no-build.')
 git push --force-with-lease="refs/heads/main:$base" origin "$head:refs/heads/main"
+if [ "$(gh pr view "$pr_url" --json state --jq .state)" != MERGED ]; then
+	printf 'main now contains %s, but GitHub did not mark %s merged; leaving %s for inspection.\n' "$head" "$pr_url" "$branch" >&2
+	exit 1
+fi
 git switch main
 git pull --ff-only origin main
-git push origin --delete "$branch"
+if ! git push origin --delete "$branch"; then
+	remote_branch=$(git ls-remote --heads origin "$branch")
+	[ -z "$remote_branch" ] || exit 1
+fi
 git branch -d "$branch"
 printf 'Merged %s\n' "$pr_url"
