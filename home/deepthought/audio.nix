@@ -361,6 +361,8 @@ in
         TimeoutStartSec = 30;
         TimeoutStopSec = 30;
       };
+
+      Install.WantedBy = [ "hyprland-session.target" ];
     };
 
     saffire-jack-tunnel = {
