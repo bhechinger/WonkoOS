@@ -357,7 +357,7 @@ in
 
       Service = {
         Environment = "LD_LIBRARY_PATH=${jack2}/lib";
-        ExecStart = "${jack2}/bin/jackd --name saffire --realtime --realtime-priority 88 -d firewire --device guid:0x00130e0401c04de0 --period 128 --nperiods 3 --rate 48000 --duplex --verbose 3";
+        ExecStart = "${jack2}/bin/jackd --name saffire --realtime --realtime-priority 88 -d firewire --device guid:0x00130e0401c04de0 --period 256 --nperiods 2 --rate 48000 --duplex --verbose 3";
         TimeoutStartSec = 30;
         TimeoutStopSec = 30;
       };
