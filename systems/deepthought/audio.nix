@@ -23,8 +23,6 @@
 
   boot.blacklistedKernelModules = [ "snd_fireworks" ];
 
-  services.dbus.packages = [ pkgs.jack2 ];
-
   services = {
     pipewire = {
       enable = true;

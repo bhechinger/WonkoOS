@@ -6,6 +6,7 @@
 }:
 let
   audioPipewire = pkgs.pipewire;
+  jack2 = pkgs.jack2;
   saffireSink = "alsa_output.firewire-0x00130e0401c04de0.multichannel-output";
   saffireSource = "alsa_input.firewire-0x00130e0401c04de0.multichannel-input";
   saffireNodeProperties = ''.info.props["device.bus"] == "firewire" and .info.props["api.alsa.pcm.stream"] == $pcm_stream'';
@@ -204,6 +205,7 @@ in
       };
       "pipewire/pipewire.conf.d/20-audiofire-jack.conf".text = ''
         module.jackdbus-detect.args = {
+          jack.library = "${jack2}/lib/libjack.so.0"
           jack.client-name = "AudioFire4"
           jack.connect = true
           tunnel.mode = duplex
@@ -262,21 +264,25 @@ in
       };
 
       Service = {
-        Type = "oneshot";
-        RemainAfterExit = true;
-        ExecStartPre = [
-          "${pkgs.jack2}/bin/jack_control ds firewire"
-          "${pkgs.jack2}/bin/jack_control dps device guid:0x0014866faf73b593"
-          "${pkgs.jack2}/bin/jack_control dps period 256"
-          "${pkgs.jack2}/bin/jack_control dps nperiods 2"
-          "${pkgs.jack2}/bin/jack_control dps rate 48000"
-          "${pkgs.jack2}/bin/jack_control dps duplex true"
-          "${pkgs.jack2}/bin/jack_control dps verbose 3"
-          "${pkgs.jack2}/bin/jack_control eps realtime-priority 88"
+        Type = "dbus";
+        BusName = "org.jackaudio.service";
+        Environment = "LD_LIBRARY_PATH=${jack2}/lib";
+        ExecStart = "${jack2}/bin/jackdbus auto";
+        ExecStartPost = [
+          "${jack2}/bin/jack_control ds firewire"
+          "${jack2}/bin/jack_control dps device guid:0x0014866faf73b593"
+          "${jack2}/bin/jack_control dps period 256"
+          "${jack2}/bin/jack_control dps nperiods 2"
+          "${jack2}/bin/jack_control dps rate 48000"
+          "${jack2}/bin/jack_control dps duplex true"
+          "${jack2}/bin/jack_control dps verbose 3"
+          "${jack2}/bin/jack_control eps realtime-priority 88"
+          "${jack2}/bin/jack_control start"
         ];
-        ExecStart = "${pkgs.jack2}/bin/jack_control start";
-        ExecStop = "${pkgs.jack2}/bin/jack_control stop";
-        ExecStopPost = "-${pkgs.jack2}/bin/jack_control exit";
+        ExecStop = [
+          "-${jack2}/bin/jack_control stop"
+          "-${jack2}/bin/jack_control exit"
+        ];
         TimeoutStartSec = 30;
         TimeoutStopSec = 30;
       };
