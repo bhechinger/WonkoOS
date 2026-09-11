@@ -6,6 +6,7 @@
 }:
 let
   audioPipewire = pkgs.pipewire;
+  jack2 = pkgs.jack2;
   saffireSink = "alsa_output.firewire-0x00130e0401c04de0.multichannel-output";
   saffireSource = "alsa_input.firewire-0x00130e0401c04de0.multichannel-input";
   saffireNodeProperties = ''.info.props["device.bus"] == "firewire" and .info.props["api.alsa.pcm.stream"] == $pcm_stream'';
@@ -202,6 +203,32 @@ in
         force = true;
         text = builtins.readFile ./pipewire/11-null-source.conf;
       };
+      "pipewire/pipewire.conf.d/20-audiofire-jack.conf".text = ''
+        module.jackdbus-detect.args = {
+          jack.library = "libjack.so.0"
+          jack.client-name = "AudioFire4"
+          jack.connect = true
+          tunnel.mode = duplex
+          audio.channels = 6
+          audio.position = [ AUX0 AUX1 AUX2 AUX3 AUX4 AUX5 ]
+          source.props = {
+            node.name = audiofire_jack_source
+            node.description = "AudioFire4 JACK Source"
+            priority.session = 1
+            midi.ports = 1
+          }
+          sink.props = {
+            node.name = audiofire_jack_sink
+            node.description = "AudioFire4 JACK Sink"
+            priority.session = 1
+            midi.ports = 1
+          }
+        }
+      '';
+      "systemd/user/pipewire.service.d/20-audiofire-jack.conf".text = ''
+        [Service]
+        Environment="LIBJACK_PATH=${jack2}/lib"
+      '';
       "wireplumber/wireplumber.conf.d/50-audio-routes.conf".text = audioRoutesRule;
       "pipewire/client.conf.d/52-battletech-games.conf".text = battletechGamesRule;
       "pipewire/pipewire-pulse.conf.d/52-battletech-games.conf".text = battletechGamesRule;
@@ -233,6 +260,38 @@ in
   };
 
   systemd.user.services = {
+    audiofire-jack = {
+      Unit = {
+        Description = "AudioFire4 JACK/FFADO server";
+        Requires = [ "pipewire.service" ];
+        After = [ "pipewire.service" ];
+      };
+
+      Service = {
+        Type = "dbus";
+        BusName = "org.jackaudio.service";
+        Environment = "LD_LIBRARY_PATH=${jack2}/lib";
+        ExecStart = "${jack2}/bin/jackdbus auto";
+        ExecStartPost = [
+          "${jack2}/bin/jack_control ds firewire"
+          "${jack2}/bin/jack_control dps device guid:0x0014866faf73b593"
+          "${jack2}/bin/jack_control dps period 256"
+          "${jack2}/bin/jack_control dps nperiods 2"
+          "${jack2}/bin/jack_control dps rate 48000"
+          "${jack2}/bin/jack_control dps duplex true"
+          "${jack2}/bin/jack_control dps verbose 3"
+          "${jack2}/bin/jack_control eps realtime-priority 88"
+          "${jack2}/bin/jack_control start"
+        ];
+        ExecStop = [
+          "-${jack2}/bin/jack_control stop"
+          "-${jack2}/bin/jack_control exit"
+        ];
+        TimeoutStartSec = 30;
+        TimeoutStopSec = 30;
+      };
+    };
+
     ardour-default = {
       Unit = {
         Description = "Ardour Default session";
