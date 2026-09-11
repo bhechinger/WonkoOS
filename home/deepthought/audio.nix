@@ -276,7 +276,7 @@ in
           "${jack2}/bin/jack_control ds firewire"
           "${jack2}/bin/jack_control dps device guid:0x0014866faf73b593"
           "${jack2}/bin/jack_control dps period 128"
-          "${jack2}/bin/jack_control dps nperiods 3"
+          "${jack2}/bin/jack_control dps nperiods 2"
           "${jack2}/bin/jack_control dps rate 48000"
           "${jack2}/bin/jack_control dps duplex true"
           "${jack2}/bin/jack_control dps verbose 3"
