@@ -9,7 +9,7 @@
   musnix = {
     enable = true;
     ffado.enable = true;
-    soundcardPciId = "06:00.0";
+    soundcardPciId = "07:00.0";
     rtcqs.enable = true;
     rtirq = {
       resetAll = 1;
