@@ -225,6 +225,10 @@ in
           }
         }
       '';
+      "systemd/user/pipewire.service.d/20-audiofire-jack.conf".text = ''
+        [Service]
+        Environment="LIBJACK_PATH=${jack2}/lib"
+      '';
       "wireplumber/wireplumber.conf.d/50-audio-routes.conf".text = audioRoutesRule;
       "pipewire/client.conf.d/52-battletech-games.conf".text = battletechGamesRule;
       "pipewire/pipewire-pulse.conf.d/52-battletech-games.conf".text = battletechGamesRule;
@@ -287,8 +291,6 @@ in
         TimeoutStopSec = 30;
       };
     };
-
-    pipewire.Service.Environment = "LIBJACK_PATH=${jack2}/lib";
 
     ardour-default = {
       Unit = {
