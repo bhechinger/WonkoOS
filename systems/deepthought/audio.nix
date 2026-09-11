@@ -8,15 +8,22 @@
 
   musnix = {
     enable = true;
+    ffado.enable = true;
     soundcardPciId = "06:00.0";
     rtcqs.enable = true;
     rtirq = {
       resetAll = 1;
       prioLow = 0;
+      prioHigh = 99;
       enable = true;
-      nameList = "rtc0 firewire_ohci";
+      highList = "firewire_ohci s-firewi";
+      nameList = "rtc0";
     };
   };
+
+  boot.blacklistedKernelModules = [ "snd_fireworks" ];
+
+  services.dbus.packages = [ pkgs.jack2 ];
 
   services = {
     pipewire = {

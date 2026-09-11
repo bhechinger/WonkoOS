@@ -202,6 +202,27 @@ in
         force = true;
         text = builtins.readFile ./pipewire/11-null-source.conf;
       };
+      "pipewire/pipewire.conf.d/20-audiofire-jack.conf".text = ''
+        module.jackdbus-detect.args = {
+          jack.client-name = "AudioFire4"
+          jack.connect = true
+          tunnel.mode = duplex
+          audio.channels = 6
+          audio.position = [ AUX0 AUX1 AUX2 AUX3 AUX4 AUX5 ]
+          source.props = {
+            node.name = audiofire_jack_source
+            node.description = "AudioFire4 JACK Source"
+            priority.session = 1
+            midi.ports = 1
+          }
+          sink.props = {
+            node.name = audiofire_jack_sink
+            node.description = "AudioFire4 JACK Sink"
+            priority.session = 1
+            midi.ports = 1
+          }
+        }
+      '';
       "wireplumber/wireplumber.conf.d/50-audio-routes.conf".text = audioRoutesRule;
       "pipewire/client.conf.d/52-battletech-games.conf".text = battletechGamesRule;
       "pipewire/pipewire-pulse.conf.d/52-battletech-games.conf".text = battletechGamesRule;
@@ -233,6 +254,34 @@ in
   };
 
   systemd.user.services = {
+    audiofire-jack = {
+      Unit = {
+        Description = "AudioFire4 JACK/FFADO server";
+        Requires = [ "pipewire.service" ];
+        After = [ "pipewire.service" ];
+      };
+
+      Service = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        ExecStartPre = [
+          "${pkgs.jack2}/bin/jack_control ds firewire"
+          "${pkgs.jack2}/bin/jack_control dps device guid:0x0014866faf73b593"
+          "${pkgs.jack2}/bin/jack_control dps period 256"
+          "${pkgs.jack2}/bin/jack_control dps nperiods 2"
+          "${pkgs.jack2}/bin/jack_control dps rate 48000"
+          "${pkgs.jack2}/bin/jack_control dps duplex true"
+          "${pkgs.jack2}/bin/jack_control dps verbose 3"
+          "${pkgs.jack2}/bin/jack_control eps realtime-priority 88"
+        ];
+        ExecStart = "${pkgs.jack2}/bin/jack_control start";
+        ExecStop = "${pkgs.jack2}/bin/jack_control stop";
+        ExecStopPost = "-${pkgs.jack2}/bin/jack_control exit";
+        TimeoutStartSec = 30;
+        TimeoutStopSec = 30;
+      };
+    };
+
     ardour-default = {
       Unit = {
         Description = "Ardour Default session";
