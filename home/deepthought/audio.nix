@@ -205,7 +205,7 @@ in
       };
       "pipewire/pipewire.conf.d/20-audiofire-jack.conf".text = ''
         module.jackdbus-detect.args = {
-          jack.library = "${jack2}/lib/libjack.so.0"
+          jack.library = "libjack.so.0"
           jack.client-name = "AudioFire4"
           jack.connect = true
           tunnel.mode = duplex
@@ -287,6 +287,8 @@ in
         TimeoutStopSec = 30;
       };
     };
+
+    pipewire.Service.Environment = "LIBJACK_PATH=${jack2}/lib";
 
     ardour-default = {
       Unit = {
