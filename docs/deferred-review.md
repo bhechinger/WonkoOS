@@ -3,14 +3,11 @@
 These findings were reviewed on 2026-07-11 and deliberately deferred. Their
 implementations remain unchanged.
 
-## EOL kernel and disabled mitigations
+## Disabled CPU mitigations
 
-`deepthought` pins Linux 7.0 and ZFS 2.4 from `linux_7_0`, while also passing
-`mitigations=off`. This leaves the host without a maintained kernel security
-stream and disables CPU vulnerability mitigations.
+`deepthought` passes `mitigations=off`, disabling CPU vulnerability mitigations.
 
-Review when ZFS supports a maintained kernel suitable for the audio workload,
-or sooner if the host's threat model changes.
+Review if the host's threat model changes.
 
 ## Runtime-derived hugepage configuration
 

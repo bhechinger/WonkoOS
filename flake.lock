@@ -269,22 +269,6 @@
         "type": "github"
       }
     },
-    "linux_7_0": {
-      "locked": {
-        "lastModified": 1782598695,
-        "narHash": "sha256-DkFKoGr3yhqUC8eZXso8o+lydfQlNlCsS4FtSBjCYpA=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "709592197675b569aeaf6a68eb66365226a7c718",
-        "type": "github"
-      },
-      "original": {
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "709592197675b569aeaf6a68eb66365226a7c718",
-        "type": "github"
-      }
-    },
     "musnix": {
       "inputs": {
         "nixpkgs": [
@@ -503,7 +487,6 @@
         "determinate": "determinate",
         "disko": "disko",
         "home-manager": "home-manager",
-        "linux_7_0": "linux_7_0",
         "musnix": "musnix",
         "nix-minecraft": "nix-minecraft",
         "nixpkgs": "nixpkgs_2",
