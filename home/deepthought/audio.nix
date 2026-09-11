@@ -7,9 +7,8 @@
 let
   audioPipewire = pkgs.pipewire;
   jack2 = pkgs.jack2;
-  saffireSink = "alsa_output.firewire-0x00130e0401c04de0.multichannel-output";
-  saffireSource = "alsa_input.firewire-0x00130e0401c04de0.multichannel-input";
-  saffireNodeProperties = ''.info.props["device.bus"] == "firewire" and .info.props["api.alsa.pcm.stream"] == $pcm_stream'';
+  saffireSink = "saffire_jack_sink";
+  saffireSource = "saffire_jack_source";
   saffirePortChecks = ''
     has_port "$saffire_source:capture_AUX0" &&
       has_port "$saffire_source:capture_AUX4" &&
@@ -60,23 +59,23 @@ let
       node_ready() {
         local node_name="$1"
         local media_class="$2"
-        local pcm_stream="$3"
+        local channels="$3"
 
         timeout 3 pw-dump |
           jq -e \
             --arg node_name "$node_name" \
             --arg media_class "$media_class" \
-            --arg pcm_stream "$pcm_stream" '
+            --argjson channels "$channels" '
             any(.[]; .type == "PipeWire:Interface:Node" and
               .info.props["node.name"] == $node_name and
               .info.props["media.class"] == $media_class and
-              ${saffireNodeProperties})
+              .info.props["audio.channels"] == $channels)
           ' >/dev/null
       }
 
       saffire_nodes_ready() {
-        node_ready "$saffire_sink" "Audio/Sink" "playback" &&
-          node_ready "$saffire_source" "Audio/Source" "capture"
+        node_ready "$saffire_sink" "Audio/Sink" 8 &&
+          node_ready "$saffire_source" "Audio/Source" 16
       }
 
       saffire_ports_exist() {
@@ -154,10 +153,65 @@ let
     '';
   };
 
+  saffireJackTunnelArgs = ''
+    {
+      jack.library = "libjack.so.0"
+      jack.server = saffire
+      jack.client-name = SaffirePro24
+      jack.connect = true
+      tunnel.mode = duplex
+      node.group = saffire-jack-group
+      source.props = {
+        node.name = saffire_jack_source
+        node.nick = "Pro24-004de0"
+        node.description = "Saffire Pro 24 JACK Source"
+        priority.driver = 100
+        priority.session = 1
+        audio.channels = 16
+        audio.position = [ AUX0 AUX1 AUX2 AUX3 AUX4 AUX5 AUX6 AUX7 AUX8 AUX9 AUX10 AUX11 AUX12 AUX13 AUX14 AUX15 ]
+        midi.ports = 1
+      }
+      sink.props = {
+        node.name = saffire_jack_sink
+        node.nick = "Pro24-004de0"
+        node.description = "Saffire Pro 24 JACK Sink"
+        priority.driver = 2000
+        priority.session = 1
+        audio.channels = 8
+        audio.position = [ FL FR RL RR FC LFE SL SR ]
+        midi.ports = 1
+      }
+    }
+  '';
+
+  saffireJackTunnelReady = pkgs.writeShellApplication {
+    name = "saffire-jack-tunnel-ready";
+    runtimeInputs = with pkgs; [
+      coreutils
+      jq
+      audioPipewire
+    ];
+    text = ''
+      set -euo pipefail
+
+      for _ in $(seq 1 5); do
+        if timeout 3 pw-dump | jq -e '
+          any(.[]; .type == "PipeWire:Interface:Node" and .info.props["node.name"] == "${saffireSource}") and
+          any(.[]; .type == "PipeWire:Interface:Node" and .info.props["node.name"] == "${saffireSink}")
+        ' >/dev/null; then
+          exit 0
+        fi
+        sleep 1
+      done
+
+      exit 1
+    '';
+  };
+
   battletechGamesRule = builtins.readFile ./wireplumber/battletech-games.conf;
   audioRoutesRule = builtins.readFile ./wireplumber/audio-routes.conf;
   audioRoutesScript = builtins.readFile ./wireplumber/audio-routes.lua;
-  saffireClockRule = builtins.readFile ./wireplumber/saffire-clock.conf;
+  alsaClockRule = builtins.readFile ./wireplumber/alsa-clock.conf;
 
 in
 {
@@ -233,7 +287,7 @@ in
       "pipewire/client.conf.d/52-battletech-games.conf".text = battletechGamesRule;
       "pipewire/pipewire-pulse.conf.d/52-battletech-games.conf".text = battletechGamesRule;
       "wireplumber/wireplumber.conf.d/52-battletech-games.conf".text = battletechGamesRule;
-      "wireplumber/wireplumber.conf.d/51-saffire-clock.conf".text = saffireClockRule;
+      "wireplumber/wireplumber.conf.d/51-alsa-clock.conf".text = alsaClockRule;
     };
 
     dataFile."wireplumber/scripts/audio-routes.lua".text = audioRoutesScript;
@@ -289,6 +343,47 @@ in
         ];
         TimeoutStartSec = 30;
         TimeoutStopSec = 30;
+      };
+    };
+
+    saffire-jack = {
+      Unit = {
+        Description = "Saffire Pro 24 JACK/FFADO server";
+        Requires = [ "pipewire.service" ];
+        Wants = [ "saffire-jack-tunnel.service" ];
+        After = [ "pipewire.service" ];
+        Before = [ "saffire-jack-tunnel.service" ];
+      };
+
+      Service = {
+        Environment = "LD_LIBRARY_PATH=${jack2}/lib";
+        ExecStart = "${jack2}/bin/jackd --name saffire --realtime --realtime-priority 88 -d firewire --device guid:0x00130e0401c04de0 --period 128 --nperiods 3 --rate 48000 --duplex --verbose 3";
+        TimeoutStartSec = 30;
+        TimeoutStopSec = 30;
+      };
+    };
+
+    saffire-jack-tunnel = {
+      Unit = {
+        Description = "PipeWire tunnel for the Saffire JACK server";
+        BindsTo = [ "saffire-jack.service" ];
+        Requires = [ "pipewire.service" ];
+        After = [
+          "pipewire.service"
+          "saffire-jack.service"
+        ];
+      };
+
+      Service = {
+        Environment = "LIBJACK_PATH=${jack2}/lib";
+        ExecStart = "${audioPipewire}/bin/pw-cli --monitor load-module libpipewire-module-jack-tunnel ${
+          lib.escapeShellArg (lib.replaceStrings [ "\n" ] [ " " ] saffireJackTunnelArgs)
+        }";
+        ExecStartPost = "${saffireJackTunnelReady}/bin/saffire-jack-tunnel-ready";
+        Restart = "on-failure";
+        RestartSec = 1;
+        TimeoutStartSec = 30;
+        TimeoutStopSec = 10;
       };
     };
 
