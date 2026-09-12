@@ -34,14 +34,25 @@ in
         "vfio_pci"
         "firewire_core"
       ];
-      # Both FireWire controllers have the same PCI ID, so isolate the
-      # AudioFire controller by its stable slot before udev loads firewire_ohci.
-      preDeviceCommands = ''
-        if [ -d /sys/bus/pci/devices/0000:06:00.0 ]; then
-          echo vfio-pci > /sys/bus/pci/devices/0000:06:00.0/driver_override
-          echo 0000:06:00.0 > /sys/bus/pci/drivers_probe
-        fi
-      '';
+      systemd.services.bind-audiofire-vfio = {
+        description = "Bind AudioFire FireWire controller to VFIO";
+        wantedBy = [ "sysinit.target" ];
+        before = [ "systemd-udev-trigger.service" ];
+        after = [ "systemd-modules-load.service" ];
+        unitConfig.DefaultDependencies = false;
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+        };
+        # Both FireWire controllers have the same PCI ID, so isolate the
+        # AudioFire controller by its stable slot before udev loads firewire_ohci.
+        script = ''
+          if [ -d /sys/bus/pci/devices/0000:06:00.0 ]; then
+            echo vfio-pci > /sys/bus/pci/devices/0000:06:00.0/driver_override
+            echo 0000:06:00.0 > /sys/bus/pci/drivers_probe
+          fi
+        '';
+      };
       luks.mitigateDMAAttacks = false;
     };
     supportedFilesystems = [ "nfs" ];
