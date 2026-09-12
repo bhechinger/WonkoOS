@@ -60,7 +60,6 @@ in
       inherit (hugepages) sysctl;
     };
     kernelParams = [
-      "amd_iommu=on"
       "iommu=pt"
       "mitigations=off"
       "preempt=full"
