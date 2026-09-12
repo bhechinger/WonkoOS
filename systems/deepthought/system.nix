@@ -31,9 +31,17 @@ in
         "virtio_pci"
         "sr_mod"
         "virtio_blk"
-        "firewire_ohci"
+        "vfio_pci"
         "firewire_core"
       ];
+      # Both FireWire controllers have the same PCI ID, so isolate the
+      # AudioFire controller by its stable slot before udev loads firewire_ohci.
+      preDeviceCommands = ''
+        if [ -d /sys/bus/pci/devices/0000:06:00.0 ]; then
+          echo vfio-pci > /sys/bus/pci/devices/0000:06:00.0/driver_override
+          echo 0000:06:00.0 > /sys/bus/pci/drivers_probe
+        fi
+      '';
       luks.mitigateDMAAttacks = false;
     };
     supportedFilesystems = [ "nfs" ];
@@ -41,6 +49,8 @@ in
       inherit (hugepages) sysctl;
     };
     kernelParams = [
+      "amd_iommu=on"
+      "iommu=pt"
       "mitigations=off"
       "preempt=full"
       "nohz_full=all"
