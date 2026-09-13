@@ -15,6 +15,7 @@ SYNTH_LINE='        synth-from-dnssec no;'
 TTL_ANCHOR="{% if helpers.exists('OPNsense.bind.general.dnssecvalidation') and OPNsense.bind.general.dnssecvalidation != '' %}"
 NEWWANIP_LINE="        'newwanip' => ['bind_configure_do'],"
 NEWWANIP_ANCHOR="        'dns' => ['bind_configure_do'],"
+NEWWANIP_PATTERN="^[[:space:]]*('newwanip'|\"newwanip\")[[:space:]]*=>"
 NAMED_CHECKCONF=${NAMED_CHECKCONF:-named-checkconf}
 NAMED_CHECKZONE=${NAMED_CHECKZONE:-named-checkzone}
 RNDC=${RNDC:-rndc}
@@ -167,13 +168,18 @@ patch_newwanip_hook() {
     return 1
   fi
 
-  hook_count=$(grep -Fxc "$NEWWANIP_LINE" "$PLUGIN" || :)
+  hook_count=$(grep -Ec "$NEWWANIP_PATTERN" "$PLUGIN" || :)
+  expected_count=$(grep -Fxc "$NEWWANIP_LINE" "$PLUGIN" || :)
   if [ "$hook_count" -gt 1 ]; then
     fail "BIND plugin contains duplicate newwanip hooks"
     return 1
   fi
-  if [ "$hook_count" -eq 1 ]; then
+  if [ "$expected_count" -eq 1 ] && [ "$hook_count" -eq 1 ]; then
     return 0
+  fi
+  if [ "$hook_count" -ne 0 ]; then
+    fail "OPNsense BIND plugin contains an unexpected newwanip hook"
+    return 1
   fi
 
   anchor_count=$(grep -Fxc "$NEWWANIP_ANCHOR" "$PLUGIN" || :)
@@ -226,7 +232,9 @@ check_bind() {
     fail "generated named.conf does not disable aggressive DNSSEC negative synthesis"
     return 1
   fi
-  if [ "$(grep -Fxc "$NEWWANIP_LINE" "$PLUGIN" || :)" -ne 1 ]; then
+  if [ ! -f "$PLUGIN" ] ||
+    [ "$(grep -Ec "$NEWWANIP_PATTERN" "$PLUGIN" || :)" -ne 1 ] ||
+    [ "$(grep -Fxc "$NEWWANIP_LINE" "$PLUGIN" || :)" -ne 1 ]; then
     fail "BIND plugin does not restart after dynamic address changes"
     return 1
   fi
@@ -294,6 +302,13 @@ EOF
   [ "$(grep -Fxc "$TTL_LINE" "$TEMPLATE")" -eq 1 ]
   [ "$(grep -Fxc "$SYNTH_LINE" "$TEMPLATE")" -eq 1 ]
   [ "$(grep -Fxc "$NEWWANIP_LINE" "$PLUGIN")" -eq 1 ]
+  {
+    printf '%s\n' "$NEWWANIP_ANCHOR"
+    printf '%s\n' '        "newwanip" => ["upstream_handler"],'
+  } >"$PLUGIN"
+  if patch_newwanip_hook >/dev/null 2>&1; then
+    fail "plugin patch should reject an unexpected newwanip hook"
+  fi
   printf '%s\n' 'template changed' >"$TEMPLATE"
   if patch_template >/dev/null 2>&1; then
     fail "template patch should reject a missing anchor"
