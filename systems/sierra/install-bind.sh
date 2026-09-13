@@ -15,7 +15,7 @@ SYNTH_LINE='        synth-from-dnssec no;'
 TTL_ANCHOR="{% if helpers.exists('OPNsense.bind.general.dnssecvalidation') and OPNsense.bind.general.dnssecvalidation != '' %}"
 NEWWANIP_LINE="        'newwanip' => ['bind_configure_do'],"
 NEWWANIP_ANCHOR="        'dns' => ['bind_configure_do'],"
-NEWWANIP_PATTERN="^[[:space:]]*('newwanip'|\"newwanip\")[[:space:]]*=>"
+NEWWANIP_PATTERN="^[[:space:]]*('newwanip'|\"newwanip\")([[:space:]]|=>|\$)"
 NAMED_CHECKCONF=${NAMED_CHECKCONF:-named-checkconf}
 NAMED_CHECKZONE=${NAMED_CHECKZONE:-named-checkzone}
 RNDC=${RNDC:-rndc}
@@ -308,6 +308,13 @@ EOF
   } >"$PLUGIN"
   if patch_newwanip_hook >/dev/null 2>&1; then
     fail "plugin patch should reject an unexpected newwanip hook"
+  fi
+  {
+    printf '%s\n' "$NEWWANIP_ANCHOR"
+    printf '%s\n' "        'newwanip'" '            => ["upstream_handler"],'
+  } >"$PLUGIN"
+  if patch_newwanip_hook >/dev/null 2>&1; then
+    fail "plugin patch should reject a multiline newwanip hook"
   fi
   printf '%s\n' 'template changed' >"$TEMPLATE"
   if patch_template >/dev/null 2>&1; then
