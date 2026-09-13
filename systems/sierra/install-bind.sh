@@ -5,6 +5,7 @@ umask 077
 
 ZONES='lan.4amlunch.net 0.42.10.in-addr.arpa 11.42.10.in-addr.arpa'
 TEMPLATE=${SIERRA_ROOT:-}/usr/local/opnsense/service/templates/OPNsense/Bind/named.conf
+PLUGIN=${SIERRA_ROOT:-}/usr/local/etc/inc/plugins.inc.d/bind.inc
 NAMED_CONF=${SIERRA_ROOT:-}/usr/local/etc/namedb/named.conf
 CUSTOM_DIR=${SIERRA_ROOT:-}/usr/local/etc/namedb/named.conf.d
 DYNAMIC_DIR=${SIERRA_ROOT:-}/usr/local/etc/namedb/dynamic
@@ -12,6 +13,9 @@ CUSTOM_CONF=$CUSTOM_DIR/10-kea-zones.conf
 TTL_LINE='        max-ncache-ttl 300;'
 SYNTH_LINE='        synth-from-dnssec no;'
 TTL_ANCHOR="{% if helpers.exists('OPNsense.bind.general.dnssecvalidation') and OPNsense.bind.general.dnssecvalidation != '' %}"
+NEWWANIP_LINE="        'newwanip' => ['bind_configure_do'],"
+NEWWANIP_ANCHOR="        'dns' => ['bind_configure_do'],"
+NEWWANIP_PATTERN="^[[:space:]]*('newwanip'|\"newwanip\")([[:space:]]|=>|\$)"
 NAMED_CHECKCONF=${NAMED_CHECKCONF:-named-checkconf}
 NAMED_CHECKZONE=${NAMED_CHECKZONE:-named-checkzone}
 RNDC=${RNDC:-rndc}
@@ -158,6 +162,41 @@ patch_template() {
   rm -f "$temporary"
 }
 
+patch_newwanip_hook() {
+  if [ ! -f "$PLUGIN" ]; then
+    fail "BIND plugin is missing: $PLUGIN"
+    return 1
+  fi
+
+  hook_count=$(grep -Ec "$NEWWANIP_PATTERN" "$PLUGIN" || :)
+  expected_count=$(grep -Fxc "$NEWWANIP_LINE" "$PLUGIN" || :)
+  if [ "$hook_count" -gt 1 ]; then
+    fail "BIND plugin contains duplicate newwanip hooks"
+    return 1
+  fi
+  if [ "$expected_count" -eq 1 ] && [ "$hook_count" -eq 1 ]; then
+    return 0
+  fi
+  if [ "$hook_count" -ne 0 ]; then
+    fail "OPNsense BIND plugin contains an unexpected newwanip hook"
+    return 1
+  fi
+
+  anchor_count=$(grep -Fxc "$NEWWANIP_ANCHOR" "$PLUGIN" || :)
+  if [ "$anchor_count" -ne 1 ]; then
+    fail "OPNsense BIND plugin changed; newwanip anchor not found exactly once"
+    return 1
+  fi
+
+  temporary=$(mktemp "${TMPDIR:-/tmp}/sierra-bind-plugin.XXXXXX")
+  awk -v anchor="$NEWWANIP_ANCHOR" -v hook="$NEWWANIP_LINE" '
+    { print }
+    $0 == anchor { print hook }
+  ' "$PLUGIN" >"$temporary"
+  install_file 0644 root wheel "$temporary" "$PLUGIN"
+  rm -f "$temporary"
+}
+
 install_bind() {
   require_root
   for command in awk cmp grep install mktemp "$NAMED_CHECKZONE"; do
@@ -166,7 +205,8 @@ install_bind() {
   install_zone_files "${1:-}"
   install_custom_config
   patch_template
-  say "Sierra BIND custom zones and 300-second negative-cache safeguards are staged."
+  patch_newwanip_hook
+  say "Sierra BIND custom zones, cache safeguards, and dynamic-address restart hook are staged."
   say "Remove the three dynamic zones from the OPNsense model, reconfigure BIND once, then run: $0 check"
 }
 
@@ -192,6 +232,12 @@ check_bind() {
     fail "generated named.conf does not disable aggressive DNSSEC negative synthesis"
     return 1
   fi
+  if [ ! -f "$PLUGIN" ] ||
+    [ "$(grep -Ec "$NEWWANIP_PATTERN" "$PLUGIN" || :)" -ne 1 ] ||
+    [ "$(grep -Fxc "$NEWWANIP_LINE" "$PLUGIN" || :)" -ne 1 ]; then
+    fail "BIND plugin does not restart after dynamic address changes"
+    return 1
+  fi
 
   temporary=$(mktemp "${TMPDIR:-/tmp}/sierra-bind-check.XXXXXX")
   render_custom_config >"$temporary"
@@ -206,7 +252,7 @@ check_bind() {
     "$NAMED_CHECKZONE" -j "$zone" "$DYNAMIC_DIR/$zone.db" >/dev/null
     "$RNDC" zonestatus "$zone" >/dev/null
   done
-  say "Sierra BIND configuration, dynamic zones, and negative-cache safeguards are healthy."
+  say "Sierra BIND configuration, dynamic zones, cache safeguards, and address hook are healthy."
 }
 
 self_test() {
@@ -221,12 +267,14 @@ self_test() {
   trap 'rm -rf "$test_root"' EXIT HUP INT TERM
   SIERRA_ROOT=$test_root
   TEMPLATE=$test_root/usr/local/opnsense/service/templates/OPNsense/Bind/named.conf
+  PLUGIN=$test_root/usr/local/etc/inc/plugins.inc.d/bind.inc
   CUSTOM_DIR=$test_root/usr/local/etc/namedb/named.conf.d
   DYNAMIC_DIR=$test_root/usr/local/etc/namedb/dynamic
   CUSTOM_CONF=$CUSTOM_DIR/10-kea-zones.conf
   seeds=$test_root/seeds
-  install -d "$(dirname "$TEMPLATE")" "$seeds"
+  install -d "$(dirname "$TEMPLATE")" "$(dirname "$PLUGIN")" "$seeds"
   printf '%s\n' "$TTL_ANCHOR" >"$TEMPLATE"
+  printf '%s\n' "$NEWWANIP_ANCHOR" >"$PLUGIN"
 
   for zone in $ZONES; do
     cat >"$seeds/$zone.db" <<'EOF'
@@ -240,19 +288,41 @@ EOF
   install_zone_files "$seeds"
   install_custom_config
   patch_template
+  patch_newwanip_hook
   [ "$(grep -Fxc "$TTL_LINE" "$TEMPLATE")" -eq 1 ]
   [ "$(grep -Fxc "$SYNTH_LINE" "$TEMPLATE")" -eq 1 ]
+  [ "$(grep -Fxc "$NEWWANIP_LINE" "$PLUGIN")" -eq 1 ]
 
   printf '%s\n' '; live data' >>"$DYNAMIC_DIR/lan.4amlunch.net.db"
   install_zone_files "$seeds"
   grep -Fqx '; live data' "$DYNAMIC_DIR/lan.4amlunch.net.db"
 
   patch_template
+  patch_newwanip_hook
   [ "$(grep -Fxc "$TTL_LINE" "$TEMPLATE")" -eq 1 ]
   [ "$(grep -Fxc "$SYNTH_LINE" "$TEMPLATE")" -eq 1 ]
+  [ "$(grep -Fxc "$NEWWANIP_LINE" "$PLUGIN")" -eq 1 ]
+  {
+    printf '%s\n' "$NEWWANIP_ANCHOR"
+    printf '%s\n' '        "newwanip" => ["upstream_handler"],'
+  } >"$PLUGIN"
+  if patch_newwanip_hook >/dev/null 2>&1; then
+    fail "plugin patch should reject an unexpected newwanip hook"
+  fi
+  {
+    printf '%s\n' "$NEWWANIP_ANCHOR"
+    printf '%s\n' "        'newwanip'" '            => ["upstream_handler"],'
+  } >"$PLUGIN"
+  if patch_newwanip_hook >/dev/null 2>&1; then
+    fail "plugin patch should reject a multiline newwanip hook"
+  fi
   printf '%s\n' 'template changed' >"$TEMPLATE"
   if patch_template >/dev/null 2>&1; then
     fail "template patch should reject a missing anchor"
+  fi
+  printf '%s\n' 'plugin changed' >"$PLUGIN"
+  if patch_newwanip_hook >/dev/null 2>&1; then
+    fail "plugin patch should reject a missing anchor"
   fi
 
   rm -rf "$test_root"

@@ -10,7 +10,9 @@ configuration directory, where template reloads cannot overwrite their zone
 files or desynchronize their journals. The installer also patches the plugin
 template to cap recursive negative answers at 300 seconds and disable
 aggressive DNSSEC negative synthesis, which otherwise reuses long-lived NSEC
-and SOA records outside that cap.
+and SOA records outside that cap. It also registers BIND for OPNsense's
+`newwanip` hook so the daemon restarts after dynamic IPv4 or IPv6 addresses
+arrive and can bind port 53 before dropping privileges.
 
 ## Test and stage
 
@@ -92,9 +94,10 @@ or offline clients return on their next DHCP request.
 ## Upgrades and rollback
 
 Run `install` and `check` after every `os-bind` upgrade. `install` reapplies
-the negative-cache template safeguards if necessary and otherwise leaves live
-zone data alone. It fails instead of guessing if the upstream template anchor
-changes.
+the negative-cache template safeguards and dynamic-address hook if necessary
+and otherwise leaves live zone data alone. It fails instead of guessing if an
+upstream anchor changes. Restart BIND once after installing the hook so it
+binds addresses already present on the appliance.
 
 If BIND does not start, restore `/conf/config.xml` from the timestamped backup,
 move `10-kea-zones.conf` out of `named.conf.d`, and apply BIND again. Do not
