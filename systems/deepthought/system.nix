@@ -1,10 +1,18 @@
 {
+  inputs,
   pkgs,
   ...
 }:
 
 let
   hugepages = import ../../common/hugepages.nix (import ./hugepages-inputs.nix);
+  linux70Kernel = pkgs.callPackage "${inputs.linux_7_0}/pkgs/os-specific/linux/kernel/mainline.nix" {
+    branch = "7.0";
+    kernelPatches = [
+      pkgs.kernelPatches.bridge_stp_helper
+      pkgs.kernelPatches.request_key_helper
+    ];
+  };
 in
 {
   boot = {
@@ -75,7 +83,7 @@ in
     extraModulePackages = [ ];
     # kernelPackages = pkgs.linuxPackages_xanmod_latest;
     # kernelPackages = pkgs.linuxPackages_6_18;
-    kernelPackages = pkgs.linuxPackages_7_2;
+    kernelPackages = pkgs.linuxPackagesFor linux70Kernel;
     zfs = {
       forceImportRoot = false;
       extraPools = [
