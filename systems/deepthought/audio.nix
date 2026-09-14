@@ -8,23 +8,17 @@
 
   musnix = {
     enable = true;
-    ffado.enable = true;
     soundcardPciId = "07:00.0";
     rtcqs.enable = true;
     rtirq = {
       resetAll = 1;
       prioLow = 0;
-      prioHigh = 99;
       enable = true;
-      highList = "firewire_ohci s-firewi";
-      nameList = "rtc0";
+      nameList = "rtc0 firewire_ohci";
     };
   };
 
-  boot.blacklistedKernelModules = [
-    "snd_dice"
-    "snd_fireworks"
-  ];
+  boot.blacklistedKernelModules = [ "snd_fireworks" ];
 
   services = {
     pipewire = {
@@ -39,6 +33,20 @@
       pulse.enable = true;
       jack.enable = true;
       socketActivation = true;
+      wireplumber.extraConfig."51-saffire-headroom" = {
+        "monitor.alsa.rules" = [
+          {
+            matches = [
+              {
+                "node.name" = "~alsa_(input|output).firewire-0x00130e0401c04de0.*";
+              }
+            ];
+            actions.update-props = {
+              "api.alsa.headroom" = 1024;
+            };
+          }
+        ];
+      };
     };
   };
 
