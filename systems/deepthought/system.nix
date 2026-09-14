@@ -74,8 +74,7 @@ in
     '';
     extraModulePackages = [ ];
     # kernelPackages = pkgs.linuxPackages_xanmod_latest;
-    # kernelPackages = pkgs.linuxPackages_6_18;
-    kernelPackages = pkgs.linuxPackages_7_2;
+    kernelPackages = pkgs.linuxPackages_6_18;
     zfs = {
       forceImportRoot = false;
       extraPools = [
