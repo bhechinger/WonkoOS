@@ -74,8 +74,18 @@ in
     '';
     extraModulePackages = [ ];
     # kernelPackages = pkgs.linuxPackages_xanmod_latest;
-    # kernelPackages = pkgs.linuxPackages_6_18;
-    kernelPackages = pkgs.linuxPackages_7_2;
+    kernelPackages = pkgs.linuxPackagesFor (
+      pkgs.linux_6_18.override {
+        argsOverride = rec {
+          version = "6.18.51";
+          modDirVersion = version;
+          src = pkgs.fetchurl {
+            url = "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-${version}.tar.xz";
+            hash = "sha256-ui9g+Fi/TR+SkQH6o1bJPci5JbF6qp+V6r1GJ3WN9hM=";
+          };
+        };
+      }
+    );
     zfs = {
       forceImportRoot = false;
       extraPools = [
