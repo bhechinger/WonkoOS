@@ -31,6 +31,7 @@
         support32Bit = true;
       };
       pulse.enable = true;
+      jack.enable = true;
       socketActivation = true;
       wireplumber.extraConfig."51-saffire-headroom" = {
         "monitor.alsa.rules" = [
