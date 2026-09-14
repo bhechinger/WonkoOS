@@ -3,6 +3,9 @@
   unstable-pkgs,
   ...
 }:
+let
+  audioPipewire = unstable-pkgs.pipewire.override { ffadoSupport = false; };
+in
 {
   security.rtkit.enable = true;
 
@@ -23,7 +26,7 @@
   services = {
     pipewire = {
       enable = true;
-      package = unstable-pkgs.pipewire;
+      package = audioPipewire;
       audio.enable = true;
       wireplumber.enable = true;
       alsa = {
@@ -44,6 +47,31 @@
             actions.update-props = {
               "api.alsa.headroom" = 1024;
             };
+          }
+          {
+            matches = [
+              {
+                "node.name" = "alsa_input.firewire-0x00130e0401c04de0.multichannel-input";
+              }
+            ];
+            actions.update-props."audio.position" = [
+              "AUX0"
+              "AUX1"
+              "AUX2"
+              "AUX3"
+              "AUX4"
+              "AUX5"
+              "AUX6"
+              "AUX7"
+              "AUX8"
+              "AUX9"
+              "AUX10"
+              "AUX11"
+              "AUX12"
+              "AUX13"
+              "AUX14"
+              "AUX15"
+            ];
           }
         ];
       };

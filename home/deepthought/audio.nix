@@ -2,10 +2,11 @@
   config,
   lib,
   pkgs,
+  unstable-pkgs,
   ...
 }:
 let
-  audioPipewire = pkgs.pipewire;
+  audioPipewire = unstable-pkgs.pipewire.override { ffadoSupport = false; };
   saffireSink = "alsa_output.firewire-0x00130e0401c04de0.multichannel-output";
   saffireSource = "alsa_input.firewire-0x00130e0401c04de0.multichannel-input";
   saffireNodeProperties = ''.info.props["device.bus"] == "firewire" and .info.props["api.alsa.pcm.stream"] == $pcm_stream'';
@@ -32,17 +33,28 @@ let
     runtimeInputs = with pkgs; [
       coreutils
       gnugrep
+      gnused
       jq
       audioPipewire
     ];
     text = ''
       set -euo pipefail
 
+      ardour_config=${lib.escapeShellArg "${config.xdg.configHome}/ardour9/config"}
       saffire_sink=${lib.escapeShellArg saffireSink}
       saffire_source=${lib.escapeShellArg saffireSource}
       max_wait_seconds=90
       poll_interval_seconds=2
       required_consecutive_ready_checks=2
+
+      if test -f "$ardour_config"; then
+        sed -E -i \
+          -e '/<State backend=/ s/active="[01]"/active="0"/' \
+          -e '\|<State backend="JACK/Pipewire"| s/active="0"/active="1"/' \
+          -e '/<Option name="work-around-jack-no-copy-optimization"/d' \
+          -e '/<Config>/a\    <Option name="work-around-jack-no-copy-optimization" value="0"/>' \
+          "$ardour_config"
+      fi
 
       log() {
         printf 'ardour-pipewire-ready: %s\n' "$*" >&2
@@ -160,20 +172,6 @@ let
 
 in
 {
-  home.activation.useArdourPipewire =
-    lib.hm.dag.entryBetween [ "reloadSystemd" ] [ "writeBoundary" ]
-      ''
-        ARDOUR_CONFIG=${lib.escapeShellArg "${config.xdg.configHome}/ardour9/config"}
-        if test -f "$ARDOUR_CONFIG"; then
-          ${pkgs.gnused}/bin/sed -E -i \
-            -e '/<State backend=/ s/active="[01]"/active="0"/' \
-            -e '\|<State backend="JACK/Pipewire"| s/active="0"/active="1"/' \
-            -e '/<Option name="work-around-jack-no-copy-optimization"/d' \
-            -e '/<Config>/a\    <Option name="work-around-jack-no-copy-optimization" value="0"/>' \
-            "$ARDOUR_CONFIG"
-        fi
-      '';
-
   home.packages = with pkgs; [
     carla
     qpwgraph
