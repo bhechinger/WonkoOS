@@ -45,6 +45,8 @@ in
               }
             ];
             actions.update-props = {
+              "api.alsa.period-size" = 1024;
+              "api.alsa.period-num" = 3;
               "api.alsa.headroom" = 1024;
             };
           }
