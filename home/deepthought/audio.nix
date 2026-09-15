@@ -2,13 +2,14 @@
   config,
   lib,
   pkgs,
+  unstable-pkgs,
   ...
 }:
 let
-  audioPipewire = pkgs.pipewire;
-  jack2 = pkgs.jack2;
-  saffireSink = "saffire_jack_sink";
-  saffireSource = "saffire_jack_source";
+  audioPipewire = unstable-pkgs.pipewire.override { ffadoSupport = false; };
+  saffireSink = "alsa_output.firewire-0x00130e0401c04de0.multichannel-output";
+  saffireSource = "alsa_input.firewire-0x00130e0401c04de0.multichannel-input";
+  saffireNodeProperties = ''.info.props["device.bus"] == "firewire" and .info.props["api.alsa.pcm.stream"] == $pcm_stream'';
   saffirePortChecks = ''
     has_port "$saffire_source:capture_AUX0" &&
       has_port "$saffire_source:capture_AUX4" &&
@@ -32,17 +33,28 @@ let
     runtimeInputs = with pkgs; [
       coreutils
       gnugrep
+      gnused
       jq
       audioPipewire
     ];
     text = ''
       set -euo pipefail
 
+      ardour_config=${lib.escapeShellArg "${config.xdg.configHome}/ardour9/config"}
       saffire_sink=${lib.escapeShellArg saffireSink}
       saffire_source=${lib.escapeShellArg saffireSource}
       max_wait_seconds=90
       poll_interval_seconds=2
       required_consecutive_ready_checks=2
+
+      if test -f "$ardour_config"; then
+        sed -E -i \
+          -e '/<State backend=/ s/active="[01]"/active="0"/' \
+          -e '\|<State backend="JACK/Pipewire"| s/active="0"/active="1"/' \
+          -e '/<Option name="work-around-jack-no-copy-optimization"/d' \
+          -e '/<Config>/a\    <Option name="work-around-jack-no-copy-optimization" value="0"/>' \
+          "$ardour_config"
+      fi
 
       log() {
         printf 'ardour-pipewire-ready: %s\n' "$*" >&2
@@ -59,23 +71,23 @@ let
       node_ready() {
         local node_name="$1"
         local media_class="$2"
-        local channels="$3"
+        local pcm_stream="$3"
 
         timeout 3 pw-dump |
           jq -e \
             --arg node_name "$node_name" \
             --arg media_class "$media_class" \
-            --argjson channels "$channels" '
+            --arg pcm_stream "$pcm_stream" '
             any(.[]; .type == "PipeWire:Interface:Node" and
               .info.props["node.name"] == $node_name and
               .info.props["media.class"] == $media_class and
-              .info.props["audio.channels"] == $channels)
+              ${saffireNodeProperties})
           ' >/dev/null
       }
 
       saffire_nodes_ready() {
-        node_ready "$saffire_sink" "Audio/Sink" 8 &&
-          node_ready "$saffire_source" "Audio/Source" 16
+        node_ready "$saffire_sink" "Audio/Sink" "playback" &&
+          node_ready "$saffire_source" "Audio/Source" "capture"
       }
 
       saffire_ports_exist() {
@@ -153,61 +165,6 @@ let
     '';
   };
 
-  saffireJackTunnelArgs = ''
-    {
-      jack.library = "libjack.so.0"
-      jack.server = saffire
-      jack.client-name = SaffirePro24
-      jack.connect = true
-      tunnel.mode = duplex
-      node.group = saffire-jack-group
-      source.props = {
-        node.name = saffire_jack_source
-        node.nick = "Pro24-004de0"
-        node.description = "Saffire Pro 24 JACK Source"
-        priority.driver = 100
-        priority.session = 1
-        audio.channels = 16
-        audio.position = [ AUX0 AUX1 AUX2 AUX3 AUX4 AUX5 AUX6 AUX7 AUX8 AUX9 AUX10 AUX11 AUX12 AUX13 AUX14 AUX15 ]
-        midi.ports = 1
-      }
-      sink.props = {
-        node.name = saffire_jack_sink
-        node.nick = "Pro24-004de0"
-        node.description = "Saffire Pro 24 JACK Sink"
-        priority.driver = 2000
-        priority.session = 1
-        audio.channels = 8
-        audio.position = [ FL FR RL RR FC LFE SL SR ]
-        midi.ports = 1
-      }
-    }
-  '';
-
-  saffireJackTunnelReady = pkgs.writeShellApplication {
-    name = "saffire-jack-tunnel-ready";
-    runtimeInputs = with pkgs; [
-      coreutils
-      jq
-      audioPipewire
-    ];
-    text = ''
-      set -euo pipefail
-
-      for _ in $(seq 1 5); do
-        if timeout 3 pw-dump | jq -e '
-          any(.[]; .type == "PipeWire:Interface:Node" and .info.props["node.name"] == "${saffireSource}") and
-          any(.[]; .type == "PipeWire:Interface:Node" and .info.props["node.name"] == "${saffireSink}")
-        ' >/dev/null; then
-          exit 0
-        fi
-        sleep 1
-      done
-
-      exit 1
-    '';
-  };
-
   battletechGamesRule = builtins.readFile ./wireplumber/battletech-games.conf;
   audioRoutesRule = builtins.readFile ./wireplumber/audio-routes.conf;
   audioRoutesScript = builtins.readFile ./wireplumber/audio-routes.lua;
@@ -215,16 +172,6 @@ let
 
 in
 {
-  home.activation.disableArdourJackNoCopyWorkaround = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    ARDOUR_CONFIG=${lib.escapeShellArg "${config.xdg.configHome}/ardour9/config"}
-    if test -f "$ARDOUR_CONFIG"; then
-      ${pkgs.gnused}/bin/sed -i \
-        -e '/<Option name="work-around-jack-no-copy-optimization"/d' \
-        -e '/<Config>/a\    <Option name="work-around-jack-no-copy-optimization" value="0"/>' \
-        "$ARDOUR_CONFIG"
-    fi
-  '';
-
   home.packages = with pkgs; [
     carla
     qpwgraph
@@ -288,49 +235,6 @@ in
   };
 
   systemd.user.services = {
-    saffire-jack = {
-      Unit = {
-        Description = "Saffire Pro 24 JACK/FFADO server";
-        Requires = [ "pipewire.service" ];
-        Wants = [ "saffire-jack-tunnel.service" ];
-        After = [ "pipewire.service" ];
-        Before = [ "saffire-jack-tunnel.service" ];
-      };
-
-      Service = {
-        Environment = "LD_LIBRARY_PATH=${jack2}/lib";
-        ExecStart = "${jack2}/bin/jackd --name saffire --realtime --realtime-priority 88 -d firewire --device guid:0x00130e0401c04de0 --period 128 --nperiods 3 --rate 48000 --duplex --verbose 3";
-        TimeoutStartSec = 30;
-        TimeoutStopSec = 30;
-      };
-
-      Install.WantedBy = [ "hyprland-session.target" ];
-    };
-
-    saffire-jack-tunnel = {
-      Unit = {
-        Description = "PipeWire tunnel for the Saffire JACK server";
-        BindsTo = [ "saffire-jack.service" ];
-        Requires = [ "pipewire.service" ];
-        After = [
-          "pipewire.service"
-          "saffire-jack.service"
-        ];
-      };
-
-      Service = {
-        Environment = "LIBJACK_PATH=${jack2}/lib";
-        ExecStart = "${audioPipewire}/bin/pw-cli --monitor load-module libpipewire-module-jack-tunnel ${
-          lib.escapeShellArg (lib.replaceStrings [ "\n" ] [ " " ] saffireJackTunnelArgs)
-        }";
-        ExecStartPost = "${saffireJackTunnelReady}/bin/saffire-jack-tunnel-ready";
-        Restart = "on-failure";
-        RestartSec = 1;
-        TimeoutStartSec = 30;
-        TimeoutStopSec = 10;
-      };
-    };
-
     ardour-default = {
       Unit = {
         Description = "Ardour Default session";
