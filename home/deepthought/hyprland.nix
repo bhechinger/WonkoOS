@@ -180,7 +180,7 @@ in
         "application/x-krita" = "org.kde.krita.desktop";
         "image/x-xcf" = "gimp.desktop";
         "inode/directory" = "org.kde.dolphin.desktop";
-        "text/plain" = "dev.zed.Zed.desktop";
+        "text/plain" = "app.liten.Gram.desktop";
         "x-scheme-handler/jetbrains" = "jetbrains-toolbox.desktop";
         "x-scheme-handler/jetbrains-gateway" = "jetbrains-gateway.desktop";
       };
@@ -192,7 +192,7 @@ in
         audacious
         vlc
         firefox
-        unstable-pkgs.zed-editor
+        unstable-pkgs.gram
         thunderbird
         telegram-desktop
         signal-desktop
