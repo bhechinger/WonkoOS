@@ -59,6 +59,13 @@ let
   omnigraphNginx = config.services.nginx.virtualHosts."omnigraph.4amlunch.net";
   jellyfin = config.services.jellyfin;
   jellyfinNginx = config.services.nginx.virtualHosts."jellyfin.4amlunch.net";
+  basketMounts = [
+    "nfs-NixCache.mount"
+    "nfs-Plex.mount"
+    "nfs-Restic.mount"
+    "nfs-Torrents.mount"
+  ];
+  basketNfsReady = config.systemd.services.basket-nfs-ready;
 in
 assert config.services.tailscale.enable;
 assert config.services.zerotierone.enable;
@@ -206,6 +213,12 @@ assert lib.hasInfix "client_max_body_size 32M;" omnigraphNginx.extraConfig;
 assert !lib.elem 18085 internal.allowedTCPPorts;
 assert lib.hasInfix "/var/lib/paperless/consume " config.services.nfs.server.exports;
 assert lib.hasInfix "/var/lib/paperless/export " config.services.nfs.server.exports;
+assert basketNfsReady.before == basketMounts;
+assert basketNfsReady.requiredBy == basketMounts;
+assert lib.elem "network-online.target" basketNfsReady.after;
+assert lib.hasInfix "rpcinfo -T tcp 10.42.0.30 nfs 4" basketNfsReady.script;
+assert basketNfsReady.serviceConfig.Type == "oneshot";
+assert basketNfsReady.serviceConfig.TimeoutStartSec == "infinity";
 assert config.services.nginx.virtualHosts."bob.4amlunch.net".root == "/var/www";
 assert config.services.nginx.virtualHosts."hamburgerking.pt".root == "/var/www/hbk";
 assert lib.hasInfix "proxy_cookie_flags ~ secure;"
