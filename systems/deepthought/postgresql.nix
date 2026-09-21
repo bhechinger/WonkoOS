@@ -14,14 +14,18 @@
           };
         }
       ];
-      ensureDatabases = [ "wonko" ];
+      ensureDatabases = [
+        "wonko"
+        "tunnel_dev"
+      ];
       authentication = lib.mkForce ''
         #type database  DBuser  auth-method
         # "local" is for Unix domain socket connections only
         local   all             all                                     peer
-        # TCP localhost is intentionally disabled. The managed local roles do
-        # not have passwords; use Unix sockets with peer auth for local access.
+        # TCP localhost is disabled except for the tunnel_dev/wonko IPv6
+        # exception below; use Unix sockets with peer auth otherwise.
         host    all             all             127.0.0.1/32            reject
+        host    tunnel_dev      wonko           ::1/128                 trust
         host    all             all             ::1/128                 reject
         # Allow replication connections from localhost, by a user with the
         # replication privilege.
