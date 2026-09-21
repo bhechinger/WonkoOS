@@ -7,8 +7,6 @@
 {
   home.packages = with pkgs; [
     act
-    unstable-pkgs.opencode
-    unstable-pkgs.zed-editor
     cloc
     nil
     nixd
@@ -31,6 +29,7 @@
     k8sgpt
     skopeo
     circleci-cli
+    unstable-pkgs.gram
   ];
 
   programs = {
