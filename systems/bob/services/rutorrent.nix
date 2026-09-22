@@ -1,6 +1,12 @@
 { config, inputs, ... }:
 
 {
+  disabledModules = [ "services/torrent/rtorrent.nix" ];
+
+  imports = [
+    (inputs.unstable-nixpkgs.outPath + "/nixos/modules/services/torrent/rtorrent.nix")
+  ];
+
   nixpkgs.overlays = [
     (
       _final: prev:
