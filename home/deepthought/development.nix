@@ -1,9 +1,22 @@
 {
+  lib,
   pkgs,
   unstable-pkgs,
   ...
 }:
 
+let
+  rustupWithoutDynamicPatchelf = pkgs.rustup.overrideAttrs (old: {
+    patches =
+      let
+        patches = old.patches or [ ];
+        isDynamicPatchelfPatch =
+          patch: lib.hasSuffix "dynamically-patchelf-binaries.patch" (toString patch);
+      in
+      assert lib.count isDynamicPatchelfPatch patches == 1;
+      lib.filter (patch: !isDynamicPatchelfPatch patch) patches;
+  });
+in
 {
   home.packages = with pkgs; [
     act
@@ -18,7 +31,7 @@
     lldb
     autoconf
     automake
-    rustup
+    rustupWithoutDynamicPatchelf
     (google-cloud-sdk.withExtraComponents [ google-cloud-sdk.components.gke-gcloud-auth-plugin ])
     podman
     podman-compose
