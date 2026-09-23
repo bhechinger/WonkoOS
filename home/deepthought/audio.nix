@@ -199,11 +199,11 @@ let
           jq -nc --argjson pid "$ARDOUR_TEST_PID" --arg title "$title" \
             '[{pid: $pid, address: "0xtest", class: "Ardour", title: $title}]'
           ;;
-        *"CTRL, S,"*)
+        *'hl.dispatch(hl.dsp.send_shortcut({mods = "CTRL", key = "S", window = "address:0xtest"}))'*)
           printf 'clean' >"$ARDOUR_TEST_STATE"
           printf 'save\n' >>"$ARDOUR_TEST_LOG"
           ;;
-        *"CTRL, Q,"*)
+        *'hl.dispatch(hl.dsp.send_shortcut({mods = "CTRL", key = "Q", window = "address:0xtest"}))'*)
           printf 'quit\n' >>"$ARDOUR_TEST_LOG"
           kill "$ARDOUR_TEST_PID"
           ;;
@@ -237,6 +237,12 @@ let
         printf 'ardour-graceful-stop: %s\n' "$*" >&2
       }
 
+      send_shortcut() {
+        local key="$1"
+        "$hyprctl_command" --quiet eval \
+          "return hl.dispatch(hl.dsp.send_shortcut({mods = \"CTRL\", key = \"$key\", window = \"address:$address\"}))"
+      }
+
       client_info=""
       while kill -0 "$pid" 2>/dev/null; do
         client_info="$(client 2>/dev/null || true)"
@@ -252,7 +258,7 @@ let
       fi
 
       address="''${client_info%%$'\t'*}"
-      until "$hyprctl_command" --quiet dispatch sendshortcut "CTRL, S, address:$address"; do
+      until send_shortcut S; do
         if ! kill -0 "$pid" 2>/dev/null; then
           exit 0
         fi
@@ -276,7 +282,7 @@ let
       fi
 
       address="''${client_info%%$'\t'*}"
-      until "$hyprctl_command" --quiet dispatch sendshortcut "CTRL, Q, address:$address"; do
+      until send_shortcut Q; do
         if ! kill -0 "$pid" 2>/dev/null; then
           exit 0
         fi
