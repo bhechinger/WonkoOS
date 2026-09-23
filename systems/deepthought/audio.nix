@@ -81,17 +81,23 @@ in
   };
 
   systemd.user.services = {
-    pipewire.serviceConfig = {
-      LimitMEMLOCK = "infinity";
-      LimitRTPRIO = 95;
-      LimitNICE = "-11";
-      RestrictRealtime = false;
+    pipewire = {
+      partOf = [ "wireplumber.service" ];
+      serviceConfig = {
+        LimitMEMLOCK = "infinity";
+        LimitRTPRIO = 95;
+        LimitNICE = "-11";
+        RestrictRealtime = false;
+      };
     };
-    pipewire-pulse.serviceConfig = {
-      LimitMEMLOCK = "infinity";
-      LimitRTPRIO = 95;
-      LimitNICE = "-11";
-      RestrictRealtime = false;
+    pipewire-pulse = {
+      partOf = [ "wireplumber.service" ];
+      serviceConfig = {
+        LimitMEMLOCK = "infinity";
+        LimitRTPRIO = 95;
+        LimitNICE = "-11";
+        RestrictRealtime = false;
+      };
     };
     wireplumber.serviceConfig = {
       LimitMEMLOCK = "infinity";

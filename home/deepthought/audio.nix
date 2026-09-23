@@ -165,6 +165,189 @@ let
     '';
   };
 
+  ardourGracefulStop = pkgs.writeShellApplication {
+    name = "ardour-graceful-stop";
+    runtimeInputs = with pkgs; [
+      coreutils
+      hyprland
+      jq
+    ];
+    derivationArgs.postCheck = ''
+      test_dir="$(mktemp -d)"
+      test_pid=""
+      cleanup() {
+        if test -n "$test_pid"; then
+          kill "$test_pid" 2>/dev/null || true
+        fi
+        rm -rf "$test_dir"
+      }
+      trap cleanup EXIT
+
+      cat >"$test_dir/hyprctl" <<'EOF'
+      #!/bin/sh
+      case "$*" in
+        "-j clients")
+          if test "$ARDOUR_TEST_PERMANENT_FAILURE" = 1; then
+            printf '[]\n'
+            exit 0
+          fi
+          if test ! -e "$ARDOUR_TEST_STATE"; then
+            printf 'dirty' >"$ARDOUR_TEST_STATE"
+            printf '[]\n'
+            exit 0
+          fi
+          title="Default - Ardour"
+          if test "$(cat "$ARDOUR_TEST_STATE")" = dirty; then
+            title="*$title"
+          fi
+          jq -nc --argjson pid "$ARDOUR_TEST_PID" --arg title "$title" \
+            '[{pid: $pid, address: "0xtest", class: "Ardour", title: $title}]'
+          ;;
+        *'hl.dispatch(hl.dsp.send_shortcut({mods = "CTRL", key = "S", window = "address:0xtest"}))'*)
+          if test ! -e "$ARDOUR_TEST_STATE-save-retried"; then
+            touch "$ARDOUR_TEST_STATE-save-retried"
+            printf 'save-failed\n' >>"$ARDOUR_TEST_LOG"
+            printf 'warning: simulated failure\n'
+            exit 0
+          fi
+          printf 'clean' >"$ARDOUR_TEST_STATE"
+          printf 'save\n' >>"$ARDOUR_TEST_LOG"
+          printf 'ok\n'
+          ;;
+        *'hl.dispatch(hl.dsp.send_shortcut({mods = "CTRL", key = "Q", window = "address:0xtest"}))'*)
+          if test ! -e "$ARDOUR_TEST_STATE-quit-retried"; then
+            touch "$ARDOUR_TEST_STATE-quit-retried"
+            printf 'quit-failed\n' >>"$ARDOUR_TEST_LOG"
+            printf 'warning: simulated failure\n'
+            exit 0
+          fi
+          printf 'quit\n' >>"$ARDOUR_TEST_LOG"
+          kill "$ARDOUR_TEST_PID"
+          printf 'ok\n'
+          ;;
+        *) exit 1 ;;
+      esac
+      EOF
+      chmod +x "$test_dir/hyprctl"
+
+      sleep 30 &
+      test_pid="$!"
+      ARDOUR_HYPRCTL="$test_dir/hyprctl" \
+        ARDOUR_TEST_STATE="$test_dir/state" \
+        ARDOUR_TEST_LOG="$test_dir/log" \
+        ARDOUR_TEST_PID="$test_pid" \
+        "$target" "$test_pid"
+      test "$(cat "$test_dir/log")" = "$(printf 'save-failed\nsave\nquit-failed\nquit')"
+
+      sleep 30 &
+      test_pid="$!"
+      if ARDOUR_HYPRCTL="$test_dir/hyprctl" \
+        ARDOUR_STOP_TIMEOUT_SECONDS=1 \
+        ARDOUR_TEST_PERMANENT_FAILURE=1 \
+        ARDOUR_TEST_STATE="$test_dir/state" \
+        ARDOUR_TEST_LOG="$test_dir/log" \
+        ARDOUR_TEST_PID="$test_pid" \
+        "$target" "$test_pid"; then
+        echo "expected a persistent Hyprland failure to time out" >&2
+        exit 1
+      fi
+    '';
+    text = ''
+      pid="$1"
+      hyprctl_command="''${ARDOUR_HYPRCTL:-hyprctl}"
+      timeout_seconds="''${ARDOUR_STOP_TIMEOUT_SECONDS:-20}"
+      deadline="$((SECONDS + timeout_seconds))"
+
+      client() {
+        "$hyprctl_command" -j clients |
+          jq -r --argjson pid "$pid" '
+            first(.[] | select(.pid == $pid and .class == "Ardour") |
+              [.address, .title] | @tsv) // empty
+          '
+      }
+
+      log() {
+        printf 'ardour-graceful-stop: %s\n' "$*" >&2
+      }
+
+      check_deadline() {
+        if test "$SECONDS" -ge "$deadline"; then
+          log "graceful stop timed out after $timeout_seconds seconds; forcing a restart"
+          exit 1
+        fi
+      }
+
+      send_shortcut() {
+        local key="$1"
+        local response
+        response="$("$hyprctl_command" eval \
+          "return hl.dispatch(hl.dsp.send_shortcut({mods = \"CTRL\", key = \"$key\", window = \"address:$address\"}))")"
+        test "$response" = ok
+      }
+
+      client_info=""
+      while kill -0 "$pid" 2>/dev/null; do
+        client_info="$(client 2>/dev/null || true)"
+        if test -n "$client_info"; then
+          break
+        fi
+        check_deadline
+        sleep 1
+      done
+
+      if ! kill -0 "$pid" 2>/dev/null; then
+        exit 0
+      fi
+
+      address="''${client_info%%$'\t'*}"
+      until send_shortcut S; do
+        if ! kill -0 "$pid" 2>/dev/null; then
+          exit 0
+        fi
+        client_info="$(client 2>/dev/null || true)"
+        if test -n "$client_info"; then
+          address="''${client_info%%$'\t'*}"
+        fi
+        check_deadline
+        sleep 1
+      done
+
+      title=""
+      while kill -0 "$pid" 2>/dev/null; do
+        client_info="$(client 2>/dev/null || true)"
+        title="''${client_info#*$'\t'}"
+        if test -n "$client_info" && [[ "$title" != \** ]]; then
+          break
+        fi
+
+        check_deadline
+        sleep 0.25
+      done
+
+      if ! kill -0 "$pid" 2>/dev/null; then
+        exit 0
+      fi
+
+      address="''${client_info%%$'\t'*}"
+      until send_shortcut Q; do
+        if ! kill -0 "$pid" 2>/dev/null; then
+          exit 0
+        fi
+        client_info="$(client 2>/dev/null || true)"
+        if test -n "$client_info"; then
+          address="''${client_info%%$'\t'*}"
+        fi
+        check_deadline
+        sleep 1
+      done
+
+      while kill -0 "$pid" 2>/dev/null; do
+        check_deadline
+        sleep 0.25
+      done
+    '';
+  };
+
   battletechGamesRule = builtins.readFile ./wireplumber/battletech-games.conf;
   audioRoutesRule = builtins.readFile ./wireplumber/audio-routes.conf;
   audioRoutesScript = builtins.readFile ./wireplumber/audio-routes.lua;
@@ -211,7 +394,10 @@ in
       "wireplumber/wireplumber.conf.d/51-alsa-clock.conf".text = alsaClockRule;
     };
 
-    dataFile."wireplumber/scripts/audio-routes.lua".text = audioRoutesScript;
+    dataFile."wireplumber/scripts/audio-routes.lua" = {
+      text = audioRoutesScript;
+      onChange = "RESTART_WIREPLUMBER=1";
+    };
 
     desktopEntries."org.rncbc.qpwgraph" = {
       name = "qpwgraph";
@@ -234,6 +420,18 @@ in
     };
   };
 
+  home.activation.restartWireplumberOnAudioRoutesChange =
+    lib.hm.dag.entryAfter
+      [
+        "onFilesChange"
+        "reloadSystemd"
+      ]
+      ''
+        if [[ -v RESTART_WIREPLUMBER ]]; then
+          run ${pkgs.systemd}/bin/systemctl --user restart wireplumber.service
+        fi
+      '';
+
   systemd.user.services = {
     ardour-default = {
       Unit = {
@@ -242,27 +440,31 @@ in
           "pipewire.service"
           "wireplumber.service"
         ];
-        After = [
-          "pipewire.service"
-          "wireplumber.service"
-        ];
+        After = [ "graphical-session.target" ];
         PartOf = [
           "hyprland-session.target"
+          "wireplumber.service"
         ];
       };
 
       Service = {
         ExecStartPre = "${ardourPipewireReady}/bin/ardour-pipewire-ready";
         ExecStart = "${ardourPipewire}/bin/ardour9 /home/wonko/Default";
-        KillSignal = "SIGINT";
+        ExecStop = "${ardourGracefulStop}/bin/ardour-graceful-stop $MAINPID";
+        KillSignal = "SIGKILL";
         Restart = "on-failure";
         RestartSec = 5;
-        SuccessExitStatus = "SIGINT";
         TimeoutStartSec = 600;
-        TimeoutStopSec = 120;
+        TimeoutStopSec = 30;
       };
 
       Install.WantedBy = [ "hyprland-session.target" ];
+    };
+
+    spotify-midi-control.Unit = {
+      Wants = [ "wireplumber.service" ];
+      After = [ "wireplumber.service" ];
+      PartOf = [ "wireplumber.service" ];
     };
   };
 
