@@ -12,6 +12,7 @@ local desired_links = {
   { output = "Firefox:output_FR",             input = "ardour:Firefox/audio_in 2", exclusive = true },
   { output = "DEATH STRANDING DIRECTOR'S CUT:output_FL", input = "ardour:Games/audio_in 1", exclusive = true },
   { output = "DEATH STRANDING DIRECTOR'S CUT:output_FR", input = "ardour:Games/audio_in 2", exclusive = true },
+
   -- Feed PipeWire-owned virtual sinks into matching Ardour buses.
   { output = "System Sounds:monitor_FL",      input = "ardour:System/audio_in 1" },
   { output = "System Sounds:monitor_FR",      input = "ardour:System/audio_in 2" },
