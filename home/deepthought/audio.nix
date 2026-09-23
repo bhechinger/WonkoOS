@@ -165,6 +165,115 @@ let
     '';
   };
 
+  ardourGracefulStop = pkgs.writeShellApplication {
+    name = "ardour-graceful-stop";
+    runtimeInputs = with pkgs; [
+      coreutils
+      hyprland
+      jq
+    ];
+    derivationArgs.postCheck = ''
+      test_dir="$(mktemp -d)"
+      test_pid=""
+      cleanup() {
+        if test -n "$test_pid"; then
+          kill "$test_pid" 2>/dev/null || true
+        fi
+        rm -rf "$test_dir"
+      }
+      trap cleanup EXIT
+
+      cat >"$test_dir/hyprctl" <<'EOF'
+      #!/bin/sh
+      case "$*" in
+        "-j clients")
+          title="Default - Ardour"
+          if test "$(cat "$ARDOUR_TEST_STATE")" = dirty; then
+            title="*$title"
+          fi
+          jq -nc --argjson pid "$ARDOUR_TEST_PID" --arg title "$title" \
+            '[{pid: $pid, address: "0xtest", class: "Ardour", title: $title}]'
+          ;;
+        *"CTRL, S,"*)
+          printf 'clean' >"$ARDOUR_TEST_STATE"
+          printf 'save\n' >>"$ARDOUR_TEST_LOG"
+          ;;
+        *"CTRL, Q,"*)
+          printf 'quit\n' >>"$ARDOUR_TEST_LOG"
+          kill "$ARDOUR_TEST_PID"
+          ;;
+        *) exit 1 ;;
+      esac
+      EOF
+      chmod +x "$test_dir/hyprctl"
+
+      sleep 30 &
+      test_pid="$!"
+      printf 'dirty' >"$test_dir/state"
+      ARDOUR_HYPRCTL="$test_dir/hyprctl" \
+        ARDOUR_TEST_STATE="$test_dir/state" \
+        ARDOUR_TEST_LOG="$test_dir/log" \
+        ARDOUR_TEST_PID="$test_pid" \
+        "$target" "$test_pid"
+      test "$(cat "$test_dir/log")" = "$(printf 'save\nquit')"
+    '';
+    text = ''
+      pid="$1"
+      hyprctl_command="''${ARDOUR_HYPRCTL:-hyprctl}"
+
+      client() {
+        "$hyprctl_command" -j clients |
+          jq -r --argjson pid "$pid" '
+            first(.[] | select(.pid == $pid and .class == "Ardour") |
+              [.address, .title] | @tsv) // empty
+          '
+      }
+
+      client_info="$(client)"
+      if test -z "$client_info"; then
+        printf 'ardour-graceful-stop: no Ardour window found for PID %s\n' "$pid" >&2
+        exit 1
+      fi
+
+      address="''${client_info%%$'\t'*}"
+      "$hyprctl_command" --quiet dispatch sendshortcut "CTRL, S, address:$address"
+
+      save_deadline="$((SECONDS + 30))"
+      title=""
+      while test "$SECONDS" -lt "$save_deadline"; do
+        if ! kill -0 "$pid" 2>/dev/null; then
+          exit 0
+        fi
+
+        client_info="$(client)"
+        title="''${client_info#*$'\t'}"
+        if test -n "$client_info" && [[ "$title" != \** ]]; then
+          break
+        fi
+
+        sleep 0.25
+      done
+
+      if test -z "$client_info" || [[ "$title" == \** ]]; then
+        printf 'ardour-graceful-stop: Ardour did not finish saving\n' >&2
+        exit 1
+      fi
+
+      "$hyprctl_command" --quiet dispatch sendshortcut "CTRL, Q, address:$address"
+
+      quit_deadline="$((SECONDS + 60))"
+      while test "$SECONDS" -lt "$quit_deadline"; do
+        if ! kill -0 "$pid" 2>/dev/null; then
+          exit 0
+        fi
+        sleep 0.25
+      done
+
+      printf 'ardour-graceful-stop: Ardour did not exit after saving\n' >&2
+      exit 1
+    '';
+  };
+
   battletechGamesRule = builtins.readFile ./wireplumber/battletech-games.conf;
   audioRoutesRule = builtins.readFile ./wireplumber/audio-routes.conf;
   audioRoutesScript = builtins.readFile ./wireplumber/audio-routes.lua;
@@ -248,22 +357,24 @@ in
         ];
         PartOf = [
           "hyprland-session.target"
+          "wireplumber.service"
         ];
       };
 
       Service = {
         ExecStartPre = "${ardourPipewireReady}/bin/ardour-pipewire-ready";
         ExecStart = "${ardourPipewire}/bin/ardour9 /home/wonko/Default";
-        KillSignal = "SIGINT";
+        ExecStop = "${ardourGracefulStop}/bin/ardour-graceful-stop $MAINPID";
         Restart = "on-failure";
         RestartSec = 5;
-        SuccessExitStatus = "SIGINT";
         TimeoutStartSec = 600;
         TimeoutStopSec = 120;
       };
 
       Install.WantedBy = [ "hyprland-session.target" ];
     };
+
+    spotify-midi-control.Unit.PartOf = [ "wireplumber.service" ];
   };
 
   services = {
