@@ -187,6 +187,11 @@ let
       #!/bin/sh
       case "$*" in
         "-j clients")
+          if test ! -e "$ARDOUR_TEST_STATE"; then
+            printf 'dirty' >"$ARDOUR_TEST_STATE"
+            printf '[]\n'
+            exit 0
+          fi
           title="Default - Ardour"
           if test "$(cat "$ARDOUR_TEST_STATE")" = dirty; then
             title="*$title"
@@ -209,7 +214,6 @@ let
 
       sleep 30 &
       test_pid="$!"
-      printf 'dirty' >"$test_dir/state"
       ARDOUR_HYPRCTL="$test_dir/hyprctl" \
         ARDOUR_TEST_STATE="$test_dir/state" \
         ARDOUR_TEST_LOG="$test_dir/log" \
@@ -229,23 +233,36 @@ let
           '
       }
 
-      client_info="$(client)"
-      if test -z "$client_info"; then
-        printf 'ardour-graceful-stop: no Ardour window found for PID %s\n' "$pid" >&2
-        exit 1
+      log() {
+        printf 'ardour-graceful-stop: %s\n' "$*" >&2
+      }
+
+      client_info=""
+      while kill -0 "$pid" 2>/dev/null; do
+        client_info="$(client 2>/dev/null || true)"
+        if test -n "$client_info"; then
+          break
+        fi
+        log "waiting for the Ardour window"
+        sleep 1
+      done
+
+      if ! kill -0 "$pid" 2>/dev/null; then
+        exit 0
       fi
 
       address="''${client_info%%$'\t'*}"
-      "$hyprctl_command" --quiet dispatch sendshortcut "CTRL, S, address:$address"
-
-      save_deadline="$((SECONDS + 30))"
-      title=""
-      while test "$SECONDS" -lt "$save_deadline"; do
+      until "$hyprctl_command" --quiet dispatch sendshortcut "CTRL, S, address:$address"; do
         if ! kill -0 "$pid" 2>/dev/null; then
           exit 0
         fi
+        log "waiting to request an Ardour save"
+        sleep 1
+      done
 
-        client_info="$(client)"
+      title=""
+      while kill -0 "$pid" 2>/dev/null; do
+        client_info="$(client 2>/dev/null || true)"
         title="''${client_info#*$'\t'}"
         if test -n "$client_info" && [[ "$title" != \** ]]; then
           break
@@ -254,23 +271,26 @@ let
         sleep 0.25
       done
 
-      if test -z "$client_info" || [[ "$title" == \** ]]; then
-        printf 'ardour-graceful-stop: Ardour did not finish saving\n' >&2
-        exit 1
+      if ! kill -0 "$pid" 2>/dev/null; then
+        exit 0
       fi
 
-      "$hyprctl_command" --quiet dispatch sendshortcut "CTRL, Q, address:$address"
-
-      quit_deadline="$((SECONDS + 60))"
-      while test "$SECONDS" -lt "$quit_deadline"; do
+      address="''${client_info%%$'\t'*}"
+      until "$hyprctl_command" --quiet dispatch sendshortcut "CTRL, Q, address:$address"; do
         if ! kill -0 "$pid" 2>/dev/null; then
           exit 0
         fi
-        sleep 0.25
+        client_info="$(client 2>/dev/null || true)"
+        if test -n "$client_info"; then
+          address="''${client_info%%$'\t'*}"
+        fi
+        log "waiting to request a clean Ardour exit"
+        sleep 1
       done
 
-      printf 'ardour-graceful-stop: Ardour did not exit after saving\n' >&2
-      exit 1
+      while kill -0 "$pid" 2>/dev/null; do
+        sleep 0.25
+      done
     '';
   };
 
@@ -352,6 +372,7 @@ in
           "wireplumber.service"
         ];
         After = [
+          "graphical-session.target"
           "pipewire.service"
           "wireplumber.service"
         ];
@@ -368,13 +389,17 @@ in
         Restart = "on-failure";
         RestartSec = 5;
         TimeoutStartSec = 600;
-        TimeoutStopSec = 120;
+        TimeoutStopSec = "infinity";
       };
 
       Install.WantedBy = [ "hyprland-session.target" ];
     };
 
-    spotify-midi-control.Unit.PartOf = [ "wireplumber.service" ];
+    spotify-midi-control.Unit = {
+      Wants = [ "wireplumber.service" ];
+      After = [ "wireplumber.service" ];
+      PartOf = [ "wireplumber.service" ];
+    };
   };
 
   services = {
