@@ -5,6 +5,8 @@
 }:
 
 {
+  home.file.".local/share/Steam/package/beta".text = "publicbeta";
+
   home.packages = with pkgs; [
     chiaki-ng
     ryubing
