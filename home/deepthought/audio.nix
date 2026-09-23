@@ -394,7 +394,10 @@ in
       "wireplumber/wireplumber.conf.d/51-alsa-clock.conf".text = alsaClockRule;
     };
 
-    dataFile."wireplumber/scripts/audio-routes.lua".text = audioRoutesScript;
+    dataFile."wireplumber/scripts/audio-routes.lua" = {
+      text = audioRoutesScript;
+      onChange = "${pkgs.systemd}/bin/systemctl --user restart wireplumber.service";
+    };
 
     desktopEntries."org.rncbc.qpwgraph" = {
       name = "qpwgraph";
