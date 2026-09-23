@@ -187,6 +187,10 @@ let
       #!/bin/sh
       case "$*" in
         "-j clients")
+          if test "$ARDOUR_TEST_PERMANENT_FAILURE" = 1; then
+            printf '[]\n'
+            exit 0
+          fi
           if test ! -e "$ARDOUR_TEST_STATE"; then
             printf 'dirty' >"$ARDOUR_TEST_STATE"
             printf '[]\n'
@@ -200,11 +204,23 @@ let
             '[{pid: $pid, address: "0xtest", class: "Ardour", title: $title}]'
           ;;
         *'hl.dispatch(hl.dsp.send_shortcut({mods = "CTRL", key = "S", window = "address:0xtest"}))'*)
+          if test ! -e "$ARDOUR_TEST_STATE-save-retried"; then
+            touch "$ARDOUR_TEST_STATE-save-retried"
+            printf 'save-failed\n' >>"$ARDOUR_TEST_LOG"
+            printf 'warning: simulated failure\n'
+            exit 0
+          fi
           printf 'clean' >"$ARDOUR_TEST_STATE"
           printf 'save\n' >>"$ARDOUR_TEST_LOG"
           printf 'ok\n'
           ;;
         *'hl.dispatch(hl.dsp.send_shortcut({mods = "CTRL", key = "Q", window = "address:0xtest"}))'*)
+          if test ! -e "$ARDOUR_TEST_STATE-quit-retried"; then
+            touch "$ARDOUR_TEST_STATE-quit-retried"
+            printf 'quit-failed\n' >>"$ARDOUR_TEST_LOG"
+            printf 'warning: simulated failure\n'
+            exit 0
+          fi
           printf 'quit\n' >>"$ARDOUR_TEST_LOG"
           kill "$ARDOUR_TEST_PID"
           printf 'ok\n'
@@ -221,11 +237,26 @@ let
         ARDOUR_TEST_LOG="$test_dir/log" \
         ARDOUR_TEST_PID="$test_pid" \
         "$target" "$test_pid"
-      test "$(cat "$test_dir/log")" = "$(printf 'save\nquit')"
+      test "$(cat "$test_dir/log")" = "$(printf 'save-failed\nsave\nquit-failed\nquit')"
+
+      sleep 30 &
+      test_pid="$!"
+      if ARDOUR_HYPRCTL="$test_dir/hyprctl" \
+        ARDOUR_STOP_TIMEOUT_SECONDS=1 \
+        ARDOUR_TEST_PERMANENT_FAILURE=1 \
+        ARDOUR_TEST_STATE="$test_dir/state" \
+        ARDOUR_TEST_LOG="$test_dir/log" \
+        ARDOUR_TEST_PID="$test_pid" \
+        "$target" "$test_pid"; then
+        echo "expected a persistent Hyprland failure to time out" >&2
+        exit 1
+      fi
     '';
     text = ''
       pid="$1"
       hyprctl_command="''${ARDOUR_HYPRCTL:-hyprctl}"
+      timeout_seconds="''${ARDOUR_STOP_TIMEOUT_SECONDS:-20}"
+      deadline="$((SECONDS + timeout_seconds))"
 
       client() {
         "$hyprctl_command" -j clients |
@@ -237,6 +268,13 @@ let
 
       log() {
         printf 'ardour-graceful-stop: %s\n' "$*" >&2
+      }
+
+      check_deadline() {
+        if test "$SECONDS" -ge "$deadline"; then
+          log "graceful stop timed out after $timeout_seconds seconds; forcing a restart"
+          exit 1
+        fi
       }
 
       send_shortcut() {
@@ -253,7 +291,7 @@ let
         if test -n "$client_info"; then
           break
         fi
-        log "waiting for the Ardour window"
+        check_deadline
         sleep 1
       done
 
@@ -270,7 +308,7 @@ let
         if test -n "$client_info"; then
           address="''${client_info%%$'\t'*}"
         fi
-        log "waiting to request an Ardour save"
+        check_deadline
         sleep 1
       done
 
@@ -282,6 +320,7 @@ let
           break
         fi
 
+        check_deadline
         sleep 0.25
       done
 
@@ -298,11 +337,12 @@ let
         if test -n "$client_info"; then
           address="''${client_info%%$'\t'*}"
         fi
-        log "waiting to request a clean Ardour exit"
+        check_deadline
         sleep 1
       done
 
       while kill -0 "$pid" 2>/dev/null; do
+        check_deadline
         sleep 0.25
       done
     '';
@@ -403,7 +443,7 @@ in
         Restart = "on-failure";
         RestartSec = 5;
         TimeoutStartSec = 600;
-        TimeoutStopSec = "infinity";
+        TimeoutStopSec = 30;
       };
 
       Install.WantedBy = [ "hyprland-session.target" ];
