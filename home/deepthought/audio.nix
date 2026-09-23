@@ -440,6 +440,7 @@ in
         ExecStartPre = "${ardourPipewireReady}/bin/ardour-pipewire-ready";
         ExecStart = "${ardourPipewire}/bin/ardour9 /home/wonko/Default";
         ExecStop = "${ardourGracefulStop}/bin/ardour-graceful-stop $MAINPID";
+        KillSignal = "SIGKILL";
         Restart = "on-failure";
         RestartSec = 5;
         TimeoutStartSec = 600;
