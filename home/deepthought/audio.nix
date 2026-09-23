@@ -202,10 +202,12 @@ let
         *'hl.dispatch(hl.dsp.send_shortcut({mods = "CTRL", key = "S", window = "address:0xtest"}))'*)
           printf 'clean' >"$ARDOUR_TEST_STATE"
           printf 'save\n' >>"$ARDOUR_TEST_LOG"
+          printf 'ok\n'
           ;;
         *'hl.dispatch(hl.dsp.send_shortcut({mods = "CTRL", key = "Q", window = "address:0xtest"}))'*)
           printf 'quit\n' >>"$ARDOUR_TEST_LOG"
           kill "$ARDOUR_TEST_PID"
+          printf 'ok\n'
           ;;
         *) exit 1 ;;
       esac
@@ -239,8 +241,10 @@ let
 
       send_shortcut() {
         local key="$1"
-        "$hyprctl_command" --quiet eval \
-          "return hl.dispatch(hl.dsp.send_shortcut({mods = \"CTRL\", key = \"$key\", window = \"address:$address\"}))"
+        local response
+        response="$("$hyprctl_command" eval \
+          "return hl.dispatch(hl.dsp.send_shortcut({mods = \"CTRL\", key = \"$key\", window = \"address:$address\"}))")"
+        test "$response" = ok
       }
 
       client_info=""
@@ -261,6 +265,10 @@ let
       until send_shortcut S; do
         if ! kill -0 "$pid" 2>/dev/null; then
           exit 0
+        fi
+        client_info="$(client 2>/dev/null || true)"
+        if test -n "$client_info"; then
+          address="''${client_info%%$'\t'*}"
         fi
         log "waiting to request an Ardour save"
         sleep 1
