@@ -396,7 +396,7 @@ in
 
     dataFile."wireplumber/scripts/audio-routes.lua" = {
       text = audioRoutesScript;
-      onChange = "${pkgs.systemd}/bin/systemctl --user restart wireplumber.service";
+      onChange = "RESTART_WIREPLUMBER=1";
     };
 
     desktopEntries."org.rncbc.qpwgraph" = {
@@ -420,6 +420,18 @@ in
     };
   };
 
+  home.activation.restartWireplumberOnAudioRoutesChange =
+    lib.hm.dag.entryAfter
+      [
+        "onFilesChange"
+        "reloadSystemd"
+      ]
+      ''
+        if [[ -v RESTART_WIREPLUMBER ]]; then
+          run ${pkgs.systemd}/bin/systemctl --user restart wireplumber.service
+        fi
+      '';
+
   systemd.user.services = {
     ardour-default = {
       Unit = {
@@ -428,11 +440,7 @@ in
           "pipewire.service"
           "wireplumber.service"
         ];
-        After = [
-          "graphical-session.target"
-          "pipewire.service"
-          "wireplumber.service"
-        ];
+        After = [ "graphical-session.target" ];
         PartOf = [
           "hyprland-session.target"
           "wireplumber.service"
