@@ -58,7 +58,7 @@ let
 
       (
         cd "$staging_dir"
-        zip -qr "$archive" YAZS
+        zip -qry "$archive" YAZS
       )
       printf 'Created %s\n' "$archive"
     '';
