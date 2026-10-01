@@ -37,7 +37,10 @@ let
       copy_file "$unity_logs/Player.log"
       copy_file "$unity_logs/Player-prev.log"
 
-      if [[ -d "$crash_root" ]]; then
+      shopt -s nullglob dotglob
+      crash_entries=("$crash_root"/*)
+      shopt -u nullglob dotglob
+      if (( ''${#crash_entries[@]} )); then
         cp -a -- "$crash_root" "$bundle_dir/Crashes"
         collected=$((collected + 1))
       fi
