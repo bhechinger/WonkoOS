@@ -40,9 +40,15 @@ let
       shopt -s nullglob
       crash_entries=("$crash_root"/Crash_*)
       shopt -u nullglob
-      if (( ''${#crash_entries[@]} )); then
+      latest_crash=
+      for candidate in "''${crash_entries[@]}"; do
+        if [[ -d "$candidate" && ! -L "$candidate" ]]; then
+          latest_crash=$candidate
+        fi
+      done
+      if [[ -n "$latest_crash" ]]; then
         mkdir -p "$bundle_dir/Crashes"
-        cp -a -- "''${crash_entries[-1]}" "$bundle_dir/Crashes/"
+        cp -a -- "$latest_crash" "$bundle_dir/Crashes/"
         collected=$((collected + 1))
       fi
 
