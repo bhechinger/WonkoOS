@@ -42,7 +42,7 @@ let
       shopt -u nullglob
       latest_crash=
       for candidate in "''${crash_entries[@]}"; do
-        if [[ -d "$candidate" && ! -L "$candidate" && -f "$candidate/crash.dmp" && ! -L "$candidate/crash.dmp" ]]; then
+        if [[ -d "$candidate" && ! -L "$candidate" && -f "$candidate/crash.dmp" && -s "$candidate/crash.dmp" && ! -L "$candidate/crash.dmp" ]]; then
           latest_crash=$candidate
         fi
       done
