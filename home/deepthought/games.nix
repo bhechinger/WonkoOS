@@ -37,11 +37,12 @@ let
       copy_file "$unity_logs/Player.log"
       copy_file "$unity_logs/Player-prev.log"
 
-      shopt -s nullglob dotglob
-      crash_entries=("$crash_root"/*)
-      shopt -u nullglob dotglob
+      shopt -s nullglob
+      crash_entries=("$crash_root"/Crash_*)
+      shopt -u nullglob
       if (( ''${#crash_entries[@]} )); then
-        cp -a -- "$crash_root" "$bundle_dir/Crashes"
+        mkdir -p "$bundle_dir/Crashes"
+        cp -a -- "''${crash_entries[-1]}" "$bundle_dir/Crashes/"
         collected=$((collected + 1))
       fi
 
