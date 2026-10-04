@@ -55,7 +55,7 @@
     printing = {
       enable = true;
       drivers = [
-        pkgs.hplipWithPlugin
+        # pkgs.hplipWithPlugin
         pkgs.brlaser
         pkgs.brgenml1lpr
         pkgs.brgenml1cupswrapper
