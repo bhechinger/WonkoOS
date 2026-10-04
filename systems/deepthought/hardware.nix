@@ -180,7 +180,7 @@
 
     sane = {
       enable = true;
-      extraBackends = [ pkgs.hplipWithPlugin ];
+      # extraBackends = [ pkgs.hplipWithPlugin ];
       disabledDefaultBackends = [
         "escl"
         "v4l"
