@@ -6,14 +6,16 @@ local desired_links = {
   { output = "ardour:mackie control out", input = "nanoKONTROL2:nanoKONTROL2 _ CTRL" },
 
   -- Route selected app streams directly into Ardour and remove their default sink links.
-  { output = "spotify:output_FL",             input = "ardour:Music/audio_in 1",   exclusive = true },
-  { output = "spotify:output_FR",             input = "ardour:Music/audio_in 2",   exclusive = true },
-  { output = "Firefox:output_FL",             input = "ardour:Firefox/audio_in 1", exclusive = true },
-  { output = "Firefox:output_FR",             input = "ardour:Firefox/audio_in 2", exclusive = true },
-  { output = "DEATH STRANDING DIRECTOR'S CUT:output_FL", input = "ardour:Games/audio_in 1", exclusive = true },
-  { output = "DEATH STRANDING DIRECTOR'S CUT:output_FR", input = "ardour:Games/audio_in 2", exclusive = true },
+  { output = "spotify:output_FL",                          input = "ardour:Music/audio_in 1",   exclusive = true },
+  { output = "spotify:output_FR",                          input = "ardour:Music/audio_in 2",   exclusive = true },
+  { output = "Firefox:output_FL",                          input = "ardour:Firefox/audio_in 1", exclusive = true },
+  { output = "Firefox:output_FR",                          input = "ardour:Firefox/audio_in 2", exclusive = true },
+  { output = "DEATH STRANDING DIRECTOR'S CUT:output_FL",   input = "ardour:Games/audio_in 1", exclusive = true },
+  { output = "DEATH STRANDING DIRECTOR'S CUT:output_FR",   input = "ardour:Games/audio_in 2", exclusive = true },
   { output = "Yet Another Zombie Survivors.exe:output_FL", input = "ardour:Games/audio_in 1", exclusive = true },
   { output = "Yet Another Zombie Survivors.exe:output_FR", input = "ardour:Games/audio_in 2", exclusive = true },
+  { output = "WhatSie:output_FL",                          input = "ardour:System/audio_in 1", exclusive = true },
+  { output = "WhatSie:output_FR",                          input = "ardour:System/audio_in 2", exluclusive = true },
 
   -- Feed PipeWire-owned virtual sinks into matching Ardour buses.
   { output = "System Sounds:monitor_FL",      input = "ardour:System/audio_in 1" },
