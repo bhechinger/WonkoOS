@@ -39,11 +39,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    auto-splice = {
-      url = "github:zenith-network/auto-splice";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
     spotify-midi-control = {
       url = "github:bhechinger/spotify-midi-control";
       inputs.nixpkgs.follows = "nixpkgs";

@@ -14,7 +14,6 @@
     ./software.nix
     ./desktop.nix
     ./nix_tools.nix
-    ./zenith.nix
     ./games.nix
     ./gamedev.nix
   ];
