@@ -849,7 +849,8 @@ in
         symlinks.mods = "${gigglesomethingProfile}/mods";
         files = {
           config = "${gigglesomethingProfile}/config";
-          "world/datapacks" = "${gigglesomethingProfile}/datapacks";
+          "world/datapacks/navigable-rivers-v1.0.1.zip" =
+            "${gigglesomethingProfile}/datapacks/navigable-rivers-v1.0.1.zip";
           "world/serverconfig" = "${gigglesomethingProfile}/world/serverconfig";
           "server.properties" = "${gigglesomethingProfile}/server.properties";
         };

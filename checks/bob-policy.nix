@@ -497,7 +497,9 @@ assert gigglesomething.serverProperties."rcon.port" == 25576;
 assert gigglesomething.serverProperties."rcon.password" == "@RCON_PASSWORD@";
 assert gigglesomething.symlinks.mods == "${minecraftProfile "gigglesomething"}/mods";
 assert gigglesomething.files.config == "${minecraftProfile "gigglesomething"}/config";
-assert gigglesomething.files."world/datapacks" == "${minecraftProfile "gigglesomething"}/datapacks";
+assert
+  gigglesomething.files."world/datapacks/navigable-rivers-v1.0.1.zip"
+  == "${minecraftProfile "gigglesomething"}/datapacks/navigable-rivers-v1.0.1.zip";
 assert
   gigglesomething.files."world/serverconfig"
   == "${minecraftProfile "gigglesomething"}/world/serverconfig";
