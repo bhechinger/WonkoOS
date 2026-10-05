@@ -79,6 +79,7 @@ let
     level-seed = "3172972216244339045";
     motd = "A FORGE server on ${gigglesomethingPack.versions.minecraft}\\nrunning ${gigglesomethingPack.name} ${gigglesomethingPack.version}";
     max-players = 20;
+    max-tick-time = 300000;
     online-mode = true;
     white-list = true;
     enforce-whitelist = true;
