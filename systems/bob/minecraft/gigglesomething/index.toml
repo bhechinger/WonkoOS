@@ -2067,7 +2067,7 @@ metafile = true
 
 [[files]]
 file = "mods/fancy-tab-sections.pw.toml"
-hash = "d9e7772942c726e9a02228d5fe73c7d34e97239f9c0cb02bd9af20531081bf26"
+hash = "40cf20804939d99fc69485937a7892a8e75fca9bac3720b3ee4dc6923c565b66"
 metafile = true
 
 [[files]]
@@ -2212,7 +2212,7 @@ metafile = true
 
 [[files]]
 file = "mods/libtooltips.pw.toml"
-hash = "23cd5ebabafb8887918a183e68e8fb820ecf2e8fca15a959c22c103b0d61b552"
+hash = "6d5e8e9bdbccdfc3a8c69e20641cd461fd4da2157e5da3f5e93d11690cff4c27"
 metafile = true
 
 [[files]]

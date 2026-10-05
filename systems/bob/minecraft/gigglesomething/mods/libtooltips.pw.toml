@@ -1,6 +1,6 @@
 name = "LibTooltips"
 filename = "libtooltips-2.3-FORGE-1.20.1.jar"
-side = "client"
+side = "both"
 
 [download]
 hash-format = "sha1"
