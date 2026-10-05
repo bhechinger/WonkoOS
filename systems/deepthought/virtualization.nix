@@ -12,6 +12,7 @@ _:
       };
       enable = true;
       storageDriver = "zfs";
+      daemon.settings."log-driver" = "json-file";
     };
     podman = {
       enable = true;
