@@ -18,3 +18,4 @@
 	#Enable or disable sound features
 	#Enable rain drum sounds when rain hits noteblocks[default: true]
 	EnableRainDrums = true
+

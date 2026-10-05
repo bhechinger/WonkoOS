@@ -79,6 +79,7 @@ let
     level-seed = "3172972216244339045";
     motd = "A FORGE server on ${gigglesomethingPack.versions.minecraft}\\nrunning ${gigglesomethingPack.name} ${gigglesomethingPack.version}";
     max-players = 20;
+    max-tick-time = 300000;
     online-mode = true;
     white-list = true;
     enforce-whitelist = true;
@@ -184,7 +185,7 @@ let
     version = gigglesomethingPackVersion;
     src = gigglesomethingPackSource;
     side = "server";
-    packHash = "sha256-g9Emw0O++7f8+32Joa3+/kAZZC5hvUwFqDO8TEhIe6w=";
+    packHash = "sha256-+clPMXRLbin3Y6lwqWXul1hgmN6GwMfL/xGCDjhPSbY=";
   };
   gigglesomethingServerMods =
     pkgs.runCommand "gigglesomething-server-mods"
@@ -240,22 +241,6 @@ let
     file-id = 8156977
     project-id = 923238
   '';
-  gigglesomethingClientOxidizedMetadata = pkgs.writeText "create-oxidized.pw.toml" ''
-    name = "Create: Oxidized"
-    filename = "create_oxidized-0.1.2.jar"
-    side = "both"
-
-    [download]
-    hash-format = "sha1"
-    hash = "cf1aae96a1af67d6ea615060cf8061fc18730ddb"
-    mode = "metadata:curseforge"
-
-    [update]
-    [update.curseforge]
-    file-id = 6261649
-    project-id = 953729
-  '';
-
   clientPack =
     pkgs.runCommand clientPackFileName
       {
@@ -294,14 +279,33 @@ let
   gigglesomethingClientPack =
     pkgs.runCommand gigglesomethingClientPackFileName
       {
-        nativeBuildInputs = [ pkgs.packwiz ];
+        nativeBuildInputs = [
+          pkgs.packwiz
+          pkgs.python3
+        ];
       }
       ''
+        export HOME="$TMPDIR"
         cp -r ${gigglesomethingPackSource} pack
         chmod -R u+w pack
         cd pack
-        cp ${gigglesomethingClientOxidizedMetadata} mods/create-oxidized.pw.toml
         cp ${gigglesomethingServerList} servers.dat
+        ${lib.getExe pkgs.python3} - ${gigglesomethingServerPack}/mods <<'PY'
+        from pathlib import Path
+        import shutil
+        import sys
+        import tomllib
+
+        server_mods = Path(sys.argv[1])
+        for metadata_path in Path("mods").glob("*.pw.toml"):
+            with metadata_path.open("rb") as handle:
+                metadata = tomllib.load(handle)
+            if "curseforge" not in metadata.get("update", {}):
+                shutil.copy2(
+                    server_mods / metadata["filename"],
+                    Path("mods") / metadata["filename"],
+                )
+        PY
         packwiz refresh
         packwiz curseforge export --output "$out"
       '';
@@ -367,7 +371,7 @@ let
   '';
   gigglesomethingPackFiles = pkgs.runCommand "gigglesomething-managed-files" { } ''
     mkdir "$out"
-    cp -r ${gigglesomethingPackSource}/config "$out/"
+    cp -r ${gigglesomethingPackSource}/config ${gigglesomethingPackSource}/datapacks "$out/"
   '';
 
   packCheck = pkgs.runCommand "pwppp-pack-check" { nativeBuildInputs = [ pkgs.packwiz ]; } ''
@@ -554,35 +558,27 @@ let
         diff -u index.toml refreshed/index.toml
         diff -u pack.toml refreshed/pack.toml
         diff -qr ${gigglesomethingPackSource}/config ${gigglesomethingPackFiles}/config
+        diff -qr ${gigglesomethingPackSource}/datapacks ${gigglesomethingPackFiles}/datapacks
 
         python - \
           ${gigglesomethingPackSource} \
           ${gigglesomethingServerPack} \
           ${gigglesomethingClientPack} \
-          ${gigglesomethingServerList} \
-          ${gigglesomethingClientOxidizedMetadata} <<'PY'
+          ${gigglesomethingServerList} <<'PY'
         from collections import Counter
-        import hashlib
         import json
         from pathlib import Path
         import sys
         import tomllib
         import zipfile
 
-        source, server, client, server_list, *override_paths = map(Path, sys.argv[1:])
+        source, server, client, server_list = map(Path, sys.argv[1:])
 
         with (source / "pack.toml").open("rb") as handle:
             pack = tomllib.load(handle)
-        overrides = {}
-        for override_path in override_paths:
-            with override_path.open("rb") as handle:
-                override = tomllib.load(handle)
-            overrides[override["name"]] = override
-
         server_expected = set()
         client_expected = Counter()
-        mapped_server_hashes = {}
-        unused_overrides = set(overrides)
+        client_bundled_expected = set()
         for metadata_path in source.rglob("*.pw.toml"):
             with metadata_path.open("rb") as handle:
                 metadata = tomllib.load(handle)
@@ -595,21 +591,9 @@ let
             if side in {"both", "client"}:
                 curseforge = metadata.get("update", {}).get("curseforge")
                 if curseforge is None:
-                    override = overrides.get(metadata["name"])
-                    if override is None:
-                        raise SystemExit(f"client file lacks CurseForge metadata: {destination}")
-                    unused_overrides.remove(metadata["name"])
-                    if metadata["filename"] != override["filename"]:
-                        raise SystemExit(f"stale CurseForge mapping: {destination}")
-                    curseforge = override["update"]["curseforge"]
-                    mapped_server_hashes[destination] = (
-                        override["download"]["hash-format"],
-                        override["download"]["hash"],
-                    )
+                    client_bundled_expected.add(f"overrides/{destination.as_posix()}")
+                    continue
                 client_expected[(curseforge["project-id"], curseforge["file-id"])] += 1
-
-        if unused_overrides:
-            raise SystemExit(f"unused CurseForge mappings: {sorted(unused_overrides)}")
 
         server_actual = {
             path.relative_to(server).as_posix()
@@ -618,12 +602,6 @@ let
         }
         if server_expected != server_actual:
             raise SystemExit("server mod set does not match Packwiz metadata")
-        for destination, (algorithm, expected_hash) in mapped_server_hashes.items():
-            algorithm = algorithm.replace("-", "")
-            with (server / destination).open("rb") as handle:
-                actual_hash = hashlib.file_digest(handle, algorithm).hexdigest()
-            if actual_hash != expected_hash:
-                raise SystemExit(f"stale CurseForge mapping: {destination}")
 
         with zipfile.ZipFile(client) as archive:
             if archive.read("overrides/servers.dat") != server_list.read_bytes():
@@ -636,6 +614,17 @@ let
             )
             if client_expected != client_actual:
                 raise SystemExit("client mod set does not match Packwiz metadata")
+            client_bundled_actual = {
+                name
+                for name in archive.namelist()
+                if name.startswith("overrides/mods/") and name.endswith(".jar")
+            }
+            if client_bundled_expected != client_bundled_actual:
+                raise SystemExit("client bundled mod set does not match Packwiz metadata")
+            for archive_path in client_bundled_expected:
+                source_path = server / archive_path.removeprefix("overrides/")
+                if source_path.read_bytes() != archive.read(archive_path):
+                    raise SystemExit(f"client bundled mod mismatch: {archive_path}")
         PY
 
         touch "$out"
@@ -666,6 +655,7 @@ let
     ln -s ${gigglesomethingServerPackage} "$out/server"
     ln -s ${gigglesomethingServerMods} "$out/mods"
     cp -r ${gigglesomethingPackFiles}/config/. "$out/config/"
+    cp -r ${gigglesomethingPackFiles}/datapacks "$out/datapacks"
     chmod -R u+w "$out/config"
     cp ${gigglesomethingVoiceConfig} "$out/config/voicechat/voicechat-server.properties"
     cp ${prometheusExporterConfig "127.0.0.12"} \
@@ -859,6 +849,8 @@ in
         symlinks.mods = "${gigglesomethingProfile}/mods";
         files = {
           config = "${gigglesomethingProfile}/config";
+          "world/datapacks/navigable-rivers-v1.0.1.zip" =
+            "${gigglesomethingProfile}/datapacks/navigable-rivers-v1.0.1.zip";
           "world/serverconfig" = "${gigglesomethingProfile}/world/serverconfig";
           "server.properties" = "${gigglesomethingProfile}/server.properties";
         };

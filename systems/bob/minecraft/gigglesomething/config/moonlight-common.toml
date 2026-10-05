@@ -10,3 +10,4 @@
 	extra_children_debug = false
 	#Global datapack folder. A folder where you can store and load datapacks for all your worlds automatically. Set to empty string to disable
 	global_datapacks_folder = "moonlight-global-datapacks"
+

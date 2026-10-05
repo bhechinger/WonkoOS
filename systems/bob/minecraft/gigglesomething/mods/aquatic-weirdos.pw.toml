@@ -1,0 +1,13 @@
+name = "Aquatic Weirdos"
+filename = "Aquatic Weirdos 1.0.0.jar"
+side = "both"
+
+[download]
+url = "https://cdn.modrinth.com/data/bRZ689kK/versions/2zOvDKd7/Aquatic%20Weirdos%201.0.0.jar"
+hash-format = "sha512"
+hash = "1227bb1c71e41e1e94d3bf947ebacece36e9e923785c6bab5d763e971ddf5daa932516289a3bd85248d1520af0a5c47dce730b57ab40aec7f5e9970e12e13b82"
+
+[update]
+[update.modrinth]
+mod-id = "bRZ689kK"
+version = "2zOvDKd7"

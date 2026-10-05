@@ -5,3 +5,4 @@ hullbackArmorProgress = true
 hullbackSoundDistance = 3.0
 #Built-in procedural Hullback wake rendering (foam, bow splash); independent from the Wakes mod's own integration.
 hullbackWakeRendering = false
+

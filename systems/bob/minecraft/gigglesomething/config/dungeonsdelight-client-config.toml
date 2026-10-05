@@ -13,3 +13,4 @@
 		voracityTransparency = false
 		#Should the Ravenous Rush status effect overlay a texture? (default: true)
 		ravenousRushOverlay = true
+

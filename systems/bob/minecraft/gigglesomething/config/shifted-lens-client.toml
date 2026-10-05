@@ -12,3 +12,4 @@
 	[mobs.tadpole]
 		#Whether tadpoles tilt up and down while swimming
 		tadpoleTilting = false
+

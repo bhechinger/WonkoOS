@@ -68,6 +68,10 @@
   "supplementaries": {
     "hat_stand": true
   },
+  "untitledduckmod": {
+    "lay_egg": true,
+    "next_eat": true
+  },
   "jade": {
     "coordinates.rel": false,
     "distance": false,

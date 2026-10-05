@@ -24,3 +24,4 @@
 	"Desert aquarium shop weight:" = 30
 	#Defines how often Hounen Fairy Shrimp will bonemeal plants. The value is once every X amount of ticks, resulting in lower values making bonemealing more often and higher values making bonemealing less often.Default value is 250 and the number must be 0 or higher.
 	"Hounen Fairy Shrimp Bonemeal Rate:" = 250
+

@@ -54,9 +54,9 @@ waveInteractionUpdateFrequency = 4
 ["Debug, Processing and Caching"]
 	#Enable debug?
 	debug = false
-	#Enable parallel processing for performance-critical tasks.
-	#When enabled, certain operations - such as wave spawning, shore detection, and entity interactions -
-	#may be executed concurrently across multiple threads. This can significantly improve performance on multi-core systems.
+	#Enable parallel processing for performance-critical tasks. 
+	#When enabled, certain operations - such as wave spawning, shore detection, and entity interactions - 
+	#may be executed concurrently across multiple threads. This can significantly improve performance on multi-core systems. 
 	#Recommended for servers with high entity load.
 	parallelProcessing = true
 	#Toggle whether or not caches should be utilized. For larger servers with lots of activity, the benefit of using caches give diminishing returns.
@@ -67,3 +67,4 @@ waveInteractionUpdateFrequency = 4
 	#How often the caches should be reset. The time is in ticks, so 20 ticks = 1 second. Set to 0 to disable cache updates.
 	#Range: > 0
 	cacheResetFrequency = 24000
+

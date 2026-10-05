@@ -1,0 +1,16 @@
+name = "Magical Marines"
+filename = "magicalmarine-1.0.3.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "903440d0cd612305fda11e0a14e46c1089efed42"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 5569858
+project-id = 877891
+
+[option]
+optional = true

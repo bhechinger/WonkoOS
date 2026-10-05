@@ -1,11 +1,11 @@
 name = "gigglesomething"
-version = "1.0.10"
+version = "1.0.11"
 pack-format = "packwiz:1.1.0"
 
 [index]
 file = "index.toml"
 hash-format = "sha256"
-hash = "8586677433517f8944fe37d83888c855012c21b706fb71cf9a5973a8529ff71b"
+hash = "c7d9c467808c4e2214019be7506e95555c41c84cb24069af8a3d09521e900c60"
 
 [versions]
 forge = "47.4.10"

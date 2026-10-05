@@ -11,3 +11,4 @@
 		forceEnableCompatItems = false
 		#Disable all mod integration? (if this is set to false then some mods that are supported will feature new items to collaborate the features of both mods) (default: false)
 		disableContentIntegration = false
+

@@ -1,0 +1,13 @@
+name = "Burrowers"
+filename = "burrowers-1.3-1.20.1.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "438bee7ee714a0f00960e99b50ccd95b345af65f"
+url = "https://mediafilez.forgecdn.net/files/5485/846/burrowers-1.3-1.20.1.jar"
+
+[update]
+[update.curseforge]
+file-id = 5485846
+project-id = 1028736

@@ -117,3 +117,4 @@
 	fixed_holding_animations = false
 	#Prevents campfire smoke from rendering if there is a solid block above it
 	campfire_smoke_through_blocks = false
+

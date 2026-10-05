@@ -1,0 +1,13 @@
+name = "Ender Dragon Reborn"
+filename = "Ender_Dragon_Reborn-1.1.zip"
+side = "client"
+
+[download]
+hash-format = "sha1"
+hash = "3d3fcac4231f237b2d18e4caa6e6c7ba8678e27e"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 8701601
+project-id = 1365932

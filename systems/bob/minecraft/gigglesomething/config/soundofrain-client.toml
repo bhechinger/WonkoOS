@@ -69,3 +69,4 @@
 		blacklistedBlocks = [""]
 		#Blacklist blocks by name pattern - blocks containing these strings will be skipped (e.g., "terracotta"
 		blacklistedBlockNamePatterns = ["Copycat"]
+

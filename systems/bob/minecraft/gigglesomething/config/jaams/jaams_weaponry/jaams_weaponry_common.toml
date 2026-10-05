@@ -155,3 +155,4 @@
 	"Custom Mob Equipment" = true
 	#List of item IDs that will never be equipped to mobs.
 	"Mob Equipment Blacklist" = ["minecraft:air"]
+

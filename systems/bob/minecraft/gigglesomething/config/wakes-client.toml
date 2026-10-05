@@ -76,3 +76,4 @@ shaderWaterHeightOffset = 0.0
 	maxSplashPlaneVelocity = 0.5
 	#Range: -5.0 ~ 5.0
 	splashPlaneScale = 0.8
+

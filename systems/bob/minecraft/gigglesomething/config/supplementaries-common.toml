@@ -23,16 +23,16 @@
 
 	[redstone.bellows]
 		enabled = true
-		#bellows pushes air following this equation:
-		#air=(sin(2PI*ticks/period)<0), with period = base_period-(redstone_power-1)*power_scaling
+		#bellows pushes air following this equation: 
+		#air=(sin(2PI*ticks/period)<0), with period = base_period-(redstone_power-1)*power_scaling 
 		#represents base period at 1 power
 		#Range: 1 ~ 512
 		base_period = 78
 		#entities with velocity greater than this won't be pushed
 		#Range: 0.0 ~ 16.0
 		power_scaling = 2.0
-		#velocity increase uses this equation:
-		#vel = base_vel*((range-entity_distance)/range) with base_vel = base_velocity_scaling/period
+		#velocity increase uses this equation: 
+		#vel = base_vel*((range-entity_distance)/range) with base_vel = base_velocity_scaling/period 
 		#note that the block will push further the faster it's pulsing
 		#Range: 0.0 ~ 64.0
 		base_velocity_scaling = 5.0
@@ -680,3 +680,4 @@
 		#Chance that a slime mob will apply slimed effect on successful attack. Multiplied by the slime size
 		#Range: 0.0 ~ 1.0
 		chance_per_slime_size = 0.15
+

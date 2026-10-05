@@ -1,0 +1,13 @@
+name = "wd's Selling Bin"
+filename = "selling_bin-1.4.3-FORGE-1.20.1.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "c35be092a9bc4e06933cd78835935722c1636639"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 8215905
+project-id = 1483881

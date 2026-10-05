@@ -247,7 +247,7 @@
 		"Enable Alt Key Tooltips" = true
 		#List of item IDs excluded from all custom tooltips of the mod
 		"Excluded Tooltips Items" = []
-		#List of item IDs excluded from Control key extra info tooltips added by the mod
+		#List of item IDs excluded from Control key extra info tooltips added by the mod 
 		"Excluded Control Tooltips Items" = []
 		#List of item IDs excluded from Alt key description tooltips added by the mod
 		"Excluded Alt Tooltips Items" = []
@@ -535,3 +535,4 @@
 			["Assorted Client Handler"."Weapon Traits"."Item Traits Settings"."Whirling Strike"]
 				#Enable or disable the whirling strike arm animation in third person
 				"Whirling Strike Arm Animation" = true
+

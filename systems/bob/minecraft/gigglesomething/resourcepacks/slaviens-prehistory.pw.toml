@@ -1,0 +1,13 @@
+name = "Slavien's Prehistory"
+filename = "slaviens_prehistory-1.0.0-resourcepack-1.20.1.zip"
+side = "client"
+
+[download]
+hash-format = "sha1"
+hash = "88fbf7d85a9224ce5971f058d7f56665e2f55860"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 8487876
+project-id = 1620939

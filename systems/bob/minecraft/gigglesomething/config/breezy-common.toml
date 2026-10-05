@@ -24,3 +24,4 @@
 			#Speed modifier added for each higher atmospheric layer
 			#Default: 0.065
 			altitude_bonus = 0.065
+

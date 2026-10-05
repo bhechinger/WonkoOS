@@ -92,3 +92,4 @@
 	#The maximum gossip requirement to be considered an enemy of a Piglin. Prevents you from making them neutral by wearing gold armor [-300-0, default: -100]
 	#Range: -300 ~ 0
 	enemyGossipRequirement = -100
+

@@ -22,3 +22,4 @@
 	"Do Copper Lamp Sounds" = true
 	#Enable or Disable the sounds Film Cameras make ambiently (True by default) doesn't include the start up and end sounds
 	"Do Film Camera Sounds" = true
+

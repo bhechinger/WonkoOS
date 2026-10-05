@@ -58,3 +58,4 @@
 		attackAllWithinTerritory = false
 		#If true, maneaters will always attack entities in the 'always_hunt' list.
 		maneaterAlwaysHuntList = true
+

@@ -16,3 +16,4 @@
 	"Snowy museum weight:" = 20
 	#Defines the weight of museums in desert villages. The higher the value the more common they become. Default value is 30 and the number must be 0 or higher.
 	"Desert museum weight:" = 30
+

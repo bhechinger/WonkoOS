@@ -32,3 +32,4 @@
 	new_creeper_explosion_particle = true
 	#whether the Minecraft explosion particles are replaced with a new one for Tnt explosions.
 	new_tnt_explosion_particle = true
+

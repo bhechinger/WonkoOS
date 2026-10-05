@@ -137,5 +137,5 @@ show_mod_name = false
 	# default: false
 	hide_other_tooltips = false
 	# Override the backend config library. Available options are 'cloth-config' and 'yacl'
-	# default:
+	# default: 
 	config_screen = ""

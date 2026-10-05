@@ -9,3 +9,4 @@
 [bucket-changes]
 	#Whether bucketed mobs display the contents in the tooltip.
 	bucket_tooltip = true
+

@@ -11,3 +11,4 @@ chickenAttackWorms = true
 #Time between mob spawns, recommended to use this instead of changing mob configs.
 #Range: 1 ~ 1000
 mobSpawnInterval = 20
+

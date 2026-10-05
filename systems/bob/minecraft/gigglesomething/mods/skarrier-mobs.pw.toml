@@ -1,13 +1,13 @@
 name = "Skarrier Mobs"
-filename = "skarrier_mobs-1.0.6-forge-1.20.1.jar"
+filename = "skarrier_mobs-1.0.8-forge-1.20.1.jar"
 side = "both"
 
 [download]
 hash-format = "sha1"
-hash = "4b6ed1c7c8884a0e2370512909481af78c0bd1d5"
-url = "https://mediafilez.forgecdn.net/files/8640/743/skarrier_mobs-1.0.6-forge-1.20.1.jar"
+hash = "ba71fefea6ea3c2c36144d35d2193817b971940e"
+url = "https://mediafilez.forgecdn.net/files/9012/417/skarrier_mobs-1.0.8-forge-1.20.1.jar"
 
 [update]
 [update.curseforge]
-file-id = 8640743
+file-id = 9012417
 project-id = 1566041

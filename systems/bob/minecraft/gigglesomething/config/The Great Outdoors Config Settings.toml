@@ -34,7 +34,8 @@
 	"Spawn Rocky Mountain Dwarf Sunflower" = true
 
 ["Rare skin variants"]
-	#Chance for piebald pronghorn skin. example 0.02 is 2%  0.5 is 50%     (default is 0.02)
+	#Chance for piebald pronghorn skin. example 0.02 is 2%  0.5 is 50%     (default is 0.02) 
 	"chance to get piebald pronghorn" = 0.1
-	#Chance for luecistic rubber boa skin. example 0.02 is 2%  0.5 is 50%   (default is 0.02)
+	#Chance for luecistic rubber boa skin. example 0.02 is 2%  0.5 is 50%   (default is 0.02) 
 	"chance to get Luecistic Rubber Boa" = 0.02
+
