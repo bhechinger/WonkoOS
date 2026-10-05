@@ -38,3 +38,4 @@ enable_syrup_foods = true
 #Chance of generating a patch of bell pepper blocks in the jungle. Smaller value = more frequent (vanilla melons use 6).
 #Range: > 0
 bell_pepper_block_patch_chance = 16
+

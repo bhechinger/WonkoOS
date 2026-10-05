@@ -488,7 +488,7 @@ assert gigglesomething.serverProperties.server-port == 25567;
 assert gigglesomething.serverProperties.level-seed == "3172972216244339045";
 assert
   gigglesomething.serverProperties.motd
-  == "A FORGE server on 1.20.1\\nrunning gigglesomething 1.0.10";
+  == "A FORGE server on 1.20.1\\nrunning gigglesomething 1.0.11";
 assert gigglesomething.serverProperties.online-mode;
 assert gigglesomething.serverProperties.white-list;
 assert gigglesomething.serverProperties.enforce-whitelist;
@@ -497,6 +497,7 @@ assert gigglesomething.serverProperties."rcon.port" == 25576;
 assert gigglesomething.serverProperties."rcon.password" == "@RCON_PASSWORD@";
 assert gigglesomething.symlinks.mods == "${minecraftProfile "gigglesomething"}/mods";
 assert gigglesomething.files.config == "${minecraftProfile "gigglesomething"}/config";
+assert gigglesomething.files."world/datapacks" == "${minecraftProfile "gigglesomething"}/datapacks";
 assert
   gigglesomething.files."world/serverconfig"
   == "${minecraftProfile "gigglesomething"}/world/serverconfig";

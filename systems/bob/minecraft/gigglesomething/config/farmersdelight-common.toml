@@ -64,3 +64,4 @@
 	#Tomato crops hanging on rope will force-place a Rope block when broken. Due to technical limitations, this affects things such as commands, making them fail to 'setblock' at first.
 	#Disable this if this block is preventing you from editing a region in creative or with commands. For normal gameplay, I recommend leaving this enabled.
 	enableTomatoRopePermanence = true
+

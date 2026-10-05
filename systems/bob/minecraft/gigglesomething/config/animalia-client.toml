@@ -1,0 +1,12 @@
+
+#Client-only accessibility and presentation settings.
+[accessibility]
+	#Rotates the local camera while its entity is caught in a Crocodile death roll.
+	#Set to false to prevent motion sickness. The captured entity still rotates, and
+	#death-roll movement, damage, release, animation, and other players are unaffected.
+	crocodileDeathRollCameraEffect = true
+	#Shakes the local camera from Elephant footsteps and stomp impacts.
+	#Set to false to prevent motion sickness. Elephant sounds, animations, movement,
+	#stomp damage, knockback, terrain effects, and other players are unaffected.
+	elephantCameraShake = true
+

@@ -392,3 +392,4 @@
 	"Dragon Max Pathfinding Nodes" = 5000
 	#Enables the option to draw the pathfinding nodes when enabled (use a stick on an entity)
 	"Debug Pathfinding Mode" = false
+

@@ -8,3 +8,4 @@
 	"minecraft:overworld" = 8
 	#If the slice size for a dimension isn't defined, this value will get used for that dimension
 	default = 8
+

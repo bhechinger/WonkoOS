@@ -59,3 +59,4 @@
 	creeper_oink_at_pigs = true
 	#whether Creepers struck by lightning summon a new Charged Creeper miniboss. This also enables Beheading Spores, a new crop dropped by the Charged Creeper that allows you to renewably get heads.
 	charged_creeper_miniboss = true
+

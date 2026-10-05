@@ -1,13 +1,13 @@
 name = "Knight Lib"
-filename = "knightlib-forge-1.20.1-1.6.1.jar"
+filename = "knightlib-forge-1.20.1-2.0.3.jar"
 side = "both"
 
 [download]
 hash-format = "sha1"
-hash = "eb03a424f191b559412b05217c246047a7568733"
+hash = "332d6430c702d1fb75a8925120d080c4ac5b8cd9"
 mode = "metadata:curseforge"
 
 [update]
 [update.curseforge]
-file-id = 8400697
+file-id = 8958404
 project-id = 1105855

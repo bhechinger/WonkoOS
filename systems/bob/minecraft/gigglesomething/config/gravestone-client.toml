@@ -2,3 +2,4 @@
 render_skull = true
 #The color of the text at the gravestone (Hex RGB)
 grave_text_color = "FFFFFF"
+

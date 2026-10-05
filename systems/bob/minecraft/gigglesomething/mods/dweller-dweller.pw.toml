@@ -1,0 +1,13 @@
+name = "Dweller dweller"
+filename = "dweller_dweller-3.13.1.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "b0d7dd1e1d74a80fc60221e815f12c7421e994f2"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 5605351
+project-id = 964586

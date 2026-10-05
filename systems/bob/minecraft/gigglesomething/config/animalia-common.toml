@@ -1,0 +1,103 @@
+
+#Natural spawning settings grouped by animal.
+#Weights are relative selection weights, not percentages.
+#Set one habitat weight to 0 to disable only that habitat.
+#All spawning changes require a world reload.
+[spawning]
+
+	#Crocodile natural spawning.
+	[spawning.crocodile]
+		#Enables Crocodile natural spawning. Existing entities, spawn eggs, commands, breeding, and hatching are unaffected.
+		enabled = true
+		#Mangrove Swamp and Beach biomes.
+		#Relative natural spawn weight, not a percentage. Default: 8.
+		#Set to 0 to disable this habitat slot.
+		#Range: 0 ~ 1000
+		mangroveBeachWeight = 8
+		#Savanna, Savanna Plateau, and Windswept Savanna biomes.
+		#Relative natural spawn weight, not a percentage. Default: 20.
+		#Set to 0 to disable this habitat slot.
+		#Range: 0 ~ 1000
+		savannaWeight = 20
+		#Desert biome.
+		#Relative natural spawn weight, not a percentage. Default: 5.
+		#Set to 0 to disable this habitat slot.
+		#Range: 0 ~ 1000
+		desertWeight = 5
+		#Warm Ocean and Lukewarm Ocean biomes.
+		#Relative natural spawn weight, not a percentage. Default: 3.
+		#Set to 0 to disable this habitat slot.
+		#Range: 0 ~ 1000
+		warmOceanWeight = 3
+		#Jungle, Sparse Jungle, and Bamboo Jungle biomes.
+		#Relative natural spawn weight, not a percentage. Default: 3.
+		#Set to 0 to disable this habitat slot.
+		#Range: 0 ~ 1000
+		jungleWeight = 3
+
+	#Jaguar natural spawning.
+	[spawning.jaguar]
+		#Enables Jaguar natural spawning. Existing entities, spawn eggs, commands, breeding, and hatching are unaffected.
+		enabled = true
+		#Jungle, Sparse Jungle, and Bamboo Jungle biomes.
+		#Relative natural spawn weight, not a percentage. Default: 10.
+		#Set to 0 to disable this habitat slot.
+		#Range: 0 ~ 1000
+		jungleWeight = 10
+
+	#Hippopotamus natural spawning.
+	[spawning.hippopotamus]
+		#Enables Hippopotamus natural spawning. Existing entities, spawn eggs, commands, breeding, and hatching are unaffected.
+		enabled = true
+		#Savanna, Savanna Plateau, and Windswept Savanna biomes.
+		#Relative natural spawn weight, not a percentage. Default: 10.
+		#Set to 0 to disable this habitat slot.
+		#Range: 0 ~ 1000
+		savannaWeight = 10
+		#Sparse Jungle biome.
+		#Relative natural spawn weight, not a percentage. Default: 3.
+		#Set to 0 to disable this habitat slot.
+		#Range: 0 ~ 1000
+		sparseJungleWeight = 3
+
+	#Rhinoceros natural spawning.
+	[spawning.rhinoceros]
+		#Enables Rhinoceros natural spawning. Existing entities, spawn eggs, commands, breeding, and hatching are unaffected.
+		enabled = true
+		#Savanna, Savanna Plateau, and Windswept Savanna biomes.
+		#Relative natural spawn weight, not a percentage. Default: 1.
+		#Set to 0 to disable this habitat slot.
+		#Range: 0 ~ 1000
+		savannaWeight = 1
+
+	#Elephant natural spawning.
+	[spawning.elephant]
+		#Enables Elephant natural spawning. Existing entities, spawn eggs, commands, breeding, and hatching are unaffected.
+		enabled = true
+		#Savanna, Savanna Plateau, and Windswept Savanna biomes.
+		#Relative natural spawn weight, not a percentage. Default: 3.
+		#Set to 0 to disable this habitat slot.
+		#Range: 0 ~ 1000
+		savannaWeight = 3
+
+	#Moho natural spawning.
+	[spawning.moho]
+		#Enables Moho natural spawning. Existing entities, spawn eggs, commands, breeding, and hatching are unaffected.
+		enabled = true
+		#Jungle, Sparse Jungle, and Bamboo Jungle biomes.
+		#Relative natural spawn weight, not a percentage. Default: 25.
+		#Set to 0 to disable this habitat slot.
+		#Range: 0 ~ 1000
+		jungleWeight = 25
+
+#Advanced diagnostic options. Leave disabled during ordinary play.
+[advanced]
+
+	[advanced.debug]
+		#Writes detailed Jaguar AI, movement, combat, and animation transitions to latest.log.
+		#This can generate a large amount of log output.
+		jaguarBehaviorLogging = false
+		#Writes detailed Elephant world-food approach diagnostics to latest.log.
+		#Enable only while investigating a feeding/navigation problem.
+		elephantFoodApproachLogging = false
+

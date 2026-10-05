@@ -37,3 +37,4 @@
 	[settings.recipe_book]
 		#Should the Keg have a Recipe Book available on its interface?
 		enableRecipeBookKeg = true
+

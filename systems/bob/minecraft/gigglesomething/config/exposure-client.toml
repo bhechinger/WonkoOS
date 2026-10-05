@@ -1,6 +1,6 @@
 
 [ui]
-	#Tooltips for Developing Film Rolls and Copying Photographs will be shown on Film Rolls and Photographs respectively, describing the crafting recipe.
+	#Tooltips for Developing Film Rolls and Copying Photographs will be shown on Film Rolls and Photographs respectively, describing the crafting recipe. 
 	#Only when JEI is not installed. (Only JEI shows these recipes, not REI or EMI)
 	recipe_tooltips_without_jei = true
 	#Details about Camera configuring will be shown in Camera item tooltip.
@@ -139,3 +139,4 @@
 	#Toast that teaches wiki opening will be shown when attachments menu is first opened, after info toast. Default: true.
 	#*This setting will be automatically set to false on first show.*
 	attachments_show_wiki_toast = true
+

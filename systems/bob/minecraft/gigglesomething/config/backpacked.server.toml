@@ -43,3 +43,4 @@
 		# The maximum size of an emerald stack that can generate in the Wandering Trader backpack
 		# Valid range: 1 to 64 (inclusive)
 		maxEmeraldStack = 32
+

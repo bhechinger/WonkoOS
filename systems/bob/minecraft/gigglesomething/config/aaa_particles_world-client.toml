@@ -19,3 +19,4 @@ enable_loot_sound = true
 enable_fireball_trail = true
 #Whether to add visual-only fireflies in swamp biomes at night
 enable_fireflies = true
+

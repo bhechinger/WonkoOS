@@ -3970,3 +3970,4 @@
 		"Default Ammo" = "minecraft:oak_planks"
 		#List of mob-type=ammo overrides for default slingshot ammo. Format: 'mob_registry_name=item_registry_name'. Examples: 'minecraft:piglin=minecraft:blackstone', 'minecraft:stray=minecraft:blue_ice'.
 		"Mob Ammo Overrides" = ["minecraft:piglin=minecraft:netherrack", "minecraft:piglin_brute=minecraft:blackstone", "minecraft:zombified_piglin=minecraft:blackstone", "minecraft:stray=minecraft:blue_ice"]
+

@@ -115,3 +115,4 @@
 	loot_chest_in_witch_huts = true
 	#Whether the Enchantments added by AC appear in vanilla loot tables.
 	enchantments_in_loot = false
+

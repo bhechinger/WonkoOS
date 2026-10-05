@@ -12,3 +12,4 @@
 	#Defines the texture for the nether portal
 	#Range: 0 ~ 2
 	NETHER_PORTAL_VARIANT = 0
+

@@ -1,0 +1,13 @@
+name = "MacroRealms"
+filename = "macrorealms-1.0.1.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "80eda142969c8f9e5c16659a5738dc28053064f1"
+url = "https://mediafilez.forgecdn.net/files/8734/560/macrorealms-1.0.1.jar"
+
+[update]
+[update.curseforge]
+file-id = 8734560
+project-id = 1666679

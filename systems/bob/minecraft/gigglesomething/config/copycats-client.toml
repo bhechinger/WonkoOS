@@ -7,3 +7,4 @@ disableGraphicsWarnings = false
 #.
 #Colorize different parts of multi-state copycats to distinguish them visually.
 colorizeMultiStates = false
+
