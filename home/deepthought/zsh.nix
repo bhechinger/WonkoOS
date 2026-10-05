@@ -33,6 +33,7 @@
       };
 
       sessionVariables = {
+        PROTON_ENABLE_WAYLAND = "1";
         PROTON_LOG = "1";
         MANGOHUD = "1";
       };
