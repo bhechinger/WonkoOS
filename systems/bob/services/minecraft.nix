@@ -701,8 +701,8 @@ let
 
   pwpppRcon = "${lib.getExe pkgs.mcrcon} -H 127.0.0.11 -P 25575";
   gigglesomethingRcon = "${lib.getExe pkgs.mcrcon} -H 127.0.0.12 -P 25576";
-  minecraftRcon = pkgs.writeShellApplication {
-    name = "minecraft-rcon";
+  pwpppMinecraftRcon = pkgs.writeShellApplication {
+    name = "pwppp-rcon";
     excludeShellChecks = [ "SC1091" ];
     text = ''
       source ${config.sops.templates.minecraft-environment.path}
@@ -777,7 +777,7 @@ in
 
   environment.systemPackages = [
     gigglesomethingMinecraftRcon
-    minecraftRcon
+    pwpppMinecraftRcon
   ];
 
   sops = {

@@ -42,7 +42,7 @@
         ll = "ls -l";
         oci = "oci --auth security_token";
         gigglesomething-rcon = "ssh -t wonko@bob.4amlunch.net gigglesomething-rcon";
-        pwppp-rcon = "ssh -t wonko@bob.4amlunch.net minecraft-rcon";
+        pwppp-rcon = "ssh -t wonko@bob.4amlunch.net pwppp-rcon";
         z = "gram .";
       };
 
