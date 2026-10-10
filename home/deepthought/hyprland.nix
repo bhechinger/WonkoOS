@@ -409,6 +409,7 @@ in
           suppress_event = "activate";
         }
         (workspaceWindowRule "r2modman" "special:games")
+        (workspaceWindowRule "heroic" "special:games")
         {
           match.class = ".*";
           suppress_event = "maximize";

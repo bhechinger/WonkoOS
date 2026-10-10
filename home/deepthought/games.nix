@@ -80,7 +80,11 @@ in
     unstable-pkgs.mame
     mindustry
     r2modman
-    heroic
+    (heroic.override {
+      heroic-unwrapped = heroic-unwrapped.override {
+        umu-launcher = unstable-pkgs.umu-launcher;
+      };
+    })
     (prismlauncher.override {
       additionalLibs = [ libXi ];
     })
