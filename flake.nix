@@ -336,12 +336,14 @@
               ! grep -Fq './scripts/generate_hugepages_inputs.sh' bob-remote
 
               make -C hosts/deepthought --no-print-directory -n deploy-bob > bob-deploy
+              grep -Fq 'nh os build -H bob --diff never .' bob-deploy
               grep -Fq 'nix copy --no-check-sigs --to ssh-ng://wonko@bob.4amlunch.net ./result' bob-deploy
               grep -Fq 'switch-to-configuration" switch' bob-deploy
               ! grep -Fq 'nix build --no-link --profile /nix/var/nix/profiles/system' bob-deploy
               ! grep -Fq 'switch-to-configuration" boot' bob-deploy
 
               make -C hosts/deepthought --no-print-directory -n boot-bob > bob-boot
+              grep -Fq 'nh os build -H bob --diff never .' bob-boot
               grep -Fq 'nix copy --no-check-sigs --to ssh-ng://wonko@bob.4amlunch.net ./result' bob-boot
               grep -Fq 'nix build --no-link --profile /nix/var/nix/profiles/system' bob-boot
               grep -Fq 'switch-to-configuration" boot' bob-boot
