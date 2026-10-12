@@ -257,8 +257,8 @@ make build
 make switch
 ```
 
-From Deepthought, use `make build-bob` and `make deploy-bob`. Bob cannot build
-or deploy Deepthought or Wintermute.
+From Deepthought, use `make build-bob`, `make deploy-bob`, and `make boot-bob`.
+Bob cannot build or deploy Deepthought or Wintermute.
 
 After deploying Bob, verify the native services and their listeners:
 

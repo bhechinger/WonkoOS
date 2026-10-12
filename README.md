@@ -19,9 +19,9 @@ NixOS on Bob, and Home Manager on Wintermute. `make boot` applies only to the
 two NixOS hosts and fails explicitly on Wintermute.
 
 Deepthought may build and deploy the other hosts with `make build-bob`,
-`make deploy-bob`, `make build-wintermute`, and `make deploy-wintermute`. Bob
-and Wintermute may use only their own explicit host targets; cross-host targets
-fail before invoking Nix or SSH.
+`make deploy-bob`, `make boot-bob`, `make build-wintermute`, and
+`make deploy-wintermute`. Bob and Wintermute may use only their own explicit
+host targets; cross-host targets fail before invoking Nix or SSH.
 
 ## Generations and input updates
 

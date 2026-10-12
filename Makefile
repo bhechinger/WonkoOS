@@ -83,11 +83,11 @@ else
 deploy-bob: build-bob
 	NIX_SSHOPTS='-F /home/wonko/.ssh/config -o ControlMaster=no -o ControlPath=none' nix copy --no-check-sigs --to ssh-ng://wonko@bob.4amlunch.net ./result
 	ssh -F /home/wonko/.ssh/config -o ControlMaster=no -o ControlPath=none -T wonko@bob.4amlunch.net sudo --non-interactive "$$(readlink -f result)/bin/switch-to-configuration" switch
+
+boot-bob: build-bob
+	NIX_SSHOPTS='-F /home/wonko/.ssh/config -o ControlMaster=no -o ControlPath=none' nix copy --no-check-sigs --to ssh-ng://wonko@bob.4amlunch.net ./result
 	ssh -F /home/wonko/.ssh/config -o ControlMaster=no -o ControlPath=none -T wonko@bob.4amlunch.net sudo --non-interactive nix build --no-link --profile /nix/var/nix/profiles/system "$$(readlink -f result)"
 	ssh -F /home/wonko/.ssh/config -o ControlMaster=no -o ControlPath=none -T wonko@bob.4amlunch.net sudo --non-interactive "$$(readlink -f result)/bin/switch-to-configuration" boot
-
-boot-bob:
-	$(error This target must run on bob (current host: $(HOST)).)
 endif
 else
 build-bob deploy-bob boot-bob:
