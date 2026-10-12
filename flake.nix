@@ -327,6 +327,25 @@
               grep -Fq 'nh home build . -c deepthought' deepthought
               grep -Fq 'nh home switch . -c deepthought' deepthought
 
+              make -C hosts/deepthought --no-print-directory -n needs-reboot-deepthought > deepthought-reboot
+              grep -Fq 'readlink "result/$part"' deepthought-reboot
+              grep -Fq 'readlink "/run/booted-system/$part"' deepthought-reboot
+              grep -Fq 'deepthought: reboot required' deepthought-reboot
+              ! grep -Eq 'nh os|switch-to-configuration|shutdown' deepthought-reboot
+
+              printf '%s\n' '#!/bin/sh' 'case "$1" in' \
+                'result/kernel) printf "/nix/store/%s-kernel\n" "$REBOOT_TEST" ;;' \
+                '*/kernel) echo /nix/store/booted-kernel ;;' \
+                '*/initrd) echo /nix/store/initrd ;;' \
+                '*/kernel-modules) echo /nix/store/kernel-modules ;;' \
+                'esac' > bin/readlink
+              chmod +x bin/readlink
+              PATH="$PWD/bin:$PATH" REBOOT_TEST=booted sh deepthought-reboot > reboot-not-required
+              grep -Fxq 'deepthought: reboot not required' reboot-not-required
+              PATH="$PWD/bin:$PATH" REBOOT_TEST=new sh deepthought-reboot > reboot-required
+              grep -Fxq 'kernel changed' reboot-required
+              grep -Fxq 'deepthought: reboot required' reboot-required
+
               make -C hosts/bob --no-print-directory -n build switch boot > bob
               grep -Fq 'nh os build -H bob --diff never .' bob
               grep -Fq 'nh os switch -H bob --diff never .' bob
@@ -348,6 +367,12 @@
               grep -Fq 'nix build --no-link --profile /nix/var/nix/profiles/system' bob-boot
               grep -Fq 'switch-to-configuration" boot' bob-boot
               ! grep -Fq 'switch-to-configuration" switch' bob-boot
+
+              make -C hosts/deepthought --no-print-directory -n needs-reboot-bob > bob-reboot
+              grep -Fq 'readlink "result/$part"' bob-reboot
+              grep -Fq 'wonko@bob.4amlunch.net readlink "/run/booted-system/$part"' bob-reboot
+              grep -Fq 'bob: reboot required' bob-reboot
+              ! grep -Eq 'nh os|nix copy|sudo|switch-to-configuration|shutdown' bob-reboot
 
               make -C hosts/deepthought --no-print-directory -n BOB=evil.invalid BOB_SSH='printf BOB_BYPASS' deploy-bob > bob-overrides
               grep -Fq 'ssh-ng://wonko@bob.4amlunch.net' bob-overrides
@@ -377,7 +402,9 @@
               ! make -C hosts/wintermute --no-print-directory boot
               ! make -C hosts/bob --no-print-directory build-wintermute
               ! make -C hosts/wintermute --no-print-directory deploy-bob
+              ! make -C hosts/wintermute --no-print-directory needs-reboot-bob
               ! make -C hosts/bob --no-print-directory build-deepthought
+              ! make -C hosts/bob --no-print-directory needs-reboot-deepthought
               ! make -C hosts/wintermute --no-print-directory rollback-pwppp
               ! make -C hosts/unknown --no-print-directory build
               ! make -C hosts/unknown --no-print-directory generations

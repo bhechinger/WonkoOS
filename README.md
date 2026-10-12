@@ -23,6 +23,10 @@ Deepthought may build and deploy the other hosts with `make build-bob`,
 `make deploy-wintermute`. Bob and Wintermute may use only their own explicit
 host targets; cross-host targets fail before invoking Nix or SSH.
 
+After an OS build, `make needs-reboot-deepthought` or
+`make needs-reboot-bob` compares the build in `result` with the host's booted
+kernel, initrd, and kernel modules. It only reports whether a reboot is needed.
+
 ## Generations and input updates
 
 `make generations` lists the local host's retained NixOS and Home Manager
