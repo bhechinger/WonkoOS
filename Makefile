@@ -1,4 +1,4 @@
-.PHONY: hugepages-inputs refresh-pwppp refresh-gigglesomething refresh-packwiz boot switch build generations update build-deepthought deploy-deepthought boot-deepthought build-bob deploy-bob boot-bob build-wintermute deploy-wintermute boot-wintermute build-minecraft stage-minecraft deploy-minecraft rollback-minecraft
+.PHONY: hugepages-inputs refresh-pwppp refresh-gigglesomething refresh-packwiz boot switch build generations update build-deepthought deploy-deepthought boot-deepthought needs-reboot-deepthought build-bob deploy-bob boot-bob needs-reboot-bob build-wintermute deploy-wintermute boot-wintermute build-minecraft stage-minecraft deploy-minecraft rollback-minecraft
 .PHONY: build-pwppp build-gigglesomething stage-pwppp stage-gigglesomething deploy-pwppp deploy-gigglesomething rollback-pwppp rollback-gigglesomething
 
 override SHELL := /bin/sh
@@ -8,6 +8,24 @@ override HOST := $(firstword $(subst ., ,$(file </proc/sys/kernel/hostname)))
 else
 override HOST := $(shell /bin/hostname -s)
 endif
+
+define check-reboot
+set -eu; \
+need_reboot=false; \
+for part in initrd kernel kernel-modules; do \
+	new="$$(readlink "result/$$part")"; \
+	booted="$$( $(2) "/run/booted-system/$$part")"; \
+	if [ "$$new" != "$$booted" ]; then \
+		echo "$$part changed"; \
+		need_reboot=true; \
+	fi; \
+done; \
+if "$$need_reboot"; then \
+	echo "$(1): reboot required"; \
+else \
+	echo "$(1): reboot not required"; \
+fi
+endef
 
 hugepages-inputs:
 	./scripts/generate_hugepages_inputs.sh
@@ -58,8 +76,11 @@ deploy-deepthought:
 
 boot-deepthought:
 	nh os boot -H deepthought .
+
+needs-reboot-deepthought:
+	@$(call check-reboot,deepthought,readlink)
 else
-build-deepthought deploy-deepthought boot-deepthought:
+build-deepthought deploy-deepthought boot-deepthought needs-reboot-deepthought:
 	$(error This target must run on deepthought (current host: $(HOST)).)
 endif
 
@@ -79,6 +100,9 @@ deploy-bob:
 
 boot-bob:
 	nh os boot -H bob --diff never .
+
+needs-reboot-bob:
+	@$(call check-reboot,bob,readlink)
 else
 deploy-bob: build-bob
 	NIX_SSHOPTS='-F /home/wonko/.ssh/config -o ControlMaster=no -o ControlPath=none' nix copy --no-check-sigs --to ssh-ng://wonko@bob.4amlunch.net ./result
@@ -88,9 +112,12 @@ boot-bob: build-bob
 	NIX_SSHOPTS='-F /home/wonko/.ssh/config -o ControlMaster=no -o ControlPath=none' nix copy --no-check-sigs --to ssh-ng://wonko@bob.4amlunch.net ./result
 	ssh -F /home/wonko/.ssh/config -o ControlMaster=no -o ControlPath=none -T wonko@bob.4amlunch.net sudo --non-interactive nix build --no-link --profile /nix/var/nix/profiles/system "$$(readlink -f result)"
 	ssh -F /home/wonko/.ssh/config -o ControlMaster=no -o ControlPath=none -T wonko@bob.4amlunch.net sudo --non-interactive "$$(readlink -f result)/bin/switch-to-configuration" boot
+
+needs-reboot-bob:
+	@$(call check-reboot,bob,ssh -F /home/wonko/.ssh/config -o ControlMaster=no -o ControlPath=none -T wonko@bob.4amlunch.net readlink)
 endif
 else
-build-bob deploy-bob boot-bob:
+build-bob deploy-bob boot-bob needs-reboot-bob:
 	$(error Only deepthought or bob may run this target (current host: $(HOST)).)
 endif
 

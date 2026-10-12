@@ -258,7 +258,9 @@ make switch
 ```
 
 From Deepthought, use `make build-bob`, `make deploy-bob`, and `make boot-bob`.
-Bob cannot build or deploy Deepthought or Wintermute.
+After `make build-bob`, `make needs-reboot-bob` reports whether the build in
+`result` changes Bob's booted kernel, initrd, or kernel modules. It does not
+deploy or reboot. Bob cannot build or deploy Deepthought or Wintermute.
 
 After deploying Bob, verify the native services and their listeners:
 
