@@ -12,6 +12,8 @@ local desired_links = {
   { output = "Firefox:output_FR",                          input = "ardour:Firefox/audio_in 2", exclusive = true },
   { output = "DEATH STRANDING DIRECTOR'S CUT:output_FL",   input = "ardour:Games/audio_in 1", exclusive = true },
   { output = "DEATH STRANDING DIRECTOR'S CUT:output_FR",   input = "ardour:Games/audio_in 2", exclusive = true },
+  { output = "Borderlands 2:output_FL",                    input = "ardour:Games/audio_in 1", exclusive = true },
+  { output = "Borderlands 2:output_FR",                    input = "ardour:Games/audio_in 2", exclusive = true },
   { output = "Yet Another Zombie Survivors.exe:output_FL", input = "ardour:Games/audio_in 1", exclusive = true },
   { output = "Yet Another Zombie Survivors.exe:output_FR", input = "ardour:Games/audio_in 2", exclusive = true },
   { output = "WhatSie:output_FL",                          input = "ardour:System/audio_in 1", exclusive = true },
