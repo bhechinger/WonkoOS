@@ -82,6 +82,7 @@ in
   security.sudo.wheelNeedsPassword = false;
 
   programs.nh.enable = true;
+  programs.nh.clean.enable = true;
   programs.vim = {
     enable = true;
     defaultEditor = true;
