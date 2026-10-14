@@ -32,6 +32,7 @@ in
     kdePackages.qtsvg
     kdePackages.dolphin
     unzip
+    zip
     irssi
     wine64
     kdePackages.bluedevil
