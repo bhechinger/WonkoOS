@@ -276,13 +276,15 @@
               ];
             }
             ''
+              shellcheck -s sh ${./scripts/cache-latest-mongodb.sh}
               shellcheck -s sh \
                 ${./scripts/generations.sh} \
                 ${./scripts/update-flake.sh} \
                 ${./scripts/repository-workflows-test.sh}
               sh ${./scripts/repository-workflows-test.sh} \
                 ${./scripts/generations.sh} \
-                ${./scripts/update-flake.sh}
+                ${./scripts/update-flake.sh} \
+                ${./scripts/cache-latest-mongodb.sh}
               touch "$out"
             '';
 

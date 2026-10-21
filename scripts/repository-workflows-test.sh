@@ -3,6 +3,7 @@ set -eu
 
 generation_script=$(cd "$(dirname "$1")" && pwd -P)/$(basename "$1")
 update_script=$(cd "$(dirname "$2")" && pwd -P)/$(basename "$2")
+mongodb_script=$(cd "$(dirname "$3")" && pwd -P)/$(basename "$3")
 test_root=$(mktemp -d)
 trap 'rm -rf -- "$test_root"' EXIT HUP INT TERM
 fake_bin=$test_root/bin
@@ -63,6 +64,10 @@ EOF
 cat >"$fake_bin/nix" <<'EOF'
 #!/bin/sh
 case "$*" in
+'build --refresh --impure --no-link --print-out-paths github:NixOS/nixpkgs/nixos-unstable#mongodb')
+	test "$NIXPKGS_ALLOW_UNFREE" = 1
+	printf '%s\n' /nix/store/test-mongodb
+	;;
 'flake update')
 	case "${NIX_MODE:-change}" in
 	change | check-fail | check-rewrite)
@@ -89,12 +94,21 @@ case "$*" in
 	;;
 esac
 EOF
+cat >"$fake_bin/attic" <<'EOF'
+#!/bin/sh
+printf '%s\n' "$*" >>"$ATTIC_LOG"
+EOF
 cat >"$fake_bin/date" <<'EOF'
 #!/bin/sh
 test "$*" = '-u +%Y%m%d-%H%M%S'
 printf '%s\n' 20260910-120000
 EOF
 chmod +x "$fake_bin"/*
+
+ATTIC_LOG=$test_root/attic.log
+export ATTIC_LOG
+PATH="$fake_bin:$PATH" sh "$mongodb_script"
+test "$(cat "$ATTIC_LOG")" = 'push internal /nix/store/test-mongodb'
 
 GH_LOG=$test_root/generation-gh.log
 TEST_ROOT=$test_root
