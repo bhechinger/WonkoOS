@@ -67,6 +67,7 @@ case "$*" in
 build\ --refresh\ --impure\ --out-link\ */mongodb\ github:NixOS/nixpkgs/nixos-unstable#mongodb)
 	test "$NIXPKGS_ALLOW_UNFREE" = 1
 	printf '%s\n' "$*" >>"$MONGODB_NIX_LOG"
+	ln -s /nix/store/test-mongodb "$5"
 	;;
 'flake update')
 	case "${NIX_MODE:-change}" in
@@ -96,6 +97,9 @@ esac
 EOF
 cat >"$fake_bin/attic" <<'EOF'
 #!/bin/sh
+test "$1 $2" = 'push internal'
+test -L "$3"
+test "$(readlink "$3")" = /nix/store/test-mongodb
 printf '%s\n' "$*" >>"$ATTIC_LOG"
 EOF
 cat >"$fake_bin/date" <<'EOF'
