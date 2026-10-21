@@ -39,6 +39,7 @@ let
   cloudflareDnsRecords = builtins.elemAt cloudflareSyncArgs 7;
   attic = config.services.atticd;
   cacheLatestNixpkgs = config.systemd.services.cache-latest-nixpkgs;
+  cacheLatestNixpkgsExecutable = lib.head (lib.splitString " " cacheLatestNixpkgs.serviceConfig.ExecStart);
   cacheLatestNixpkgsUpload = config.systemd.services.cache-latest-nixpkgs-upload;
   cacheLatestNixpkgsTimer = config.systemd.timers.cache-latest-nixpkgs;
   bind = config.services.bind;
@@ -621,6 +622,16 @@ assert
   == "/dev/disk/by-partuuid/1ad95369-76dd-45cb-bf83-e84637ff25de";
 assert (builtins.head config.swapDevices).randomEncryption.enable;
 pkgs.runCommand "bob-policy-test" { nativeBuildInputs = [ pkgs.jq ]; } ''
+  mkdir cache-latest-nixpkgs-state
+  if STATE_DIRECTORY="$PWD/cache-latest-nixpkgs-state" \
+    ${cacheLatestNixpkgsExecutable} >cache-latest-nixpkgs-usage 2>&1; then
+    exit 1
+  else
+    status=$?
+  fi
+  test "$status" -eq 2
+  grep -Fq -- '--build-only OUT_LINK PACKAGE...' cache-latest-nixpkgs-usage
+  test -f cache-latest-nixpkgs-state/lock
   jq -e 'any(.[]; .name == "jellyfin" and .type == "A" and .value == "10.42.0.2")' \
     ${opnsenseDnsRecords} >/dev/null
   jq -e 'any(.[]; .name == "omnigraph" and .type == "A" and .value == "10.42.0.2")' \

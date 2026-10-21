@@ -22,11 +22,15 @@ let
     runtimeInputs = [
       pkgs.coreutils
       pkgs.nix
+      pkgs.util-linux
     ];
     text = ''
       export HOME="$STATE_DIRECTORY"
+      exec 9>"$STATE_DIRECTORY/lock"
+      flock 9
       rm -f -- "$STATE_DIRECTORY"/result*
-      exec ${../../../scripts/cache-latest-nixpkgs.sh} --build-only "$STATE_DIRECTORY/result" "$@"
+      exec ${lib.getExe pkgs.bash} ${../../../scripts/cache-latest-nixpkgs.sh} \
+        --build-only "$STATE_DIRECTORY/result" "$@"
     '';
   };
   cacheLatestNixpkgsUpload = pkgs.writeShellApplication {
@@ -34,8 +38,11 @@ let
     runtimeInputs = [
       pkgs.attic-client
       pkgs.coreutils
+      pkgs.util-linux
     ];
     text = ''
+      exec 9>"$STATE_DIRECTORY/lock"
+      flock 9
       install -D -m 0400 "$CREDENTIALS_DIRECTORY/attic-config" "$RUNTIME_DIRECTORY/attic/config.toml"
       export HOME="$STATE_DIRECTORY"
       export XDG_CONFIG_HOME="$RUNTIME_DIRECTORY"
