@@ -64,9 +64,9 @@ EOF
 cat >"$fake_bin/nix" <<'EOF'
 #!/bin/sh
 case "$*" in
-'build --refresh --impure --no-link --print-out-paths github:NixOS/nixpkgs/nixos-unstable#mongodb')
+build\ --refresh\ --impure\ --out-link\ */mongodb\ github:NixOS/nixpkgs/nixos-unstable#mongodb)
 	test "$NIXPKGS_ALLOW_UNFREE" = 1
-	printf '%s\n' /nix/store/test-mongodb
+	printf '%s\n' "$*" >>"$MONGODB_NIX_LOG"
 	;;
 'flake update')
 	case "${NIX_MODE:-change}" in
@@ -106,9 +106,12 @@ EOF
 chmod +x "$fake_bin"/*
 
 ATTIC_LOG=$test_root/attic.log
-export ATTIC_LOG
+MONGODB_NIX_LOG=$test_root/mongodb-nix.log
+export ATTIC_LOG MONGODB_NIX_LOG
 PATH="$fake_bin:$PATH" sh "$mongodb_script"
-test "$(cat "$ATTIC_LOG")" = 'push internal /nix/store/test-mongodb'
+mongodb_link=$(awk '{ print $5 }' "$MONGODB_NIX_LOG")
+test "$(cat "$ATTIC_LOG")" = "push internal $mongodb_link"
+test ! -e "$(dirname "$mongodb_link")"
 
 GH_LOG=$test_root/generation-gh.log
 TEST_ROOT=$test_root
