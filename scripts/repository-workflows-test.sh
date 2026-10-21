@@ -3,7 +3,7 @@ set -eu
 
 generation_script=$(cd "$(dirname "$1")" && pwd -P)/$(basename "$1")
 update_script=$(cd "$(dirname "$2")" && pwd -P)/$(basename "$2")
-mongodb_script=$(cd "$(dirname "$3")" && pwd -P)/$(basename "$3")
+cache_script=$(cd "$(dirname "$3")" && pwd -P)/$(basename "$3")
 test_root=$(mktemp -d)
 trap 'rm -rf -- "$test_root"' EXIT HUP INT TERM
 fake_bin=$test_root/bin
@@ -64,10 +64,11 @@ EOF
 cat >"$fake_bin/nix" <<'EOF'
 #!/bin/sh
 case "$*" in
-build\ --refresh\ --impure\ --out-link\ */mongodb\ github:NixOS/nixpkgs/nixos-unstable#mongodb)
+build\ --refresh\ --impure\ --out-link\ */result\ github:NixOS/nixpkgs/nixos-unstable#mongodb\ github:NixOS/nixpkgs/nixos-unstable#mongosh)
 	test "$NIXPKGS_ALLOW_UNFREE" = 1
-	printf '%s\n' "$*" >>"$MONGODB_NIX_LOG"
+	printf '%s\n' "$*" >>"$CACHE_NIX_LOG"
 	ln -s /nix/store/test-mongodb "$5"
+	ln -s /nix/store/test-mongosh "$5-1"
 	;;
 'flake update')
 	case "${NIX_MODE:-change}" in
@@ -98,8 +99,11 @@ EOF
 cat >"$fake_bin/attic" <<'EOF'
 #!/bin/sh
 test "$1 $2" = 'push internal'
+test "$#" -eq 4
 test -L "$3"
+test -L "$4"
 test "$(readlink "$3")" = /nix/store/test-mongodb
+test "$(readlink "$4")" = /nix/store/test-mongosh
 printf '%s\n' "$*" >>"$ATTIC_LOG"
 EOF
 cat >"$fake_bin/date" <<'EOF'
@@ -110,12 +114,20 @@ EOF
 chmod +x "$fake_bin"/*
 
 ATTIC_LOG=$test_root/attic.log
-MONGODB_NIX_LOG=$test_root/mongodb-nix.log
-export ATTIC_LOG MONGODB_NIX_LOG
-PATH="$fake_bin:$PATH" sh "$mongodb_script"
-mongodb_link=$(awk '{ print $5 }' "$MONGODB_NIX_LOG")
-test "$(cat "$ATTIC_LOG")" = "push internal $mongodb_link"
-test ! -e "$(dirname "$mongodb_link")"
+CACHE_NIX_LOG=$test_root/cache-nix.log
+export ATTIC_LOG CACHE_NIX_LOG
+if PATH="$fake_bin:$PATH" bash "$cache_script" >"$test_root/cache-usage" 2>&1; then
+	printf 'cache script accepted an empty package list\n' >&2
+	exit 1
+fi
+grep -Fq 'cache-latest-nixpkgs.sh PACKAGE...' "$test_root/cache-usage"
+test ! -e "$ATTIC_LOG"
+test ! -e "$CACHE_NIX_LOG"
+
+PATH="$fake_bin:$PATH" bash "$cache_script" mongodb mongosh
+result_link=$(awk '{ print $5 }' "$CACHE_NIX_LOG")
+test "$(cat "$ATTIC_LOG")" = "push internal $result_link $result_link-1"
+test ! -e "$(dirname "$result_link")"
 
 GH_LOG=$test_root/generation-gh.log
 TEST_ROOT=$test_root

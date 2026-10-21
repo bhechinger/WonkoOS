@@ -276,7 +276,7 @@
               ];
             }
             ''
-              shellcheck -s sh ${./scripts/cache-latest-mongodb.sh}
+              shellcheck -s bash ${./scripts/cache-latest-nixpkgs.sh}
               shellcheck -s sh \
                 ${./scripts/generations.sh} \
                 ${./scripts/update-flake.sh} \
@@ -284,7 +284,7 @@
               sh ${./scripts/repository-workflows-test.sh} \
                 ${./scripts/generations.sh} \
                 ${./scripts/update-flake.sh} \
-                ${./scripts/cache-latest-mongodb.sh}
+                ${./scripts/cache-latest-nixpkgs.sh}
               touch "$out"
             '';
 
