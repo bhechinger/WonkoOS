@@ -276,13 +276,15 @@
               ];
             }
             ''
+              shellcheck -s bash ${./scripts/cache-latest-nixpkgs.sh}
               shellcheck -s sh \
                 ${./scripts/generations.sh} \
                 ${./scripts/update-flake.sh} \
                 ${./scripts/repository-workflows-test.sh}
               sh ${./scripts/repository-workflows-test.sh} \
                 ${./scripts/generations.sh} \
-                ${./scripts/update-flake.sh}
+                ${./scripts/update-flake.sh} \
+                ${./scripts/cache-latest-nixpkgs.sh}
               touch "$out"
             '';
 

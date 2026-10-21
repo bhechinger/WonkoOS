@@ -38,6 +38,12 @@ let
   cloudflareTunnelConfig = builtins.elemAt cloudflareSyncArgs 6;
   cloudflareDnsRecords = builtins.elemAt cloudflareSyncArgs 7;
   attic = config.services.atticd;
+  cacheLatestNixpkgs = deepthought.systemd.services.cache-latest-nixpkgs;
+  cacheLatestNixpkgsExecutable = lib.head (
+    lib.splitString " " cacheLatestNixpkgs.serviceConfig.ExecStart
+  );
+  cacheLatestNixpkgsUpload = deepthought.systemd.services.cache-latest-nixpkgs-upload;
+  cacheLatestNixpkgsTimer = deepthought.systemd.timers.cache-latest-nixpkgs;
   bind = config.services.bind;
   grafana = config.services.grafana;
   mimir = config.services.mimir.configuration;
@@ -431,6 +437,21 @@ assert lib.elem "internal:71s87pJDYLG9Ruu6BxjTC4wZzxneZXqc2U3da6/C2PI="
 assert lib.elem "internal:71s87pJDYLG9Ruu6BxjTC4wZzxneZXqc2U3da6/C2PI="
   deepthought.nix.settings.trusted-public-keys;
 assert lib.elem "nfs-NixCache.automount" config.systemd.services.atticd.requires;
+assert !(config.systemd.services ? cache-latest-nixpkgs);
+assert !(config.systemd.timers ? cache-latest-nixpkgs);
+assert cacheLatestNixpkgs.serviceConfig.DynamicUser;
+assert cacheLatestNixpkgs.serviceConfig.ProtectHome;
+assert cacheLatestNixpkgs.unitConfig.OnSuccess == "cache-latest-nixpkgs-upload.service";
+assert lib.hasSuffix " mongodb" cacheLatestNixpkgs.serviceConfig.ExecStart;
+assert cacheLatestNixpkgsUpload.serviceConfig.DynamicUser;
+assert cacheLatestNixpkgsUpload.serviceConfig.ProtectHome;
+assert cacheLatestNixpkgsUpload.after == [ "network-online.target" ];
+assert cacheLatestNixpkgsUpload.wants == [ "network-online.target" ];
+assert
+  cacheLatestNixpkgsUpload.serviceConfig.LoadCredential
+  == "attic-config:/home/wonko/.config/attic/config.toml";
+assert cacheLatestNixpkgsTimer.timerConfig.OnCalendar == "*-*-* 04:00:00";
+assert cacheLatestNixpkgsTimer.timerConfig.Persistent;
 assert config.systemd.services ? opnsense-dns-sync;
 assert lib.all (mount: mount.what != "10.42.0.30:/Brian") config.systemd.mounts;
 assert lib.any (mount: mount.what == "10.42.0.30:/NixCache") config.systemd.mounts;
@@ -607,6 +628,16 @@ assert
   == "/dev/disk/by-partuuid/1ad95369-76dd-45cb-bf83-e84637ff25de";
 assert (builtins.head config.swapDevices).randomEncryption.enable;
 pkgs.runCommand "bob-policy-test" { nativeBuildInputs = [ pkgs.jq ]; } ''
+  mkdir cache-latest-nixpkgs-state
+  if STATE_DIRECTORY="$PWD/cache-latest-nixpkgs-state" \
+    ${cacheLatestNixpkgsExecutable} >cache-latest-nixpkgs-usage 2>&1; then
+    exit 1
+  else
+    status=$?
+  fi
+  test "$status" -eq 2
+  grep -Fq -- '--build-only OUT_LINK PACKAGE...' cache-latest-nixpkgs-usage
+  test -f cache-latest-nixpkgs-state/lock
   jq -e 'any(.[]; .name == "jellyfin" and .type == "A" and .value == "10.42.0.2")' \
     ${opnsenseDnsRecords} >/dev/null
   jq -e 'any(.[]; .name == "omnigraph" and .type == "A" and .value == "10.42.0.2")' \

@@ -3,6 +3,7 @@ set -eu
 
 generation_script=$(cd "$(dirname "$1")" && pwd -P)/$(basename "$1")
 update_script=$(cd "$(dirname "$2")" && pwd -P)/$(basename "$2")
+cache_script=$(cd "$(dirname "$3")" && pwd -P)/$(basename "$3")
 test_root=$(mktemp -d)
 trap 'rm -rf -- "$test_root"' EXIT HUP INT TERM
 fake_bin=$test_root/bin
@@ -62,7 +63,18 @@ esac
 EOF
 cat >"$fake_bin/nix" <<'EOF'
 #!/bin/sh
+set -eu
+
 case "$*" in
+build\ --refresh\ --impure\ --out-link\ */result\ github:NixOS/nixpkgs/nixos-unstable#mongodb\ github:NixOS/nixpkgs/nixos-unstable#mongosh)
+	test "$NIXPKGS_ALLOW_UNFREE" = 1
+	printf '%s\n' "$*" >>"$CACHE_NIX_LOG"
+	ln -s /nix/store/test-mongodb "$5"
+	ln -s /nix/store/test-mongosh "$5-1"
+	if [ "${CACHE_NIX_MODE:-}" = term ]; then
+		kill -TERM "$PPID"
+	fi
+	;;
 'flake update')
 	case "${NIX_MODE:-change}" in
 	change | check-fail | check-rewrite)
@@ -89,12 +101,111 @@ case "$*" in
 	;;
 esac
 EOF
+cat >"$fake_bin/attic" <<'EOF'
+#!/bin/sh
+set -eu
+
+test "$1 $2" = 'push internal'
+test "$#" -eq 4
+test -L "$3"
+test -L "$4"
+test "$(readlink "$3")" = /nix/store/test-mongodb
+test "$(readlink "$4")" = /nix/store/test-mongosh
+case "${CACHE_ATTIC_MODE:-}" in
+term)
+	signal=TERM
+	;;
+int)
+	signal=INT
+	;;
+*)
+	signal=
+	;;
+esac
+if [ -n "$signal" ]; then
+	touch "$CACHE_ATTIC_STARTED"
+	kill -"$signal" "$PPID"
+	sleep 2
+	touch "$CACHE_ATTIC_COMPLETED"
+fi
+printf '%s\n' "$*" >>"$ATTIC_LOG"
+EOF
 cat >"$fake_bin/date" <<'EOF'
 #!/bin/sh
 test "$*" = '-u +%Y%m%d-%H%M%S'
 printf '%s\n' 20260910-120000
 EOF
 chmod +x "$fake_bin"/*
+
+ATTIC_LOG=$test_root/attic.log
+CACHE_NIX_LOG=$test_root/cache-nix.log
+CACHE_ATTIC_STARTED=$test_root/cache-attic-started
+CACHE_ATTIC_COMPLETED=$test_root/cache-attic-completed
+export ATTIC_LOG CACHE_NIX_LOG CACHE_ATTIC_STARTED CACHE_ATTIC_COMPLETED
+if PATH="$fake_bin:$PATH" bash "$cache_script" >"$test_root/cache-usage" 2>&1; then
+	printf 'cache script accepted an empty package list\n' >&2
+	exit 1
+fi
+grep -Fq 'cache-latest-nixpkgs.sh PACKAGE...' "$test_root/cache-usage"
+test ! -e "$ATTIC_LOG"
+test ! -e "$CACHE_NIX_LOG"
+
+build_only_dir=$test_root/cache-build-only
+mkdir "$build_only_dir"
+PATH="$fake_bin:$PATH" bash "$cache_script" --build-only "$build_only_dir/result" mongodb mongosh
+test -L "$build_only_dir/result"
+test -L "$build_only_dir/result-1"
+test ! -e "$ATTIC_LOG"
+rm -f "$build_only_dir/result" "$build_only_dir/result-1"
+
+: >"$CACHE_NIX_LOG"
+if PATH="$fake_bin:$PATH" CACHE_NIX_MODE=term bash "$cache_script" mongodb mongosh; then
+	printf 'cache script continued after SIGTERM\n' >&2
+	exit 1
+else
+	status=$?
+fi
+test "$status" -eq 143
+result_link=$(awk '{ print $5 }' "$CACHE_NIX_LOG")
+test ! -e "$ATTIC_LOG"
+test ! -e "$(dirname "$result_link")"
+
+: >"$CACHE_NIX_LOG"
+if PATH="$fake_bin:$PATH" CACHE_ATTIC_MODE=term bash "$cache_script" mongodb mongosh; then
+	printf 'cache upload continued after SIGTERM\n' >&2
+	exit 1
+else
+	status=$?
+fi
+test "$status" -eq 143
+result_link=$(awk '{ print $5 }' "$CACHE_NIX_LOG")
+test -e "$CACHE_ATTIC_STARTED"
+test ! -e "$CACHE_ATTIC_COMPLETED"
+test ! -e "$ATTIC_LOG"
+test ! -e "$(dirname "$result_link")"
+
+: >"$CACHE_NIX_LOG"
+CACHE_ATTIC_STARTED=$test_root/cache-attic-int-started
+CACHE_ATTIC_COMPLETED=$test_root/cache-attic-int-completed
+export CACHE_ATTIC_STARTED CACHE_ATTIC_COMPLETED
+if PATH="$fake_bin:$PATH" CACHE_ATTIC_MODE=int bash "$cache_script" mongodb mongosh; then
+	printf 'cache upload continued after SIGINT\n' >&2
+	exit 1
+else
+	status=$?
+fi
+test "$status" -eq 130
+result_link=$(awk '{ print $5 }' "$CACHE_NIX_LOG")
+test -e "$CACHE_ATTIC_STARTED"
+test ! -e "$CACHE_ATTIC_COMPLETED"
+test ! -e "$ATTIC_LOG"
+test ! -e "$(dirname "$result_link")"
+
+: >"$CACHE_NIX_LOG"
+PATH="$fake_bin:$PATH" bash "$cache_script" mongodb mongosh
+result_link=$(awk '{ print $5 }' "$CACHE_NIX_LOG")
+test "$(cat "$ATTIC_LOG")" = "push internal $result_link $result_link-1"
+test ! -e "$(dirname "$result_link")"
 
 GH_LOG=$test_root/generation-gh.log
 TEST_ROOT=$test_root
