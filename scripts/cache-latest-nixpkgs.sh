@@ -13,7 +13,10 @@ for package in "$@"; do
 done
 
 work_dir=$(mktemp -d)
-trap 'rm -rf -- "$work_dir"' EXIT HUP INT TERM
+trap 'rm -rf -- "$work_dir"' EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
 result=$work_dir/result
 
 NIXPKGS_ALLOW_UNFREE=1 nix build \

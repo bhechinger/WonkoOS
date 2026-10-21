@@ -69,6 +69,9 @@ build\ --refresh\ --impure\ --out-link\ */result\ github:NixOS/nixpkgs/nixos-uns
 	printf '%s\n' "$*" >>"$CACHE_NIX_LOG"
 	ln -s /nix/store/test-mongodb "$5"
 	ln -s /nix/store/test-mongosh "$5-1"
+	if [ "${CACHE_NIX_MODE:-}" = term ]; then
+		kill -TERM "$PPID"
+	fi
 	;;
 'flake update')
 	case "${NIX_MODE:-change}" in
@@ -124,6 +127,18 @@ grep -Fq 'cache-latest-nixpkgs.sh PACKAGE...' "$test_root/cache-usage"
 test ! -e "$ATTIC_LOG"
 test ! -e "$CACHE_NIX_LOG"
 
+if PATH="$fake_bin:$PATH" CACHE_NIX_MODE=term bash "$cache_script" mongodb mongosh; then
+	printf 'cache script continued after SIGTERM\n' >&2
+	exit 1
+else
+	status=$?
+fi
+test "$status" -eq 143
+result_link=$(awk '{ print $5 }' "$CACHE_NIX_LOG")
+test ! -e "$ATTIC_LOG"
+test ! -e "$(dirname "$result_link")"
+
+: >"$CACHE_NIX_LOG"
 PATH="$fake_bin:$PATH" bash "$cache_script" mongodb mongosh
 result_link=$(awk '{ print $5 }' "$CACHE_NIX_LOG")
 test "$(cat "$ATTIC_LOG")" = "push internal $result_link $result_link-1"
