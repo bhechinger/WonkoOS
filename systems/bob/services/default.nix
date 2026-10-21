@@ -2,6 +2,7 @@
   imports = [
     ./attic.nix
     ./avahi.nix
+    ./cache-latest-nixpkgs.nix
     ./cloudflared.nix
     ./jackett.nix
     ./jellyfin.nix

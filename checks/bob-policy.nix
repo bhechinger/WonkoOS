@@ -38,6 +38,8 @@ let
   cloudflareTunnelConfig = builtins.elemAt cloudflareSyncArgs 6;
   cloudflareDnsRecords = builtins.elemAt cloudflareSyncArgs 7;
   attic = config.services.atticd;
+  cacheLatestNixpkgs = config.systemd.services.cache-latest-nixpkgs;
+  cacheLatestNixpkgsTimer = config.systemd.timers.cache-latest-nixpkgs;
   bind = config.services.bind;
   grafana = config.services.grafana;
   mimir = config.services.mimir.configuration;
@@ -431,6 +433,10 @@ assert lib.elem "internal:71s87pJDYLG9Ruu6BxjTC4wZzxneZXqc2U3da6/C2PI="
 assert lib.elem "internal:71s87pJDYLG9Ruu6BxjTC4wZzxneZXqc2U3da6/C2PI="
   deepthought.nix.settings.trusted-public-keys;
 assert lib.elem "nfs-NixCache.automount" config.systemd.services.atticd.requires;
+assert cacheLatestNixpkgs.serviceConfig.User == "wonko";
+assert lib.hasSuffix " mongodb" cacheLatestNixpkgs.serviceConfig.ExecStart;
+assert cacheLatestNixpkgsTimer.timerConfig.OnCalendar == "*-*-* 04:00:00";
+assert cacheLatestNixpkgsTimer.timerConfig.Persistent;
 assert config.systemd.services ? opnsense-dns-sync;
 assert lib.all (mount: mount.what != "10.42.0.30:/Brian") config.systemd.mounts;
 assert lib.any (mount: mount.what == "10.42.0.30:/NixCache") config.systemd.mounts;
