@@ -15,6 +15,7 @@
     ./filesystems.nix
     ./software.nix
     ./services.nix
+    ./cache-latest-nixpkgs.nix
     ./system.nix
     ./virtualization.nix
     ./hardware.nix

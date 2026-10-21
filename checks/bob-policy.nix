@@ -38,10 +38,12 @@ let
   cloudflareTunnelConfig = builtins.elemAt cloudflareSyncArgs 6;
   cloudflareDnsRecords = builtins.elemAt cloudflareSyncArgs 7;
   attic = config.services.atticd;
-  cacheLatestNixpkgs = config.systemd.services.cache-latest-nixpkgs;
-  cacheLatestNixpkgsExecutable = lib.head (lib.splitString " " cacheLatestNixpkgs.serviceConfig.ExecStart);
-  cacheLatestNixpkgsUpload = config.systemd.services.cache-latest-nixpkgs-upload;
-  cacheLatestNixpkgsTimer = config.systemd.timers.cache-latest-nixpkgs;
+  cacheLatestNixpkgs = deepthought.systemd.services.cache-latest-nixpkgs;
+  cacheLatestNixpkgsExecutable = lib.head (
+    lib.splitString " " cacheLatestNixpkgs.serviceConfig.ExecStart
+  );
+  cacheLatestNixpkgsUpload = deepthought.systemd.services.cache-latest-nixpkgs-upload;
+  cacheLatestNixpkgsTimer = deepthought.systemd.timers.cache-latest-nixpkgs;
   bind = config.services.bind;
   grafana = config.services.grafana;
   mimir = config.services.mimir.configuration;
@@ -435,12 +437,16 @@ assert lib.elem "internal:71s87pJDYLG9Ruu6BxjTC4wZzxneZXqc2U3da6/C2PI="
 assert lib.elem "internal:71s87pJDYLG9Ruu6BxjTC4wZzxneZXqc2U3da6/C2PI="
   deepthought.nix.settings.trusted-public-keys;
 assert lib.elem "nfs-NixCache.automount" config.systemd.services.atticd.requires;
+assert !(config.systemd.services ? cache-latest-nixpkgs);
+assert !(config.systemd.timers ? cache-latest-nixpkgs);
 assert cacheLatestNixpkgs.serviceConfig.DynamicUser;
 assert cacheLatestNixpkgs.serviceConfig.ProtectHome;
 assert cacheLatestNixpkgs.unitConfig.OnSuccess == "cache-latest-nixpkgs-upload.service";
 assert lib.hasSuffix " mongodb" cacheLatestNixpkgs.serviceConfig.ExecStart;
 assert cacheLatestNixpkgsUpload.serviceConfig.DynamicUser;
 assert cacheLatestNixpkgsUpload.serviceConfig.ProtectHome;
+assert cacheLatestNixpkgsUpload.after == [ "network-online.target" ];
+assert cacheLatestNixpkgsUpload.wants == [ "network-online.target" ];
 assert
   cacheLatestNixpkgsUpload.serviceConfig.LoadCredential
   == "attic-config:/home/wonko/.config/attic/config.toml";

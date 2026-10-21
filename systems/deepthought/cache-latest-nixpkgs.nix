@@ -29,7 +29,7 @@ let
       exec 9>"$STATE_DIRECTORY/lock"
       flock 9
       rm -f -- "$STATE_DIRECTORY"/result*
-      exec ${lib.getExe pkgs.bash} ${../../../scripts/cache-latest-nixpkgs.sh} \
+      exec ${lib.getExe pkgs.bash} ${../../scripts/cache-latest-nixpkgs.sh} \
         --build-only "$STATE_DIRECTORY/result" "$@"
     '';
   };
@@ -64,16 +64,8 @@ in
 
   systemd.services.cache-latest-nixpkgs-upload = {
     description = "Upload current nixpkgs packages to Attic";
-    after = [
-      "atticd.service"
-      "network-online.target"
-      "nginx.service"
-    ];
-    wants = [
-      "atticd.service"
-      "network-online.target"
-      "nginx.service"
-    ];
+    after = [ "network-online.target" ];
+    wants = [ "network-online.target" ];
     serviceConfig = serviceSandbox // {
       ExecStart = lib.getExe cacheLatestNixpkgsUpload;
       LoadCredential = "attic-config:/home/wonko/.config/attic/config.toml";
