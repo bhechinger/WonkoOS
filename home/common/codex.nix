@@ -5,12 +5,6 @@
 }:
 
 let
-  codex = pkgs.writeShellScriptBin "codex" ''
-    unset GITHUB_PAT_TOKEN GITHUB_TOKEN GH_TOKEN GITHUB_PERSONAL_ACCESS_TOKEN
-    exec ${unstable-pkgs.codex}/bin/codex \
-      -c 'shell_environment_policy.allow_login_shell=false' \
-      "$@"
-  '';
   codexGithubMcp = pkgs.writeShellApplication {
     name = "codex-github-mcp";
     runtimeInputs = with pkgs; [
@@ -30,7 +24,7 @@ let
 in
 {
   home.packages = with pkgs; [
-    codex
+    unstable-pkgs.codex
     codexGithubMcp
     gh
     nodejs
