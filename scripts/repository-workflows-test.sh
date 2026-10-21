@@ -111,9 +111,20 @@ test -L "$3"
 test -L "$4"
 test "$(readlink "$3")" = /nix/store/test-mongodb
 test "$(readlink "$4")" = /nix/store/test-mongosh
-if [ "${CACHE_ATTIC_MODE:-}" = term ]; then
+case "${CACHE_ATTIC_MODE:-}" in
+term)
+	signal=TERM
+	;;
+int)
+	signal=INT
+	;;
+*)
+	signal=
+	;;
+esac
+if [ -n "$signal" ]; then
 	touch "$CACHE_ATTIC_STARTED"
-	kill -TERM "$PPID"
+	kill -"$signal" "$PPID"
 	sleep 2
 	touch "$CACHE_ATTIC_COMPLETED"
 fi
@@ -158,6 +169,23 @@ else
 	status=$?
 fi
 test "$status" -eq 143
+result_link=$(awk '{ print $5 }' "$CACHE_NIX_LOG")
+test -e "$CACHE_ATTIC_STARTED"
+test ! -e "$CACHE_ATTIC_COMPLETED"
+test ! -e "$ATTIC_LOG"
+test ! -e "$(dirname "$result_link")"
+
+: >"$CACHE_NIX_LOG"
+CACHE_ATTIC_STARTED=$test_root/cache-attic-int-started
+CACHE_ATTIC_COMPLETED=$test_root/cache-attic-int-completed
+export CACHE_ATTIC_STARTED CACHE_ATTIC_COMPLETED
+if PATH="$fake_bin:$PATH" CACHE_ATTIC_MODE=int bash "$cache_script" mongodb mongosh; then
+	printf 'cache upload continued after SIGINT\n' >&2
+	exit 1
+else
+	status=$?
+fi
+test "$status" -eq 130
 result_link=$(awk '{ print $5 }' "$CACHE_NIX_LOG")
 test -e "$CACHE_ATTIC_STARTED"
 test ! -e "$CACHE_ATTIC_COMPLETED"

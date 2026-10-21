@@ -45,7 +45,7 @@ run() {
 
 trap 'rm -rf -- "$work_dir"' EXIT
 trap 'terminate HUP 129' HUP
-trap 'terminate INT 130' INT
+trap 'terminate TERM 130' INT
 trap 'terminate TERM 143' TERM
 
 run env NIXPKGS_ALLOW_UNFREE=1 nix build \
