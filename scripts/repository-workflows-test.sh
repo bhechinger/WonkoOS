@@ -150,6 +150,15 @@ grep -Fq 'cache-latest-nixpkgs.sh PACKAGE...' "$test_root/cache-usage"
 test ! -e "$ATTIC_LOG"
 test ! -e "$CACHE_NIX_LOG"
 
+build_only_dir=$test_root/cache-build-only
+mkdir "$build_only_dir"
+PATH="$fake_bin:$PATH" bash "$cache_script" --build-only "$build_only_dir/result" mongodb mongosh
+test -L "$build_only_dir/result"
+test -L "$build_only_dir/result-1"
+test ! -e "$ATTIC_LOG"
+rm -f "$build_only_dir/result" "$build_only_dir/result-1"
+
+: >"$CACHE_NIX_LOG"
 if PATH="$fake_bin:$PATH" CACHE_NIX_MODE=term bash "$cache_script" mongodb mongosh; then
 	printf 'cache script continued after SIGTERM\n' >&2
 	exit 1
