@@ -89,10 +89,11 @@ ready and ZFS mounts its datasets under `/basket` and `/home/wonko`.
 
 ## Codex GitHub authentication
 
-Home Manager installs a local `codex-github-mcp` server that obtains the
-current GitHub CLI token only inside the MCP child process. The migration from
-URL and `bearer_token_env_var` configuration is complete. Keep this command
-configuration in `~/.codex/config.toml`:
+Home Manager installs Codex from the pinned unstable nixpkgs input and a local
+`codex-github-mcp` server that obtains the current GitHub CLI token only inside
+the MCP child process. The migration from URL and `bearer_token_env_var`
+configuration is complete. Keep this command configuration in
+`~/.codex/config.toml`:
 
 ```toml
 [mcp_servers.github]
@@ -100,5 +101,4 @@ command = "codex-github-mcp"
 ```
 
 Keep the existing per-tool approval table below it. Use `gh auth login` to
-repair authentication if needed. The Codex launcher excludes GitHub token
-variables from tool subprocesses.
+repair authentication if needed.

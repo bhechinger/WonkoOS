@@ -51,7 +51,6 @@
     let
       system = "x86_64-linux";
       darwinSystem = "aarch64-darwin";
-      codexVersion = "0.153.0";
       hyprlandFix = "d8504461f0e9f95a5df9a0cdc0723d0ca6332888";
       wonkoosRevision = self.rev or (self.dirtyRev or "unknown");
       wonkoosShortRevision = self.shortRev or (self.dirtyShortRev or "unknown");
@@ -76,44 +75,6 @@
                 })
               ];
             });
-            codex =
-              let
-                version = codexVersion;
-                src = prev.fetchurl {
-                  url = "https://github.com/openai/codex/releases/download/rust-v${version}/codex-package-x86_64-unknown-linux-musl.tar.gz";
-                  hash = "sha256-J7DXp1OsGQw0ORhUGkIGe+MHzIijKxqf6vb5Nkig6eo=";
-                };
-              in
-              prev.stdenvNoCC.mkDerivation {
-                pname = "codex";
-                inherit version;
-
-                nativeBuildInputs = [ prev.makeWrapper ];
-                dontUnpack = true;
-
-                installPhase = ''
-                  runHook preInstall
-
-                  install -d $out/bin
-                  tar -xzf ${src} -C $out
-                  mv $out/bin/codex $out/bin/.codex-setpriv-target
-                  makeWrapper ${prev.util-linux}/bin/setpriv $out/bin/codex \
-                    --set RUST_MIN_STACK "16777216" \
-                    --set SSL_CERT_FILE "${prev.cacert}/etc/ssl/certs/ca-bundle.crt" \
-                    --set NIX_SSL_CERT_FILE "${prev.cacert}/etc/ssl/certs/ca-bundle.crt" \
-                    --prefix PATH : ${prev.lib.makeBinPath [ prev.bubblewrap ]} \
-                    --add-flags "--inh-caps=-all" \
-                    --add-flags "--ambient-caps=-all" \
-                    --add-flags "$out/bin/.codex-setpriv-target"
-
-                  runHook postInstall
-                '';
-
-                meta = prev.codex.meta // {
-                  changelog = "https://raw.githubusercontent.com/openai/codex/refs/tags/rust-v${version}/CHANGELOG.md";
-                  platforms = [ "x86_64-linux" ];
-                };
-              };
           })
         ];
       };
@@ -124,27 +85,6 @@
       darwinUnstablePkgs = import inputs.unstable-nixpkgs {
         system = darwinSystem;
         config.allowUnfree = true;
-        overlays = [
-          (_final: prev: {
-            codex = prev.stdenvNoCC.mkDerivation {
-              pname = "codex";
-              version = codexVersion;
-              src = prev.fetchurl {
-                url = "https://github.com/openai/codex/releases/download/rust-v${codexVersion}/codex-aarch64-apple-darwin.tar.gz";
-                hash = "sha256-jN7NC46+I/IOs3MBD9kelReXfoQLaJQe9qZGtAnLMuE=";
-              };
-              dontUnpack = true;
-              installPhase = ''
-                mkdir -p "$out/bin"
-                tar -xzf "$src"
-                install -m 0755 codex-aarch64-apple-darwin "$out/bin/codex"
-              '';
-              meta = prev.codex.meta // {
-                platforms = [ darwinSystem ];
-              };
-            };
-          })
-        ];
       };
       inherit (nixpkgs) lib;
     in
