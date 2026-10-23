@@ -63,6 +63,7 @@ in
     mesa-demos
     whatsie
     qnap
+    stremio-linux-shell
   ];
 
   programs = {
