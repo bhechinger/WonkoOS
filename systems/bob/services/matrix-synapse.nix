@@ -4,6 +4,13 @@
   sops.secrets.matrix-synapse-registration = {
     sopsFile = ../secrets/matrix-synapse-registration.sops;
     format = "yaml";
+    key = "registration_shared_secret";
+    owner = "matrix-synapse";
+    group = "matrix-synapse";
+    mode = "0400";
+  };
+  sops.templates.matrix-synapse-registration = {
+    content = "registration_shared_secret: ${config.sops.placeholder.matrix-synapse-registration}\n";
     owner = "matrix-synapse";
     group = "matrix-synapse";
     mode = "0400";
@@ -12,7 +19,7 @@
 
   services.matrix-synapse = {
     enable = true;
-    extraConfigFiles = [ config.sops.secrets.matrix-synapse-registration.path ];
+    extraConfigFiles = [ config.sops.templates.matrix-synapse-registration.path ];
     settings = {
       server_name = "4amlunch.net";
       public_baseurl = "https://matrix.4amlunch.net/";
