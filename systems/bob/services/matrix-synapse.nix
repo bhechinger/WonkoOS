@@ -28,14 +28,18 @@
   };
 
   services.postgresql = {
-    ensureDatabases = [ "matrix-synapse" ];
     ensureUsers = [
       {
         name = "matrix-synapse";
-        ensureDBOwnership = true;
       }
     ];
   };
+
+  systemd.services.postgresql-setup.postStart = ''
+    if ! psql -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname = 'matrix-synapse'" | grep -q 1; then
+      createdb --template=template0 --lc-collate=C --lc-ctype=C --owner=matrix-synapse matrix-synapse
+    fi
+  '';
 
   services.nginx.virtualHosts = {
     "4amlunch.net" = {
