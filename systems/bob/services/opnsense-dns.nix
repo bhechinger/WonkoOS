@@ -19,6 +19,7 @@ let
     "grafana"
     "jackett"
     "jellyfin"
+    "matrix"
     "minecraft"
     "omnigraph"
     "paperless"
@@ -31,6 +32,11 @@ let
     "voice"
   ];
   records = [
+    {
+      name = "@";
+      type = "A";
+      value = "10.42.0.2";
+    }
     {
       name = "@";
       type = "NS";
