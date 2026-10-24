@@ -9,6 +9,7 @@ runtime model.
 | Workload | Persistent state |
 |---|---|
 | Paperless-ngx | `/var/lib/paperless` and `/var/lib/postgresql/paperless` |
+| Matrix Synapse | `/var/lib/matrix-synapse` and the `matrix-synapse` database in `/var/lib/postgresql/paperless` |
 | Tandoor Recipes | `/var/lib/tandoor-recipes` and the `tandoor_recipes` database in `/var/lib/postgresql/paperless` |
 | OmniGraph | `/var/lib/omnigraph/cluster` |
 | Proton Mail Bridge | `/var/lib/protonmail-bridge` |
@@ -113,9 +114,17 @@ administrator must also handle password resets.
 
 `cloudflare-tunnel-sync.service` declaratively manages the remotely managed
 Cloudflare Tunnel, Spectrum app, and public DNS records. It publishes
-Paperless, Tandoor, and the Minecraft download page through
+Paperless, Tandoor, Matrix, the root-domain Matrix discovery endpoints, and the Minecraft download page through
 `https://localhost:443`, using each public hostname for the TLS and HTTP host
 names. TLS verification remains enabled.
+
+Matrix Synapse is available at `https://matrix.4amlunch.net`; user IDs use the
+`4amlunch.net` domain (for example, `@alice:4amlunch.net`). Federation and
+client discovery use the root domain's `/.well-known/matrix/` endpoints, served
+by Bob through the same tunnel. Public registration is disabled. Create users
+administratively on Bob with `sudo matrix-synapse-register_new_matrix_user`;
+add `-a` when creating an administrator. Synapse state and its PostgreSQL
+database are included in Bob's hourly service snapshots.
 
 `mc-router` accepts Minecraft TCP traffic on internal port `25565` and routes
 `pwppp.4amlunch.net` to the isolated NeoForge listener at
@@ -266,7 +275,7 @@ After deploying Bob, verify the native services and their listeners:
 
 ```sh
 systemctl --failed
-systemctl status nginx postgresql paperless-web paperless-task-queue \
+systemctl status nginx postgresql matrix-synapse paperless-web paperless-task-queue \
   tandoor-recipes postgresqlBackup-tandoor_recipes \
   protonmail-bridge unifi jackett jellyfin sonarr rtorrent minecraft-server-pwppp \
   mc-router svc-router playit atticd omnigraph
@@ -274,6 +283,9 @@ findmnt /nfs/Restic /nfs/NixCache /nfs/Plex /nfs/Torrents
 ss -ltnup
 curl --fail https://jellyfin.4amlunch.net/health
 curl --fail https://omnigraph.4amlunch.net/healthz
+curl --fail https://4amlunch.net/.well-known/matrix/client
+curl --fail https://4amlunch.net/.well-known/matrix/server
+curl --fail https://matrix.4amlunch.net/_matrix/client/versions
 sudo -u jellyfin test -r /dev/dri/renderD128
 sudo -u jellyfin test -w /dev/dri/renderD128
 # After forcing a lower-bitrate playback:
