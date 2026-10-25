@@ -394,6 +394,8 @@ in
         (workspaceWindowRule "com.ktechpit.whatsie" "special:chat")
         (workspaceWindowRule "IRCCloud" "special:chat")
         (workspaceWindowRule "thunderbird" "special:chat2 silent")
+        (workspaceWindowRule "Signal" "special:chat2")
+        (workspaceWindowRule "org.telegram.desktop" "special:chat2")
         (workspaceWindowRule "org.gnome.Fractal" "special:chat2")
         (workspaceWindowRule "Ardour" "special:audio")
         (workspaceWindowRule "org.rncbc.qpwgraph" "special:audio")
