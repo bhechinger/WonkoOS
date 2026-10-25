@@ -64,8 +64,6 @@ build switch boot generations update:
 endif
 
 ifeq ($(HOST),deepthought)
-build-deepthought deploy-deepthought boot-deepthought: hugepages-inputs
-
 build-deepthought:
 	nh os build -H deepthought .
 	nh home build . -c deepthought
@@ -82,11 +80,6 @@ needs-reboot-deepthought:
 else
 build-deepthought deploy-deepthought boot-deepthought needs-reboot-deepthought:
 	$(error This target must run on deepthought (current host: $(HOST)).)
-endif
-
-ifneq ($(filter $(HOST),deepthought bob),)
-ifeq ($(HOST),bob)
-build-bob deploy-bob boot-bob: hugepages-inputs
 endif
 
 build-bob:
