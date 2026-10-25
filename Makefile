@@ -82,6 +82,7 @@ build-deepthought deploy-deepthought boot-deepthought needs-reboot-deepthought:
 	$(error This target must run on deepthought (current host: $(HOST)).)
 endif
 
+ifneq ($(filter $(HOST),deepthought bob),)
 build-bob:
 	nh os build -H bob --diff never .
 	#nix copy --to ssh-ng://wonko@bob.4amlunch.net ./result
