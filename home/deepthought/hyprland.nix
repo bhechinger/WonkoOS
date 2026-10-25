@@ -33,7 +33,6 @@ let
     '';
   };
   terminal = "kitty";
-  telegram = lib.getExe pkgs.telegram-desktop;
   luaInline = lib.generators.mkLuaInline;
   toLua = lib.generators.toLua { };
   bind = key: dispatcher: {
@@ -110,11 +109,7 @@ let
       rules.workspace = "special:chat silent";
     }
     {
-      command = "signal-desktop";
-      rules.workspace = "special:chat2 silent";
-    }
-    {
-      command = telegram;
+      command = "fractal";
       rules.workspace = "special:chat2 silent";
     }
     {
@@ -399,8 +394,7 @@ in
         (workspaceWindowRule "com.ktechpit.whatsie" "special:chat")
         (workspaceWindowRule "IRCCloud" "special:chat")
         (workspaceWindowRule "thunderbird" "special:chat2 silent")
-        (workspaceWindowRule "Signal" "special:chat2")
-        (workspaceWindowRule "org.telegram.desktop" "special:chat2")
+        (workspaceWindowRule "org.gnome.Fractal" "special:chat2")
         (workspaceWindowRule "Ardour" "special:audio")
         (workspaceWindowRule "org.rncbc.qpwgraph" "special:audio")
         (workspaceWindowRule "steam" "special:games")
