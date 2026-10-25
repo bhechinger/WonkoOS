@@ -89,7 +89,7 @@ in
       additionalLibs = [ libXi ];
     })
     javaPackages.compiler.temurin-bin.jdk-25
-    mcpelauncher-ui-qt
+    unstable-pkgs.mcpelauncher-ui-qt
     unigine-superposition
     python314
     yazsCrashCollector
