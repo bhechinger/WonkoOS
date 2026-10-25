@@ -23,6 +23,14 @@ let
           };
         }
         {
+          hostname = "element.4amlunch.net";
+          service = "https://localhost:443";
+          originRequest = {
+            httpHostHeader = "element.4amlunch.net";
+            originServerName = "element.4amlunch.net";
+          };
+        }
+        {
           hostname = "matrix.4amlunch.net";
           service = "https://localhost:443";
           originRequest = {
@@ -72,6 +80,13 @@ let
       {
         type = "CNAME";
         name = "4amlunch.net";
+        content = tunnelTarget;
+        ttl = 1;
+        proxied = true;
+      }
+      {
+        type = "CNAME";
+        name = "element.4amlunch.net";
         content = tunnelTarget;
         ttl = 1;
         proxied = true;

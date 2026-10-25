@@ -1,4 +1,21 @@
-{ config, ... }:
+{
+  config,
+  pkgs,
+  ...
+}:
+
+let
+  elementWeb = pkgs.element-web.override {
+    conf = {
+      default_server_config = {
+        "m.homeserver" = {
+          base_url = "https://matrix.4amlunch.net";
+          server_name = "4amlunch.net";
+        };
+      };
+    };
+  };
+in
 
 {
   sops.secrets.matrix-synapse-registration = {
@@ -49,6 +66,11 @@
   '';
 
   services.nginx.virtualHosts = {
+    "element.4amlunch.net" = {
+      useACMEHost = "4amlunch.net";
+      onlySSL = true;
+      root = elementWeb;
+    };
     "4amlunch.net" = {
       useACMEHost = "4amlunch.net";
       onlySSL = true;
