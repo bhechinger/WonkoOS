@@ -17,6 +17,7 @@ let
     "cache"
     "gigglesomething"
     "grafana"
+    "element"
     "jackett"
     "jellyfin"
     "matrix"

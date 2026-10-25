@@ -118,7 +118,9 @@ Paperless, Tandoor, Matrix, the root-domain Matrix discovery endpoints, and the 
 `https://localhost:443`, using each public hostname for the TLS and HTTP host
 names. TLS verification remains enabled.
 
-Matrix Synapse is available at `https://matrix.4amlunch.net`; user IDs use the
+Element Web is available at `https://element.4amlunch.net` and is configured to
+connect to Matrix Synapse at `https://matrix.4amlunch.net`. Matrix Synapse is
+available at `https://matrix.4amlunch.net`; user IDs use the
 `4amlunch.net` domain (for example, `@alice:4amlunch.net`). Federation and
 client discovery use the root domain's `/.well-known/matrix/` endpoints, served
 by Bob through the same tunnel. Public registration is disabled. Create users
