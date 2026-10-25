@@ -15,6 +15,22 @@ let
     builtins.toJSON {
       ingress = [
         {
+          hostname = "4amlunch.net";
+          service = "https://localhost:443";
+          originRequest = {
+            httpHostHeader = "4amlunch.net";
+            originServerName = "4amlunch.net";
+          };
+        }
+        {
+          hostname = "matrix.4amlunch.net";
+          service = "https://localhost:443";
+          originRequest = {
+            httpHostHeader = "matrix.4amlunch.net";
+            originServerName = "matrix.4amlunch.net";
+          };
+        }
+        {
           hostname = "paperless.4amlunch.net";
           service = "https://localhost:443";
           originRequest = {
@@ -53,6 +69,20 @@ let
   );
   dnsRecords = pkgs.writeText "cloudflare-dns-records.json" (
     builtins.toJSON [
+      {
+        type = "CNAME";
+        name = "4amlunch.net";
+        content = tunnelTarget;
+        ttl = 1;
+        proxied = true;
+      }
+      {
+        type = "CNAME";
+        name = "matrix.4amlunch.net";
+        content = tunnelTarget;
+        ttl = 1;
+        proxied = true;
+      }
       {
         type = "CNAME";
         name = "paperless.4amlunch.net";

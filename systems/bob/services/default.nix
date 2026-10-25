@@ -6,6 +6,7 @@
     ./jackett.nix
     ./jellyfin.nix
     ./media.nix
+    ./matrix-synapse.nix
     ./minecraft.nix
     ./monitoring.nix
     ./murmur.nix
