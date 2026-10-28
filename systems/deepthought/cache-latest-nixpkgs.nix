@@ -3,6 +3,8 @@
 let
   packages = [
     "mongodb"
+    "gram"
+    "rustup"
   ];
   serviceSandbox = {
     AmbientCapabilities = "";
