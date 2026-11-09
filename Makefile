@@ -65,15 +65,15 @@ endif
 
 ifeq ($(HOST),deepthought)
 build-deepthought:
-	nh os build -H deepthought .
-	nh home build . -c deepthought
+	nh os build -H deepthought . --no-nom
+	nh home build . -c deepthought --no-nom
 
 deploy-deepthought:
-	nh os switch -H deepthought .
-	nh home switch . -c deepthought
+	nh os switch -H deepthought . --no-nom
+	nh home switch . -c deepthought --no-nom
 
 boot-deepthought:
-	nh os boot -H deepthought .
+	nh os boot -H deepthought . --no-nom
 
 needs-reboot-deepthought:
 	@$(call check-reboot,deepthought,readlink)
@@ -84,16 +84,16 @@ endif
 
 ifneq ($(filter $(HOST),deepthought bob),)
 build-bob:
-	nh os build -H bob --diff never .
+	nh os build -H bob --diff never . --no-nom
 	#nix copy --to ssh-ng://wonko@bob.4amlunch.net ./result
 	#ssh wonko@bob.4amlunch.net nix store diff-closures /run/current-system "$$(readlink -f result)"
 
 ifeq ($(HOST),bob)
 deploy-bob:
-	nh os switch -H bob --diff never .
+	nh os switch -H bob --diff never . --no-nom
 
 boot-bob:
-	nh os boot -H bob --diff never .
+	nh os boot -H bob --diff never . --no-nom
 
 needs-reboot-bob:
 	@$(call check-reboot,bob,readlink)

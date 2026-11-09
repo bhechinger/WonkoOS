@@ -65,7 +65,14 @@ in
     whatsie
     qnap
     stremio-linux-shell
-    unstable-pkgs.zapfast
+    (unstable-pkgs.zapfast.overrideAttrs (old: {
+      buildInputs =
+        old.buildInputs
+        ++ (with unstable-pkgs; [
+          openssl
+          sqlcipher
+        ]);
+    }))
   ];
 
   programs = {
