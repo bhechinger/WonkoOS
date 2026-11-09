@@ -51,7 +51,6 @@
     let
       system = "x86_64-linux";
       darwinSystem = "aarch64-darwin";
-      hyprlandFix = "d8504461f0e9f95a5df9a0cdc0723d0ca6332888";
       wonkoosRevision = self.rev or (self.dirtyRev or "unknown");
       wonkoosShortRevision = self.shortRev or (self.dirtyShortRev or "unknown");
       revisionModule = {
@@ -65,18 +64,6 @@
       unstable-pkgs = import inputs.unstable-nixpkgs {
         inherit system;
         config.allowUnfree = true;
-        overlays = [
-          (_final: prev: {
-            hyprland = prev.hyprland.overrideAttrs (old: {
-              patches = (old.patches or [ ]) ++ [
-                (prev.fetchurl {
-                  url = "https://github.com/hyprwm/Hyprland/commit/${hyprlandFix}.patch";
-                  hash = "sha256-cZ8LzzU7fUzV7C2VOqFUOs4IOuqDHFtBQmGGgbTRjhw=";
-                })
-              ];
-            });
-          })
-        ];
       };
       darwinPkgs = import nixpkgs {
         system = darwinSystem;
@@ -122,7 +109,6 @@
         extraSpecialArgs = {
           inherit
             inputs
-            hyprlandFix
             unstable-pkgs
             wonkoosRevision
             ;
