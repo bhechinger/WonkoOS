@@ -29,6 +29,7 @@ in
         old.buildInputs
         ++ (with unstable-pkgs; [
           aws-lc
+          oniguruma
           sqlite
           zstd
         ]);
