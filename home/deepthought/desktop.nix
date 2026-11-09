@@ -57,7 +57,17 @@
       enable = true;
       indicator = true;
     };
-    pass-secret-service.enable = true;
+    pass-secret-service = {
+      enable = true;
+      package = pkgs.pass-secret-service.overrideAttrs (old: {
+        patches = (old.patches or [ ]) ++ [ ./pass-secret-service-binary.patch ];
+        installCheckPhase = ''
+          runHook preInstallCheck
+          make test
+          runHook postInstallCheck
+        '';
+      });
+    };
     mako.enable = true;
     awww.enable = true;
     wl-clip-persist = {
