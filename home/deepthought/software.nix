@@ -1,6 +1,7 @@
 {
   pkgs,
   config,
+  unstable-pkgs,
   ...
 }:
 
@@ -64,6 +65,7 @@ in
     whatsie
     qnap
     stremio-linux-shell
+    unstable-pkgs.zapfast
   ];
 
   programs = {
