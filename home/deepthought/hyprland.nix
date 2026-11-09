@@ -101,7 +101,7 @@ let
       rules.workspace = "special:chat silent";
     }
     {
-      command = ''sed -i 's/^windowTheme=.*/windowTheme=dark/' "$HOME/.config/org.keshavnrj.ubuntu/WhatSie.conf"; exec whatsie'';
+      command = "zapfast";
       rules.workspace = "special:chat silent";
     }
     {
@@ -391,7 +391,7 @@ in
       window_rule = [
         (workspaceWindowRule "Slack" "special:chat")
         (workspaceWindowRule "discord" "special:chat")
-        (workspaceWindowRule "com.ktechpit.whatsie" "special:chat")
+        (workspaceWindowRule "zapfast" "special:chat")
         (workspaceWindowRule "IRCCloud" "special:chat")
         (workspaceWindowRule "thunderbird" "special:chat2 silent")
         (workspaceWindowRule "Signal" "special:chat2")
