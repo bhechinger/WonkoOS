@@ -24,7 +24,16 @@ let
 in
 {
   home.packages = with pkgs; [
-    unstable-pkgs.codex
+    (unstable-pkgs.codex.overrideAttrs (old: {
+      buildInputs =
+        old.buildInputs
+        ++ (with unstable-pkgs; [
+          aws-lc
+          oniguruma
+          sqlite
+          zstd
+        ]);
+    }))
     codexGithubMcp
     gh
     nodejs
