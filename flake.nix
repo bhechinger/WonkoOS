@@ -171,6 +171,20 @@
             touch "$out"
           '';
 
+        zapfast-startup =
+          pkgs.runCommand "zapfast-startup-test"
+            {
+              nativeBuildInputs = with pkgs; [
+                jq
+                shellcheck
+              ];
+            }
+            ''
+              shellcheck -s sh ${./home/deepthought/zapfast-startup.sh} ${./home/deepthought/zapfast-startup-test.sh}
+              sh ${./home/deepthought/zapfast-startup-test.sh} ${./home/deepthought/zapfast-startup.sh}
+              touch "$out"
+            '';
+
         hugepages =
           assert import ./common/hugepages-test.nix;
           pkgs.runCommand "hugepages-test" { } ''

@@ -75,7 +75,16 @@ let
       rules.workspace = "special:chat silent";
     }
     {
-      command = "zapfast";
+      command = lib.getExe (
+        pkgs.writeShellApplication {
+          name = "zapfast-startup";
+          runtimeInputs = with pkgs; [
+            gnupg
+            jq
+          ];
+          text = builtins.readFile ./zapfast-startup.sh;
+        }
+      );
       rules.workspace = "special:chat silent";
     }
     {
