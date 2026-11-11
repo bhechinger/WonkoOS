@@ -1,0 +1,13 @@
+name = "Monster Expansion"
+filename = "monsterexpansion-1.20.1-v0.7.6.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "8c28505124423307736cc0a3585034ceb3a8a452"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 8594666
+project-id = 1336105

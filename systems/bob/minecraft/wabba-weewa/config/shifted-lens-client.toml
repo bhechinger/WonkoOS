@@ -1,0 +1,15 @@
+
+[mobs]
+
+	[mobs.ghast]
+		#Whether remodeled ghasts have a more vanilla faithful texture
+		retroGhasts = false
+
+	[mobs.guardian]
+		#Whether remodeled guardians have a cleaner looking texture
+		stainlessGuardians = false
+
+	[mobs.tadpole]
+		#Whether tadpoles tilt up and down while swimming
+		tadpoleTilting = false
+

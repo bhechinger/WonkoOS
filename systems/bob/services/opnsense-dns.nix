@@ -31,6 +31,7 @@ let
     "rutorrent"
     "sonarr"
     "voice"
+    "wabba-weewa"
   ];
   records = [
     {

@@ -1,0 +1,13 @@
+name = "Aurora Fantasy"
+filename = "Aurora Fantasy.5.6.zip"
+side = "client"
+
+[download]
+hash-format = "sha1"
+hash = "4835661507a305c7f27d712e42e59e91ff68e951"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 9321535
+project-id = 1462750

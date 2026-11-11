@@ -1,0 +1,69 @@
+
+[items]
+	#Whether snowballs apply freezing ticks on hit
+	freezingSnowballs = true
+	#Whether fire charges can be thrown
+	throwableFireCharges = true
+
+[mobs]
+	#Whether fish flop less often
+	betterFishFlopping = true
+	#Whether you can milk any entity, I don't know why you would want this
+	milkableEverything = false
+
+	[mobs.cod]
+		#Whether cod have updated ai and a new model
+		codRevamp = true
+
+	[mobs.ghast]
+		#Whether ghasts have updated ai and a new model
+		ghastRevamp = true
+		#Whether ghasts drop more experience
+		moreGhastXp = true
+
+	[mobs.guardian]
+		#Whether guardiands have updated ai and a new model
+		guardianRevamp = true
+
+	[mobs.pufferfish]
+		#Whether pufferfish have updated ai
+		pufferfishRevamp = true
+
+	[mobs.rabbit]
+		#Whether rabbits are upscaled and have updated ai
+		rabbitRevamp = true
+		#Whether rabbits can step up blocks to prevent getting stuck on the edges of blocks
+		rabbitStepUp = true
+		#Whether rabbits need to fall further before taking fall damage
+		rabbitFallDamageTweak = true
+		#Whether killer rabbits can spawn naturally
+		naturalKillerRabbits = true
+
+	[mobs.salmon]
+		#Whether salmon have updated ai and a new model
+		salmonRevamp = true
+
+	[mobs.squid]
+		#Whether squids have updated ai and new animations
+		squidRevamp = true
+		#Whether squids are milkable with buckets
+		milkableSquids = true
+		#Whether squids can be bucketed with water buckets
+		bucketableSquids = true
+		#Whether squids flop around on land
+		floppingSquids = true
+		#Whether squid ink applies blindness
+		blindingSquids = true
+		#The duration of the blindness effect applied by squid ink
+		#Range: > 0
+		blindingDuration = 60
+		#Whether glow squid ink applies glowing
+		glowingSquids = true
+		#The duration of the glowing effect applied by glow squid ink
+		#Range: > 0
+		glowingDuration = 60
+
+	[mobs.tropical_fish]
+		#Whether tropical fish have updated ai
+		tropicalFishRevamp = true
+

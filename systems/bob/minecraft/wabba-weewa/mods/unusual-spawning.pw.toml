@@ -1,0 +1,13 @@
+name = "Unusual Spawning"
+filename = "unusual_spawning-1.20.1-1.3.2.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "6462c3951d181ad3783d1258e5364466f264234e"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 9388472
+project-id = 1399529

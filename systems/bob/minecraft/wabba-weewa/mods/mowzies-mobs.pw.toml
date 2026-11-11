@@ -1,0 +1,13 @@
+name = "Mowzie's Mobs"
+filename = "mowziesmobs-1.8.2.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "25ffcd175cc03650e38e60d3cb7b3e038d9d3345"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 7815705
+project-id = 250498

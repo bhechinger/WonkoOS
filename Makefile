@@ -1,5 +1,5 @@
-.PHONY: hugepages-inputs refresh-pwppp refresh-gigglesomething refresh-packwiz boot switch build generations update build-deepthought deploy-deepthought boot-deepthought needs-reboot-deepthought build-bob deploy-bob boot-bob needs-reboot-bob build-wintermute deploy-wintermute boot-wintermute build-minecraft stage-minecraft deploy-minecraft rollback-minecraft
-.PHONY: build-pwppp build-gigglesomething stage-pwppp stage-gigglesomething deploy-pwppp deploy-gigglesomething rollback-pwppp rollback-gigglesomething
+.PHONY: hugepages-inputs refresh-pwppp refresh-gigglesomething refresh-wabba-weewa refresh-packwiz boot switch build generations update build-deepthought deploy-deepthought boot-deepthought needs-reboot-deepthought build-bob deploy-bob boot-bob needs-reboot-bob build-wintermute deploy-wintermute boot-wintermute build-minecraft stage-minecraft deploy-minecraft rollback-minecraft
+.PHONY: build-pwppp build-gigglesomething build-wabba-weewa stage-pwppp stage-gigglesomething stage-wabba-weewa deploy-pwppp deploy-gigglesomething deploy-wabba-weewa rollback-pwppp rollback-gigglesomething rollback-wabba-weewa
 
 override SHELL := /bin/sh
 override .SHELLFLAGS := -c
@@ -31,7 +31,7 @@ hugepages-inputs:
 	./scripts/generate_hugepages_inputs.sh
 
 ifneq ($(filter $(HOST),deepthought bob),)
-refresh-pwppp refresh-gigglesomething: refresh-%:
+refresh-pwppp refresh-gigglesomething refresh-wabba-weewa: refresh-%:
 	cd systems/bob/minecraft/$* && nix shell ../../../..#nixosConfigurations.bob.pkgs.packwiz -c packwiz refresh
 	@set -eu; \
 	output="$$(nix build --impure --expr 'let pkgs = (builtins.getFlake (toString ./.)).nixosConfigurations.bob.pkgs; in pkgs.fetchPackwizModpack { src = ./systems/bob/minecraft/$*; side = "server"; packHash = pkgs.lib.fakeHash; }' --no-link 2>&1 || :)"; \
@@ -40,11 +40,11 @@ refresh-pwppp refresh-gigglesomething: refresh-%:
 	sed -i "/pname = \"$*-server\"/,/^  };/s|packHash = \".*\";|packHash = \"$$hash\";|" systems/bob/services/minecraft.nix; \
 	echo "Updated $* packHash to $$hash"
 else
-refresh-pwppp refresh-gigglesomething:
+refresh-pwppp refresh-gigglesomething refresh-wabba-weewa:
 	$(error Only deepthought or bob may run this target (current host: $(HOST)).)
 endif
 
-refresh-packwiz: refresh-pwppp refresh-gigglesomething
+refresh-packwiz: refresh-pwppp refresh-gigglesomething refresh-wabba-weewa
 
 ifneq ($(filter $(HOST),deepthought bob wintermute),)
 build: build-$(HOST)
@@ -140,10 +140,10 @@ boot-wintermute:
 	$(error Wintermute uses Home Manager; make boot is unsupported.)
 
 ifneq ($(filter $(HOST),deepthought bob),)
-build-pwppp build-gigglesomething: build-%: refresh-%
+build-pwppp build-gigglesomething build-wabba-weewa: build-%: refresh-%
 	nix build .#nixosConfigurations.bob.config.system.build.minecraftDeployments.$* --out-link result-minecraft-$*
 
-stage-pwppp stage-gigglesomething: stage-%: build-%
+stage-pwppp stage-gigglesomething stage-wabba-weewa: stage-%: build-%
 	@new="$$(readlink -f result-minecraft-$*)"; \
 	old="$$(ssh -F /home/wonko/.ssh/config -o ControlMaster=no -o ControlPath=none -T wonko@bob.4amlunch.net readlink -f /nix/var/nix/profiles/per-user/root/minecraft-$* 2>/dev/null || :)"; \
 	if [ "$$new" = "$$old" ]; then \
@@ -152,7 +152,7 @@ stage-pwppp stage-gigglesomething: stage-%: build-%
 		nix copy --no-check-sigs --to ssh-ng://wonko@bob.4amlunch.net ./result-minecraft-$*; \
 	fi
 
-deploy-pwppp deploy-gigglesomething: deploy-%: stage-%
+deploy-pwppp deploy-gigglesomething deploy-wabba-weewa: deploy-%: stage-%
 	@new="$$(readlink -f result-minecraft-$*)"; \
 	old="$$(ssh -F /home/wonko/.ssh/config -o ControlMaster=no -o ControlPath=none -T wonko@bob.4amlunch.net readlink -f /nix/var/nix/profiles/per-user/root/minecraft-$* 2>/dev/null || :)"; \
 	if [ "$$new" = "$$old" ]; then \
@@ -162,18 +162,18 @@ deploy-pwppp deploy-gigglesomething: deploy-%: stage-%
 		ssh -F /home/wonko/.ssh/config -o ControlMaster=no -o ControlPath=none -T wonko@bob.4amlunch.net sudo systemctl restart minecraft-server-$*.service; \
 	fi
 
-rollback-pwppp rollback-gigglesomething: rollback-%:
+rollback-pwppp rollback-gigglesomething rollback-wabba-weewa: rollback-%:
 	ssh wonko@bob.4amlunch.net sudo nix-env --profile /nix/var/nix/profiles/per-user/root/minecraft-$* --rollback
 	ssh wonko@bob.4amlunch.net sudo systemctl restart minecraft-server-$*.service
 else
-build-pwppp build-gigglesomething stage-pwppp stage-gigglesomething deploy-pwppp deploy-gigglesomething rollback-pwppp rollback-gigglesomething:
+build-pwppp build-gigglesomething build-wabba-weewa stage-pwppp stage-gigglesomething stage-wabba-weewa deploy-pwppp deploy-gigglesomething deploy-wabba-weewa rollback-pwppp rollback-gigglesomething rollback-wabba-weewa:
 	$(error Only deepthought or bob may run this target (current host: $(HOST)).)
 endif
 
-build-minecraft: build-pwppp build-gigglesomething
+build-minecraft: build-pwppp build-gigglesomething build-wabba-weewa
 
-stage-minecraft: stage-pwppp stage-gigglesomething
+stage-minecraft: stage-pwppp stage-gigglesomething stage-wabba-weewa
 
-deploy-minecraft: deploy-pwppp deploy-gigglesomething
+deploy-minecraft: deploy-pwppp deploy-gigglesomething deploy-wabba-weewa
 
-rollback-minecraft: rollback-pwppp rollback-gigglesomething
+rollback-minecraft: rollback-pwppp rollback-gigglesomething rollback-wabba-weewa

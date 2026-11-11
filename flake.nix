@@ -368,6 +368,7 @@
         storage-layout = import ./checks/storage-layout.nix { inherit self lib pkgs; };
 
         bob-policy = import ./checks/bob-policy.nix { inherit self lib pkgs; };
+        minecraft-wabba-weewa = import ./checks/minecraft-wabba-weewa.nix { inherit self lib pkgs; };
 
         formatting = pkgs.runCommand "formatting-check" { nativeBuildInputs = [ pkgs.nixfmt-tree ]; } ''
           cp -r ${self} source

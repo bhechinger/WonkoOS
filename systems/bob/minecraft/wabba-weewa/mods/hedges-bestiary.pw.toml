@@ -1,0 +1,13 @@
+name = "Hedge's Bestiary"
+filename = "hedges_bestiary-1.1.6-forge.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "7b996574c169f740343f56120db608524330d734"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 9521248
+project-id = 1689358

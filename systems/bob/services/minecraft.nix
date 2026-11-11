@@ -26,6 +26,13 @@ let
   gigglesomethingVersionInfo = pkgs.writeText "gigglesomething-version.html" "Modpack ${gigglesomethingPackVersion} / Minecraft ${gigglesomethingPack.versions.minecraft} / Forge ${gigglesomethingPack.versions.forge}";
   gigglesomethingDataDir = "/var/lib/minecraft/gigglesomething";
   gigglesomethingStdin = config.services.minecraft-servers.managementSystem.systemd-socket.stdinSocket.path "gigglesomething";
+  wabbaWeewaPackSource = ../minecraft/wabba-weewa;
+  wabbaWeewaPack = builtins.fromTOML (builtins.readFile (wabbaWeewaPackSource + "/pack.toml"));
+  wabbaWeewaProfile = minecraftProfile "wabba-weewa";
+  wabbaWeewaDataDir = "/var/lib/minecraft/wabba-weewa";
+  wabbaWeewaStdin = config.services.minecraft-servers.managementSystem.systemd-socket.stdinSocket.path "wabba-weewa";
+  wabbaWeewaClientPackFileName = "wabba-weewa-${wabbaWeewaPack.version}.zip";
+  wabbaWeewaVersionInfo = pkgs.writeText "wabba-weewa-version.html" "Modpack ${wabbaWeewaPack.version} / Minecraft ${wabbaWeewaPack.versions.minecraft} / Forge ${wabbaWeewaPack.versions.forge}";
 
   whitelistedPlayers = [
     "BlockyJackBauer"
@@ -48,6 +55,11 @@ let
       { jre_headless = pkgs.graalvmPackages.graalvm-oracle_25; };
   gigglesomethingServerPackage = pkgs.callPackage ../minecraft/forge-server.nix {
     jre = pkgs.temurin-jre-bin-17;
+  };
+  wabbaWeewaServerPackage = pkgs.callPackage ../minecraft/forge-server.nix {
+    jre = pkgs.temurin-jre-bin-17;
+    forgeVersion = wabbaWeewaPack.versions.forge;
+    installerHash = "sha256-1hU5emsvHpnUtFTi2ytMoulL6R1eAkPIx+Aj2WXbOec=";
   };
   pwpppProfile = minecraftProfile "pwppp";
   gigglesomethingProfile = minecraftProfile "gigglesomething";
@@ -89,6 +101,22 @@ let
     "rcon.password" = "@RCON_PASSWORD@";
   };
   propertiesFormat = pkgs.formats.keyValue { };
+  wabbaWeewaServerProperties = {
+    server-ip = "127.0.0.13";
+    server-port = 25568;
+    level-seed = "6086272851766572427";
+    motd = "wabba weewa\\nMinecraft ${wabbaWeewaPack.versions.minecraft} / Forge ${wabbaWeewaPack.versions.forge}";
+    max-players = 20;
+    max-tick-time = 300000;
+    online-mode = true;
+    white-list = true;
+    enforce-whitelist = true;
+    enable-rcon = true;
+    broadcast-rcon-to-ops = false;
+    "rcon.port" = 25577;
+    "rcon.password" = "@RCON_PASSWORD@";
+  };
+  wabbaWeewaServerPropertiesFile = propertiesFormat.generate "wabba-weewa-server.properties" wabbaWeewaServerProperties;
   pwpppServerPropertiesFile = propertiesFormat.generate "pwppp-server.properties" pwpppServerProperties;
   gigglesomethingServerPropertiesFile = propertiesFormat.generate "gigglesomething-server.properties" gigglesomethingServerProperties;
   serverList =
@@ -117,6 +145,7 @@ let
     '';
   pwpppServerList = serverList "pwppp.4amlunch.net";
   gigglesomethingServerList = serverList "gigglesomething.4amlunch.net";
+  wabbaWeewaServerList = serverList "wabba-weewa.4amlunch.net";
   prometheusExporterConfig =
     address:
     pkgs.writeText "prometheus_exporter-server.toml" ''
@@ -187,8 +216,17 @@ let
     side = "server";
     packHash = "sha256-MxSaw88f/OpcQQKKkrlZB1KlNfqIZXa7IGzcKo291MY=";
   };
-  gigglesomethingServerMods =
-    pkgs.runCommand "gigglesomething-server-mods"
+  wabbaWeewaServerPack = pkgs.fetchPackwizModpack {
+    pname = "wabba-weewa-server";
+    version = wabbaWeewaPack.version;
+    src = wabbaWeewaPackSource;
+    side = "server";
+    packHash = "sha256-+hyT7vrDy9r3fwMknI90UHYv/Mg8X7i6ShQH0O1hwSk=";
+  };
+  # Species 3.5 ships one uncompressed structure that Minecraft expects as gzip.
+  speciesServerMods =
+    serverPack:
+    pkgs.runCommand "forge-server-mods"
       {
         nativeBuildInputs = [
           pkgs.gzip
@@ -197,7 +235,7 @@ let
         ];
       }
       ''
-        cp -r ${gigglesomethingServerPack}/mods "$out"
+        cp -r ${serverPack}/mods "$out"
         chmod -R u+w "$out"
 
         jar="$out/species-3.5.jar"
@@ -208,6 +246,8 @@ let
         (cd fixed && zip -qX "$jar" "$entry")
         unzip -p "$jar" "$entry" | gzip -t
       '';
+  gigglesomethingServerMods = speciesServerMods gigglesomethingServerPack;
+  wabbaWeewaServerMods = speciesServerMods wabbaWeewaServerPack;
 
   # Prefer matching CurseForge file IDs where available; Packwiz bundles the
   # remaining Modrinth entries as JARs in the client artifact.
@@ -276,8 +316,14 @@ let
         packwiz refresh
         packwiz curseforge export --output "$out"
       '';
-  gigglesomethingClientPack =
-    pkgs.runCommand gigglesomethingClientPackFileName
+  forgeClientPack =
+    {
+      source,
+      server,
+      serverList,
+      filename,
+    }:
+    pkgs.runCommand filename
       {
         nativeBuildInputs = [
           pkgs.packwiz
@@ -286,11 +332,11 @@ let
       }
       ''
         export HOME="$TMPDIR"
-        cp -r ${gigglesomethingPackSource} pack
+        cp -r ${source} pack
         chmod -R u+w pack
         cd pack
-        cp ${gigglesomethingServerList} servers.dat
-        ${lib.getExe pkgs.python3} - ${gigglesomethingServerPack}/mods <<'PY'
+        cp ${serverList} servers.dat
+        ${lib.getExe pkgs.python3} - ${server}/mods <<'PY'
         from pathlib import Path
         import shutil
         import sys
@@ -309,6 +355,19 @@ let
         packwiz refresh
         packwiz curseforge export --output "$out"
       '';
+
+  gigglesomethingClientPack = forgeClientPack {
+    source = gigglesomethingPackSource;
+    server = gigglesomethingServerPack;
+    serverList = gigglesomethingServerList;
+    filename = gigglesomethingClientPackFileName;
+  };
+  wabbaWeewaClientPack = forgeClientPack {
+    source = wabbaWeewaPackSource;
+    server = wabbaWeewaServerPack;
+    serverList = wabbaWeewaServerList;
+    filename = wabbaWeewaClientPackFileName;
+  };
 
   siteIndex = pkgs.writeText "minecraft-index.html" ''
     <!doctype html>
@@ -343,6 +402,13 @@ let
               <td>Whitelist</td>
               <td><a href="/packs/gigglesomething/gigglesomething.zip">Download</a></td>
             </tr>
+            <tr>
+              <td>wabba weewa</td>
+              <td><code>wabba-weewa.4amlunch.net</code></td>
+              <td><!--# include virtual="/packs/wabba-weewa/version.html" --></td>
+              <td>Whitelist</td>
+              <td><a href="/packs/wabba-weewa/wabba-weewa.zip">Download</a></td>
+            </tr>
           </tbody>
         </table>
       </body>
@@ -372,6 +438,10 @@ let
   gigglesomethingPackFiles = pkgs.runCommand "gigglesomething-managed-files" { } ''
     mkdir "$out"
     cp -r ${gigglesomethingPackSource}/config ${gigglesomethingPackSource}/datapacks "$out/"
+  '';
+  wabbaWeewaPackFiles = pkgs.runCommand "wabba-weewa-managed-files" { } ''
+    mkdir "$out"
+    cp -r ${wabbaWeewaPackSource}/config "$out/"
   '';
 
   packCheck = pkgs.runCommand "pwppp-pack-check" { nativeBuildInputs = [ pkgs.packwiz ]; } ''
@@ -541,8 +611,16 @@ let
 
     touch "$out"
   '';
-  gigglesomethingPackCheck =
-    pkgs.runCommand "gigglesomething-pack-check"
+  forgePackCheck =
+    {
+      name,
+      source,
+      files,
+      server,
+      client,
+      serverList,
+    }:
+    pkgs.runCommand "${name}-pack-check"
       {
         nativeBuildInputs = [
           pkgs.packwiz
@@ -550,21 +628,23 @@ let
         ];
       }
       ''
-        cp -r ${gigglesomethingPackSource} refreshed
+        cp -r ${source} refreshed
         chmod -R u+w refreshed
         cp refreshed/index.toml index.toml
         cp refreshed/pack.toml pack.toml
         (cd refreshed && packwiz refresh)
         diff -u index.toml refreshed/index.toml
         diff -u pack.toml refreshed/pack.toml
-        diff -qr ${gigglesomethingPackSource}/config ${gigglesomethingPackFiles}/config
-        diff -qr ${gigglesomethingPackSource}/datapacks ${gigglesomethingPackFiles}/datapacks
+        diff -qr ${source}/config ${files}/config
+        if [ -d ${source}/datapacks ]; then
+          diff -qr ${source}/datapacks ${files}/datapacks
+        fi
 
         python - \
-          ${gigglesomethingPackSource} \
-          ${gigglesomethingServerPack} \
-          ${gigglesomethingClientPack} \
-          ${gigglesomethingServerList} <<'PY'
+          ${source} \
+          ${server} \
+          ${client} \
+          ${serverList} <<'PY'
         from collections import Counter
         import json
         from pathlib import Path
@@ -630,6 +710,45 @@ let
         touch "$out"
       '';
 
+  gigglesomethingPackCheck = forgePackCheck {
+    name = "gigglesomething";
+    source = gigglesomethingPackSource;
+    files = gigglesomethingPackFiles;
+    server = gigglesomethingServerPack;
+    client = gigglesomethingClientPack;
+    serverList = gigglesomethingServerList;
+  };
+  wabbaWeewaPackArtifactsCheck = forgePackCheck {
+    name = "wabba-weewa";
+    source = wabbaWeewaPackSource;
+    files = wabbaWeewaPackFiles;
+    server = wabbaWeewaServerPack;
+    client = wabbaWeewaClientPack;
+    serverList = wabbaWeewaServerList;
+  };
+  wabbaWeewaPackCheck =
+    pkgs.runCommand "wabba-weewa-source-check" { nativeBuildInputs = [ pkgs.python3 ]; }
+      ''
+        test -e ${wabbaWeewaPackArtifactsCheck}
+        python - ${../minecraft/wabba-weewa-manifest.json} ${wabbaWeewaClientPack} <<'PYTHON'
+        from collections import Counter
+        import json
+        import sys
+        import zipfile
+
+        with open(sys.argv[1]) as handle:
+            original = json.load(handle)
+        with zipfile.ZipFile(sys.argv[2]) as archive:
+            exported = json.loads(archive.read("manifest.json"))
+        for key in ("name", "minecraft"):
+            assert exported[key] == original[key], key
+        def files(manifest):
+            return Counter((entry["projectID"], entry["fileID"]) for entry in manifest["files"])
+        assert files(exported) == files(original), "client pack differs from supplied modpack"
+        PYTHON
+        touch "$out"
+      '';
+
   pwpppDeployment = pkgs.runCommand "minecraft-pwppp-deployment" { } ''
     test -e ${packCheck}
 
@@ -666,6 +785,19 @@ let
     ln -s ${gigglesomethingClientPackFileName} "$out/site/gigglesomething.zip"
     cp -r ${gigglesomethingPackSource}/. "$out/site/packwiz/"
   '';
+  wabbaWeewaDeployment = pkgs.runCommand "minecraft-wabba-weewa-deployment" { } ''
+    test -e ${wabbaWeewaPackCheck}
+
+    mkdir -p "$out/site/packwiz"
+    ln -s ${wabbaWeewaServerPackage} "$out/server"
+    ln -s ${wabbaWeewaServerMods} "$out/mods"
+    cp -r ${wabbaWeewaPackFiles}/config "$out/config"
+    cp ${wabbaWeewaServerPropertiesFile} "$out/server.properties"
+    cp ${wabbaWeewaVersionInfo} "$out/site/version.html"
+    cp ${wabbaWeewaClientPack} "$out/site/${wabbaWeewaClientPackFileName}"
+    ln -s ${wabbaWeewaClientPackFileName} "$out/site/wabba-weewa.zip"
+    cp -r ${wabbaWeewaPackSource}/. "$out/site/packwiz/"
+  '';
 
   routerHardening = {
     CapabilityBoundingSet = "";
@@ -701,6 +833,7 @@ let
 
   pwpppRcon = "${lib.getExe pkgs.mcrcon} -H 127.0.0.11 -P 25575";
   gigglesomethingRcon = "${lib.getExe pkgs.mcrcon} -H 127.0.0.12 -P 25576";
+  wabbaWeewaRcon = "${lib.getExe pkgs.mcrcon} -H 127.0.0.13 -P 25577";
   pwpppMinecraftRcon = pkgs.writeShellApplication {
     name = "pwppp-rcon";
     excludeShellChecks = [ "SC1091" ];
@@ -719,14 +852,24 @@ let
       exec ${gigglesomethingRcon} "$@"
     '';
   };
+  wabbaWeewaMinecraftRcon = pkgs.writeShellApplication {
+    name = "wabba-weewa-rcon";
+    excludeShellChecks = [ "SC1091" ];
+    text = ''
+      source ${config.sops.templates.minecraft-environment.path}
+      export MCRCON_PASS="$RCON_PASSWORD"
+      exec ${wabbaWeewaRcon} "$@"
+    '';
+  };
   saveOff = pkgs.writeShellApplication {
     name = "minecraft-save-off";
     excludeShellChecks = [ "SC1091" ];
     text = ''
       source ${config.sops.templates.minecraft-environment.path}
-      MCRCON_PASS="$RCON_PASSWORD" ${pwpppRcon} "save-off" "save-all flush"
-      if ! MCRCON_PASS="$RCON_PASSWORD" ${gigglesomethingRcon} "save-off" "save-all flush"; then
-        MCRCON_PASS="$RCON_PASSWORD" ${pwpppRcon} "save-on"
+      if ! MCRCON_PASS="$RCON_PASSWORD" ${pwpppRcon} "save-off" "save-all flush" \
+        || ! MCRCON_PASS="$RCON_PASSWORD" ${gigglesomethingRcon} "save-off" "save-all flush" \
+        || ! MCRCON_PASS="$RCON_PASSWORD" ${wabbaWeewaRcon} "save-off" "save-all flush"; then
+        ${lib.getExe saveOn}
         exit 1
       fi
     '';
@@ -739,6 +882,7 @@ let
       exitCode=0
       MCRCON_PASS="$RCON_PASSWORD" ${pwpppRcon} "save-on" || exitCode=$?
       MCRCON_PASS="$RCON_PASSWORD" ${gigglesomethingRcon} "save-on" || exitCode=$?
+      MCRCON_PASS="$RCON_PASSWORD" ${wabbaWeewaRcon} "save-on" || exitCode=$?
       exit "$exitCode"
     '';
   };
@@ -778,6 +922,7 @@ in
   environment.systemPackages = [
     gigglesomethingMinecraftRcon
     pwpppMinecraftRcon
+    wabbaWeewaMinecraftRcon
   ];
 
   sops = {
@@ -809,6 +954,7 @@ in
       restartUnits = [
         "minecraft-server-gigglesomething.service"
         "minecraft-server-pwppp.service"
+        "minecraft-server-wabba-weewa.service"
       ];
     };
   };
@@ -856,6 +1002,19 @@ in
         };
         serverProperties = gigglesomethingServerProperties;
       };
+      servers.wabba-weewa = {
+        enable = true;
+        autoStart = true;
+        restart = "on-failure";
+        package = profileServer "wabba-weewa";
+        jvmOpts = "-Xms1G -Xmx4G -XX:+UseG1GC -XX:MaxGCPauseMillis=200";
+        symlinks.mods = "${wabbaWeewaProfile}/mods";
+        files = {
+          config = "${wabbaWeewaProfile}/config";
+          "server.properties" = "${wabbaWeewaProfile}/server.properties";
+        };
+        serverProperties = wabbaWeewaServerProperties;
+      };
     };
 
     nginx.virtualHosts."minecraft.4amlunch.net" = {
@@ -880,6 +1039,12 @@ in
       };
       locations."/packs/gigglesomething/" = {
         alias = "${gigglesomethingProfile}/site/";
+        extraConfig = ''
+          limit_except GET HEAD { deny all; }
+        '';
+      };
+      locations."/packs/wabba-weewa/" = {
+        alias = "${wabbaWeewaProfile}/site/";
         extraConfig = ''
           limit_except GET HEAD { deny all; }
         '';
@@ -922,6 +1087,7 @@ in
       paths = [
         "/var/lib/minecraft/pwppp/.zfs/snapshot/restic"
         "/var/lib/minecraft/gigglesomething/.zfs/snapshot/restic"
+        "/var/lib/minecraft/wabba-weewa/.zfs/snapshot/restic"
       ];
       backupPrepareCommand = lib.getExe prepareBackup;
       backupCleanupCommand = lib.getExe cleanupBackup;
@@ -945,9 +1111,11 @@ in
   system.build.minecraftDeployments = {
     pwppp = pwpppDeployment;
     gigglesomething = gigglesomethingDeployment;
+    wabba-weewa = wabbaWeewaDeployment;
   };
 
   systemd = {
+    tmpfiles.rules = [ "d ${wabbaWeewaDataDir}/logs 0770 minecraft minecraft -" ];
     services = {
       mc-router = {
         description = "Minecraft hostname router";
@@ -955,7 +1123,7 @@ in
         wantedBy = [ "multi-user.target" ];
         serviceConfig = routerHardening // {
           IPAddressAllow = [ "0.0.0.0/0" ];
-          ExecStart = "${lib.getExe mcRouter} -port 25565 -mapping pwppp.4amlunch.net=127.0.0.11:25566,gigglesomething.4amlunch.net=127.0.0.12:25567 -connection-rate-limit 10 -webhook-url http://127.0.0.1:${toString routerApiPort}/event";
+          ExecStart = "${lib.getExe mcRouter} -port 25565 -mapping pwppp.4amlunch.net=127.0.0.11:25566,gigglesomething.4amlunch.net=127.0.0.12:25567,wabba-weewa.4amlunch.net=127.0.0.13:25568 -connection-rate-limit 10 -webhook-url http://127.0.0.1:${toString routerApiPort}/event";
           Restart = "on-failure";
           RestartSec = "5s";
         };
@@ -999,6 +1167,18 @@ in
           ReadWritePaths = [ gigglesomethingDataDir ];
         };
       };
+      minecraft-server-wabba-weewa = {
+        restartIfChanged = lib.mkForce false;
+        wants = [ "minecraft-whitelist-wabba-weewa.service" ];
+        serviceConfig = {
+          MemoryHigh = "6G";
+          MemoryMax = "7G";
+          NoNewPrivileges = true;
+          OOMPolicy = "stop";
+          ProtectSystem = "strict";
+          ReadWritePaths = [ wabbaWeewaDataDir ];
+        };
+      };
 
       minecraft-whitelist-pwppp = {
         description = "Apply the declarative pwppp Minecraft whitelist";
@@ -1040,9 +1220,30 @@ in
           RemainAfterExit = true;
         };
       };
+      minecraft-whitelist-wabba-weewa = {
+        description = "Apply the declarative wabba weewa Minecraft whitelist";
+        after = [ "minecraft-server-wabba-weewa.service" ];
+        partOf = [ "minecraft-server-wabba-weewa.service" ];
+        path = [
+          pkgs.coreutils
+          pkgs.systemd
+        ];
+        script = ''
+          install -d -m 0770 -o minecraft -g minecraft ${wabbaWeewaDataDir}
+          install -m 0660 -o minecraft -g minecraft ${emptyWhitelistFile} ${wabbaWeewaDataDir}/whitelist.json
+          if systemctl is-active --quiet minecraft-server-wabba-weewa.service; then
+            printf %s ${lib.escapeShellArg whitelistCommands} > ${wabbaWeewaStdin}
+          fi
+        '';
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+        };
+      };
 
       restic-backups-minecraft = {
         after = [
+          "minecraft-server-wabba-weewa.service"
           "minecraft-server-gigglesomething.service"
           "minecraft-server-pwppp.service"
         ];
@@ -1050,6 +1251,7 @@ in
 
       sanoid = {
         after = [
+          "minecraft-server-wabba-weewa.service"
           "minecraft-server-gigglesomething.service"
           "minecraft-server-pwppp.service"
           "sops-install-secrets.service"

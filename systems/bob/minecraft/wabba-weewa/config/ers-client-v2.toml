@@ -1,0 +1,21 @@
+
+#Client settings
+[client]
+	#Enable custom camera correction while riding ERS mounts.
+	EnableMountCameraCorrection = true
+
+	#Mount camera settings
+	[client.mountCamera]
+		#Additional third person back camera distance while riding ERS mounts.
+		#Range: -32.0 ~ 32.0
+		BackDistanceOffset = 0.0
+		#Additional third person back vertical camera offset while riding ERS mounts.
+		#Range: -16.0 ~ 16.0
+		BackVerticalOffset = 0.0
+		#Additional third person front camera distance while riding ERS mounts.
+		#Range: -32.0 ~ 32.0
+		FrontDistanceOffset = 0.0
+		#Additional third person front vertical camera offset while riding ERS mounts.
+		#Range: -16.0 ~ 16.0
+		FrontVerticalOffset = 0.0
+

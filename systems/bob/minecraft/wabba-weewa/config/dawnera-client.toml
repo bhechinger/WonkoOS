@@ -1,0 +1,19 @@
+
+["Client Settings"]
+	#Show Dinosaur Roar Particles
+	roarParticles = true
+	#Shake Screen Effect
+	screenShake = true
+	#Show Blood While Bleeding
+	showBlood = true
+	#Show Blood On Screen While Bleeding
+	showBloodUI = true
+	#Maximum Time Of Blood Disappear
+	#Range: 0 ~ 100000
+	bloodStay = 200
+	#Dinosaur Gui Position
+	#Range: -1000 ~ 1000
+	dinoGuiX = 55
+	#Range: -1000 ~ 1000
+	dinoGuiY = 144
+

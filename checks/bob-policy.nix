@@ -594,6 +594,7 @@ assert
   minecraftRestic.paths == [
     "/var/lib/minecraft/pwppp/.zfs/snapshot/restic"
     "/var/lib/minecraft/gigglesomething/.zfs/snapshot/restic"
+    "/var/lib/minecraft/wabba-weewa/.zfs/snapshot/restic"
   ];
 assert bobServicesRestic.repository == "rest:https://restic.4amlunch.net/bob/";
 assert bobServicesRestic.passwordFile == config.sops.secrets.minecraft-restic-password.path;

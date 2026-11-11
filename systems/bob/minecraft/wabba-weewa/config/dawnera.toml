@@ -1,0 +1,14 @@
+#Baby mobs attribute multiplier.
+#Range: 0.0 ~ 1000.0
+ageAttributeMultiplier = 0.17499999701976776
+#Tamed mobs attribute multiplier.
+#Range: 0.0 ~ 1000.0
+tameAttributeMultiplier = 1.25
+#Trees are falling, when broken by dinosaurs
+treeFall = true
+#Chickens can attack worms.
+chickenAttackWorms = true
+#Time between mob spawns, recommended to use this instead of changing mob configs.
+#Range: 1 ~ 1000
+mobSpawnInterval = 20
+

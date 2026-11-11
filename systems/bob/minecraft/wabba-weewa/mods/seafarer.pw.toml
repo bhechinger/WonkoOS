@@ -1,0 +1,13 @@
+name = "Seafarer"
+filename = "seafarer-1.0.4.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "9127a73f91c59e750c17626b6d1dabfea79b8a05"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 5880189
+project-id = 1098212
