@@ -73,6 +73,7 @@ in
           sqlcipher
         ]);
     }))
+    nix-weather
   ];
 
   programs = {

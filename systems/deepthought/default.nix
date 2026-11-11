@@ -24,5 +24,6 @@
     ./restic.nix
     ./atuin.nix
     ./audio.nix
+    ./cuda.nix
   ];
 }
