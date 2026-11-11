@@ -8,4 +8,3 @@
 	#Velocity strength of the roll.
 	#Range: 0.1 ~ 2.0
 	roll_speed = 1.0
-

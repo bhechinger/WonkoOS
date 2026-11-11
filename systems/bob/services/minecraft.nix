@@ -221,7 +221,7 @@ let
     version = wabbaWeewaPack.version;
     src = wabbaWeewaPackSource;
     side = "server";
-    packHash = "sha256-+hyT7vrDy9r3fwMknI90UHYv/Mg8X7i6ShQH0O1hwSk=";
+    packHash = "sha256-m6mJbXYfTEii95YodHva3ys41V6se9bHQYN86uXz7Og=";
   };
   # Species 3.5 ships one uncompressed structure that Minecraft expects as gzip.
   speciesServerMods =

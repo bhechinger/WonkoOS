@@ -708,4 +708,3 @@
 	#How many cpu cores some mobs(elephants, leafcutter ants, bison etc) should utilize when pathing. Bigger number = less impact on TPS
 	#Range: 1 ~ 100
 	pathfindingThreads = 5
-

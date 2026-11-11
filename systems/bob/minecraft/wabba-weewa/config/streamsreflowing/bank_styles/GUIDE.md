@@ -508,4 +508,3 @@ Do these steps to make a datapack for your bank files.
 | Send it with a modpack | Put the JSON in `data/<namespace>/streamsreflowing/bank_style` or `bank_feature`. |
 | See a technique working | Copy a file from `bank_styles/examples/` (3.11). |
 | Keep notes in a file | Any field that starts with `_`, for example `"_about"`. |
-

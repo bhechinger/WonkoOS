@@ -16,4 +16,3 @@
 	hide_player_anims_in_first_person = false
 	#Play Umvuthana Crane heal sounds. Turn this off if you are experiencing crashes when Cranes appear during Umvuthi's boss battle.
 	crane_heal_sounds = true
-

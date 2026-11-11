@@ -5,7 +5,7 @@ Imported from `~/Downloads/WhatSie/wabba_weewa.zip` (SHA-256
 The source export has no version; the managed pack starts at `1.0.0`.
 `wabba-weewa-manifest.json` retains its original 83 CurseForge file references.
 The client artifact is checked against those references and the Minecraft and
-Forge versions before deployment. Imported text uses LF line endings.
+Forge versions before deployment. Imported text uses LF line endings and normalized trailing whitespace.
 
 The server uses Minecraft 1.20.1, Forge 47.4.28, Java 17, and a new world with
 seed `6086272851766572427`. Join at `wabba-weewa.4amlunch.net`; download the

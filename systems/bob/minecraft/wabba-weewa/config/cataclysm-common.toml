@@ -1036,4 +1036,3 @@
 	#Random roll chance to enable mob spawning. Higher number = lower chance of spawning
 	#Range: > 0
 	ignited_berserker_spawn_rolls = 2
-

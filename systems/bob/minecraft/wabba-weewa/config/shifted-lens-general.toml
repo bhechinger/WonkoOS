@@ -66,4 +66,3 @@
 	[mobs.tropical_fish]
 		#Whether tropical fish have updated ai
 		tropicalFishRevamp = true
-

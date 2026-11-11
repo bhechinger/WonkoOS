@@ -18,4 +18,3 @@
 		#Additional third person front vertical camera offset while riding ERS mounts.
 		#Range: -16.0 ~ 16.0
 		FrontVerticalOffset = 0.0
-

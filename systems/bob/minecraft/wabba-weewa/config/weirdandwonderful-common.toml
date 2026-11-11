@@ -7,4 +7,3 @@ magicNumber = 42
 magicNumberIntroduction = "The magic number is... "
 #A list of items to log on common setup.
 items = ["minecraft:iron_ingot"]
-

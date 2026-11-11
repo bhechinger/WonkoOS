@@ -28,4 +28,3 @@ sealedAreaCameraGracePeriod = 2
 	massTooltipVisibility = "ADVANCED"
 	#Use Imperial Units to show Mass
 	useImperialUnits = false
-

@@ -5,4 +5,3 @@ modernSpawnEggs = false
 #stomp, the Nirasmosaurus's dash), the dash's field-of-view punch, and the view turning with
 #a Nirasmosaurus that has you in its jaws. Turn off if they cause discomfort.
 cameraEffects = true
-

@@ -130,4 +130,3 @@
 		#Track Network Color on maps
 		#Allowed Values: RED, GREY, WHITE
 		trainMapColorTheme = "RED"
-

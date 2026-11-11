@@ -30,4 +30,3 @@
 	#A tamed dragon collapses at low health and recovers, instead of dying.
 	#Off: a tamed dragon dies like any other creature
 	incapacitation = true
-

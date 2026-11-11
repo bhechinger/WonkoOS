@@ -579,4 +579,3 @@
 		#You can use biome tags too, just put a # before (e.g. "#minecraft:is_forest", "#nomansland:is_river")
 		#Default = []
 		cassowaryNestExtraBiomes = []
-
