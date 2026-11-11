@@ -16,6 +16,7 @@
     ./nix_tools.nix
     ./games.nix
     ./gamedev.nix
+    ./ollama.nix
   ];
 
   home.homeDirectory = "/home/wonko";

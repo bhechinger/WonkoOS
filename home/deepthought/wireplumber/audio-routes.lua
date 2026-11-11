@@ -18,6 +18,8 @@ local desired_links = {
   { output = "Yet Another Zombie Survivors.exe:output_FR", input = "ardour:Games/audio_in 2", exclusive = true },
   { output = "WhatSie:output_FL",                          input = "ardour:System/audio_in 1", exclusive = true },
   { output = "WhatSie:output_FR",                          input = "ardour:System/audio_in 2", exluclusive = true },
+  { output = "TheBazaar.exe:output_FL",                    input = "ardour:Games/audio_in 1", exclusive = true },
+  { output = "TheBazaar.exe:output_FR",                    input = "ardour:Games/audio_in 2", exclusive = true },
 
   -- Feed PipeWire-owned virtual sinks into matching Ardour buses.
   { output = "System Sounds:monitor_FL",      input = "ardour:System/audio_in 1" },
