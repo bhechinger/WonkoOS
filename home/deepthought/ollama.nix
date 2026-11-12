@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ pkgs, unstable-pkgs, ... }:
 {
   services.ollama = {
     enable = true;
@@ -8,27 +8,28 @@
 
   programs.opencode = {
     enable = true;
-    package = pkgs.callPackage ../../packages/opencode.nix { };
+    package = unstable-pkgs.opencode;
     settings = {
-      autoupdate = false;
+      update = "disable";
       enabled_providers = [ "ollama" ];
       model = "ollama/qwen3.5:9b";
-      small_model = "ollama/qwen3.5:9b";
-      plugin = [
+      agents.title.model = "ollama/qwen3.5:9b";
+      plugins = [
         "superpowers@git+https://github.com/obra/superpowers.git#v7.0.2"
         "@dietrichgebert/ponytail@5.3.3"
       ];
-      provider.ollama = {
-        npm = "@ai-sdk/openai-compatible";
-        name = "Ollama (local)";
-        options.baseURL = "http://127.0.0.1:11434/v1";
-        models."qwen3.5:9b" = {
-          name = "Qwen 3.5 9B";
-          tool_call = true;
-          limit = {
-            context = 65536;
-            output = 8192;
-          };
+      permissions = [
+        {
+          action = "external_directory";
+          resource = "*";
+          effect = "ask";
+        }
+      ];
+      providers.ollama = {
+        settings.baseURL = "http://127.0.0.1:11434/v1";
+        models."qwen3.5:9b".limit = {
+          context = 65536;
+          output = 8192;
         };
       };
     };
