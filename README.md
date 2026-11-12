@@ -87,6 +87,23 @@ systemctl --failed
 `zfs-import-basket.service` imports the remote pool after local ZFS mounts are
 ready and ZFS mounts its datasets under `/basket` and `/home/wonko`.
 
+## OpenCode with local Ollama
+
+On Deepthought, Home Manager installs OpenCode from stable nixpkgs and configures
+`opencode` to use the local Ollama model `qwen3.5:9b`. Superpowers and Ponytail
+remain enabled, and OpenCode's self-updater is disabled.
+
+For the first migration from the Ollama-installed OpenCode, back up the existing
+unmanaged configuration during activation:
+
+```sh
+nh home switch . -c deepthought --no-nom -b before-nix-opencode
+```
+
+This keeps the previous config at
+`~/.config/opencode/opencode.json.before-nix-opencode`. Later deployments use
+`make switch` as usual. Start OpenCode directly with `opencode`.
+
 ## Codex GitHub authentication
 
 Home Manager installs Codex from the pinned unstable nixpkgs input and a local
