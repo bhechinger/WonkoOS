@@ -43,6 +43,7 @@
         oci = "oci --auth security_token";
         gigglesomething-rcon = "ssh -t wonko@bob.4amlunch.net gigglesomething-rcon";
         pwppp-rcon = "ssh -t wonko@bob.4amlunch.net pwppp-rcon";
+        wabba-weewa-rcon = "ssh -t wonko@bob.4amlunch.net wabba-weewa-rcon";
         z = "gram .";
       };
 
