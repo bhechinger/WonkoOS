@@ -8,6 +8,7 @@
 
   programs.opencode = {
     enable = true;
+    package = pkgs.callPackage ../../packages/opencode.nix { };
     settings = {
       autoupdate = false;
       enabled_providers = [ "ollama" ];

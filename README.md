@@ -89,7 +89,7 @@ ready and ZFS mounts its datasets under `/basket` and `/home/wonko`.
 
 ## OpenCode with local Ollama
 
-On Deepthought, Home Manager installs OpenCode from stable nixpkgs and configures
+On Deepthought, Home Manager installs pinned OpenCode 1.19.5 and configures
 `opencode` to use the local Ollama model `qwen3.5:9b`. Superpowers and Ponytail
 remain enabled, and OpenCode's self-updater is disabled.
 
