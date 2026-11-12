@@ -80,6 +80,10 @@
           type = "zfs_fs";
           mountpoint = "/var/lib/minecraft/gigglesomething";
         };
+        "var/minecraft/wabba-weewa" = {
+          type = "zfs_fs";
+          mountpoint = "/var/lib/minecraft/wabba-weewa";
+        };
         plex = {
           type = "zfs_fs";
           mountpoint = "/var/lib/plexmediaserver";
@@ -113,6 +117,7 @@
     "/var/lib/minecraft".enable = false;
     "/var/lib/minecraft/pwppp".enable = false;
     "/var/lib/minecraft/gigglesomething".enable = false;
+    "/var/lib/minecraft/wabba-weewa".enable = false;
     "/var/lib/paperless".enable = false;
     "/var/lib/plexmediaserver".enable = false;
     "/var/lib/postgresql".enable = false;

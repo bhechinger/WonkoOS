@@ -1,0 +1,12 @@
+name = "wabba weewa"
+version = "1.0.0"
+pack-format = "packwiz:1.1.0"
+
+[index]
+file = "index.toml"
+hash-format = "sha256"
+hash = "6e4e0844fa72f613ce03929c701bac47ecffff99326f66736ab875abfb863b32"
+
+[versions]
+forge = "47.4.28"
+minecraft = "1.20.1"

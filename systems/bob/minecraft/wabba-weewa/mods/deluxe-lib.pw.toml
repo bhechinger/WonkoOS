@@ -1,0 +1,13 @@
+name = "Deluxe_Lib"
+filename = "deluxelib-1.0.2-1.20.1.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "0b7e5f63b0e8480797de8cc6ebc5641e17c1161c"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 9060031
+project-id = 1594910

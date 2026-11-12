@@ -1,0 +1,13 @@
+name = "Dark Fantasy Volumetric Shaders - DFVS"
+filename = "DFVS-Universal.zip"
+side = "client"
+
+[download]
+hash-format = "sha1"
+hash = "8376fe1b9c2d765bb3d7b48665fe34bea894712d"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 9367354
+project-id = 1773368

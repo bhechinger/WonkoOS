@@ -22,6 +22,8 @@ runtime model.
 | Jellyfin | `/var/lib/jellyfin` and `/nfs/Plex` |
 | Attic Nix cache | `/var/lib/atticd` and Basket at `/nfs/NixCache` |
 | pwppp Minecraft server | `/var/lib/minecraft/pwppp` |
+| gigglesomething Minecraft server | `/var/lib/minecraft/gigglesomething` |
+| wabba weewa Minecraft server | `/var/lib/minecraft/wabba-weewa` |
 | Minecraft routers and Playit | Stateless; configuration is in this repository |
 | Murmur, Postfix, NFS, Tailscale, ZeroTier | Their standard NixOS state paths |
 
@@ -61,7 +63,7 @@ other application traffic use internal, Tailscale, or ZeroTier.
 
 Nginx serves Bob, Paperless, Tandoor, OmniGraph, Jackett, Jellyfin, Sonarr, and
 ruTorrent with the wildcard ACME certificate. It also serves the Minecraft
-server list and current pwppp client pack at `https://minecraft.4amlunch.net`.
+server list and client packs at `https://minecraft.4amlunch.net`.
 Unknown HTTP hosts receive `444` and unknown TLS handshakes are rejected. The
 rTorrent XML-RPC listener is only reachable through its Unix socket and the
 loopback nginx endpoint.
@@ -130,7 +132,11 @@ database are included in Bob's hourly service snapshots.
 
 `mc-router` accepts Minecraft TCP traffic on internal port `25565` and routes
 `pwppp.4amlunch.net` to the isolated NeoForge listener at
-`127.0.0.11:25566`. `svc-router` accepts Simple Voice Chat UDP traffic on
+`127.0.0.11:25566`, `gigglesomething.4amlunch.net` to `127.0.0.12:25567`, and
+`wabba-weewa.4amlunch.net` to `127.0.0.13:25568`.
+[wabba weewa](./minecraft/wabba-weewa.md) uses the supplied Minecraft 1.20.1 /
+Forge 47.4.28 pack and seed `6086272851766572427`.
+`svc-router` accepts Simple Voice Chat UDP traffic on
 internal port `34934`, while its webhook API is loopback-only. Both routers
 run as dynamic, heavily sandboxed users. The game server is online-mode and
 whitelist-only; add a player from Bob with:
@@ -149,8 +155,9 @@ Bob second on both LANs. Public-only Cloudflare names deliberately do not
 resolve internally unless they are also added to that Nix record list.
 
 Internet game traffic enters the `minecraft-tcp.4amlunch.net` Spectrum app on
-TCP `25565`. Public DNS-only aliases `pwppp.4amlunch.net` and
-`gigglesomething.4amlunch.net` point to that app. Spectrum forwards to Sierra's
+TCP `25565`. Public DNS-only aliases `pwppp.4amlunch.net`,
+`gigglesomething.4amlunch.net`, and `wabba-weewa.4amlunch.net` point to that app.
+Spectrum forwards to Sierra's
 current WAN IPv4, where DNAT sends TCP `25565` to Bob at
 `10.42.0.2:25565` and a separate WAN pass rule admits only Cloudflare sources;
 `mc-router` then selects the server from the requested hostname. The reconciler

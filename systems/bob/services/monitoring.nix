@@ -300,7 +300,7 @@ in
 
       rule {
         source_labels = ["__journal__systemd_unit"]
-        regex = "minecraft-server-(pwppp|gigglesomething)\\.service"
+        regex = "minecraft-server-(pwppp|gigglesomething|wabba-weewa)\\.service"
         action = "drop"
       }
 
@@ -330,6 +330,12 @@ in
           "host" = "bob",
           "job" = "minecraft",
           "minecraft_server" = "gigglesomething",
+        },
+        {
+          "__path__" = "/var/lib/minecraft/wabba-weewa/logs/latest.log",
+          "host" = "bob",
+          "job" = "minecraft",
+          "minecraft_server" = "wabba-weewa",
         },
       ]
       tail_from_end = true
@@ -386,13 +392,15 @@ in
           for path in \
             /var/lib/minecraft \
             /var/lib/minecraft/pwppp \
-            /var/lib/minecraft/gigglesomething
+            /var/lib/minecraft/gigglesomething \
+            /var/lib/minecraft/wabba-weewa
           do
             setfacl -m g:minecraft-logs:--x "$path"
           done
           for path in \
             /var/lib/minecraft/pwppp/logs \
-            /var/lib/minecraft/gigglesomething/logs
+            /var/lib/minecraft/gigglesomething/logs \
+            /var/lib/minecraft/wabba-weewa/logs
           do
             setfacl -R -m g:minecraft-logs:r-X "$path"
             setfacl -m d:g:minecraft-logs:r-X "$path"

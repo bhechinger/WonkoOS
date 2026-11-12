@@ -1,0 +1,219 @@
+{
+  "Replace": false,
+  "StepHeight": 0.75,
+  "Tamable": false,
+  "Attributes": {
+    "MaxHealth": 6.0,
+    "MaxHunger": 10.0,
+    "MaxEnergy": 10.0,
+    "MovementSpeed": 0.25,
+    "SwimSpeed": 2.0,
+    "FollowRange": 32.0
+  },
+  "TameMethod": {
+    "ID": "dawnera:feed_from_ground",
+    "Chance": 5
+  },
+  "SpawnData": {
+    "SpawnCount": "2-3",
+    "SpawnWeight": 2,
+    "RandomChance": 0.3,
+    "Biomes": [
+      {
+        "ID": "minecraft:beach"
+      },
+      {
+        "ID": "minecraft:warm_ocean"
+      },
+      {
+        "ID": "minecraft:lukewarm_ocean"
+      },
+      {
+        "ID": "minecraft:ocean"
+      },
+      {
+        "ID": "minecraft:deep_ocean"
+      }
+    ]
+  },
+  "AI": {
+    "Goals": [
+      {
+        "Priority": 0,
+        "ID": "dawnera:float_on_water"
+      },
+      {
+        "Priority": 0,
+        "ID": "dawnera:love_timed",
+        "Delay": 1000
+      },
+      {
+        "Priority": 1,
+        "ID": "dawnera:panic_of_damage",
+        "WalkSpeed": 1.25,
+        "SprintSpeed": 1.25,
+        "StartPanic": {
+          "Conditions": [
+            "dawnera:random_chance,25"
+          ],
+          "Actions": [
+            "dawnera:play_action,ActionController,scream"
+          ]
+        }
+      },
+      {
+        "Priority": 1,
+        "ID": "dawnera:breed_pregnancy",
+        "Speed": 0.65
+      },
+      {
+        "Priority": 2,
+        "ID": "dawnera:lay_egg",
+        "Speed": 0.65,
+        "EggBlock": "dawnera:dodo_egg",
+        "PositionChooser": "LAND"
+      },
+      {
+        "Priority": 3,
+        "ID": "dawnera:follow_owner",
+        "Speed": 0.65,
+        "StartFollowDistance": 4,
+        "StopFollowDistance": 2,
+        "TeleportDistance": 10,
+        "CanFly": false
+      },
+      {
+        "Priority": 3,
+        "ID": "dawnera:eat_food",
+        "Speed": 0.65,
+        "HorizontalDistance": 10,
+        "VerticalDistance": 3,
+        "MaxItemCountCanEat": 1,
+        "CanUse": [
+          "dawnera:is_no_action",
+          "dawnera:is_not_sleeping_or_resting",
+          "dawnera:is_not_in_water"
+        ],
+        "ShouldCanBeUsedToContinue": true,
+        "FoodEat": {
+          "Actions": [
+            "dawnera:play_action,ActionController,eat"
+          ]
+        }
+      },
+      {
+        "Priority": 4,
+        "ID": "dawnera:tempt_by_item",
+        "Speed": 0.65,
+        "HorizontalDistance": 5,
+        "VerticalDistance": 4
+      },
+      {
+        "Priority": 5,
+        "ID": "dawnera:follow_parent",
+        "Speed": 0.65,
+        "VisibilityDistance": 10,
+        "AcceptableDistance": 4
+      },
+      {
+        "Priority": 6,
+        "ID": "dawnera:look_around"
+      },
+      {
+        "Priority": 7,
+        "ID": "dawnera:random_stroll",
+        "Speed": 0.65,
+        "PositionChooser": "LAND"
+      }
+    ]
+  },
+  "StateMachine": [
+    {
+      "ID": "ActionController",
+      "Actions": [
+        {
+          "ID": "scream",
+          "Length": 1.68
+        },
+        {
+          "ID": "down",
+          "Length": 0.96
+        },
+        {
+          "ID": "fall_asleep",
+          "Length": 0.68
+        },
+        {
+          "ID": "wake_up",
+          "Length": 0.72
+        },
+        {
+          "ID": "up",
+          "Length": 0.64
+        },
+        {
+          "ID": "eat",
+          "Length": 2.12
+        }
+      ]
+    },
+    {
+      "ID": "StateController",
+      "Actions": [
+        {
+          "ID": "rest"
+        },
+        {
+          "ID": "sleep"
+        }
+      ]
+    }
+  ],
+  "FoodRation": {
+    "Items": [
+      {
+        "Tag": "dawnera:fruit_food"
+      },
+      {
+        "ID": "dawnera:worm"
+      }
+    ]
+  },
+  "MobSchedule": {
+    "Conditions": [
+      "dawnera:is_alive",
+      "dawnera:is_on_ground",
+      "dawnera:has_no_target"
+    ],
+    "Tasks": [
+      {
+        "Start": "21:00",
+        "End": "21:10",
+        "Actions": [
+          "dawnera:lie_down"
+        ]
+      },
+      {
+        "Start": "21:10",
+        "End": "05:40",
+        "Actions": [
+          "dawnera:sleep"
+        ]
+      },
+      {
+        "Start": "05:40",
+        "End": "06:00",
+        "Actions": [
+          "dawnera:wake_up"
+        ]
+      },
+      {
+        "Start": "06:00",
+        "End": "21:00",
+        "Actions": [
+          "dawnera:stand_up"
+        ]
+      }
+    ]
+  }
+}

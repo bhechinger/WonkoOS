@@ -11,12 +11,15 @@
   unzip,
   writeShellApplication,
   zip,
+  forgeVersion ? "47.4.10",
+  installerHash ? "sha256-GRJ2C0y2uAPYqCbeYDyQdrHacewnZemh+MHKePZSeOM=",
 }:
 
 let
   minecraftVersion = "1.20.1";
-  forgeVersion = "47.4.10";
-  libraries = builtins.fromJSON (builtins.readFile ./forge-1.20.1-47.4.10-libraries.json);
+  libraries = builtins.fromJSON (
+    builtins.readFile (./. + "/forge-${minecraftVersion}-${forgeVersion}-libraries.json")
+  );
   repository = linkFarm "forge-${minecraftVersion}-${forgeVersion}-libraries" (
     map (library: {
       name = library.path;
@@ -41,7 +44,7 @@ let
   };
   installer-unwrapped = fetchurl {
     url = "https://maven.minecraftforge.net/net/minecraftforge/forge/${minecraftVersion}-${forgeVersion}/forge-${minecraftVersion}-${forgeVersion}-installer.jar";
-    hash = "sha256-GRJ2C0y2uAPYqCbeYDyQdrHacewnZemh+MHKePZSeOM=";
+    hash = installerHash;
   };
   installer =
     let
@@ -57,7 +60,8 @@ let
           }
           ''
             install -m 644 -D ${installer-unwrapped} "$out"
-            zip -q -d "$out" 'META-INF/*.SF' 'META-INF/*.RSA'
+            # Unsigned installers have no signature entries (zip exit status 12).
+            zip -q -d "$out" 'META-INF/*.SF' 'META-INF/*.RSA' || test "$?" -eq 12
             unzip -p "$out" install_profile.json > install_profile.json
             jq '
               .processors |= ([

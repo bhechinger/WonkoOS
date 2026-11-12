@@ -1,0 +1,252 @@
+{
+  "Replace": false,
+  "PassengerZoom": 8,
+  "RidingSpeed": 0.01,
+  "RidingSprintSpeed": 0.055,
+  "PushModifier": 0,
+  "ExperienceDrop": "30-50",
+  "CanSprint": true,
+  "CanBreakLeaves": true,
+  "CanDropTrees": true,
+  "Rideable": true,
+  "Tamable": true,
+  "Attributes": {
+    "MaxHealth": 216.0,
+    "MaxHunger": 60.0,
+    "MaxEnergy": 200.0,
+    "Armor": 10.0,
+    "MovementSpeed": 1.0,
+    "KnockbackResistance": 1.0,
+    "FollowRange": 64.0,
+    "AttackDamage": 20.0
+  },
+  "TameMethod": {
+    "ID": "dawnera:feed_from_ground",
+    "Chance": 1
+  },
+  "RandomActions": {
+    "attack_random": [
+      {
+        "Action": "attack1,50%"
+      },
+      {
+        "Action": "attack2,50%"
+      }
+    ]
+  },
+  "ConditionalActions": {
+    "attack_conditional": [
+      {
+        "Action": "attack_random",
+        "Conditions": [
+          "dawnera:is_in_water"
+        ]
+      },
+      {
+        "Action": "attack_land",
+        "Conditions": [
+          "dawnera:is_not_in_water"
+        ]
+      }
+    ],
+    "eat_conditional": [
+      {
+        "Action": "eat1",
+        "Conditions": [
+          "dawnera:is_not_in_water"
+        ]
+      },
+      {
+        "Action": "eat2",
+        "Conditions": [
+          "dawnera:is_in_water"
+        ]
+      }
+    ]
+  },
+  "SpawnData": {
+    "SpawnCount": 1,
+    "SpawnWeight": 1,
+    "RandomChance": 0.1,
+    "Biomes": [
+      {
+        "ID": "minecraft:deep_ocean"
+      }
+    ]
+  },
+  "AI": {
+    "TargetGoals": [
+      {
+        "Priority": 0,
+        "ID": "dawnera:target_hit_by_owner"
+      },
+      {
+        "Priority": 1,
+        "ID": "dawnera:target_owner_hit_by"
+      },
+      {
+        "Priority": 1,
+        "ID": "dawnera:target_hit_by"
+      },
+      {
+        "Priority": 2,
+        "ID": "dawnera:target_hunt"
+      }
+    ],
+    "Goals": [
+      {
+        "Priority": 0,
+        "ID": "dawnera:love_timed",
+        "Delay": 2000
+      },
+      {
+        "Priority": 0,
+        "ID": "dawnera:try_to_find_water",
+        "Speed": 0.8
+      },
+      {
+        "Priority": 2,
+        "ID": "dawnera:eat_food",
+        "Speed": 1.0,
+        "HorizontalDistance": 20,
+        "VerticalDistance": 20,
+        "MaxItemCountCanEat": 4,
+        "TargetConditions": [
+          "dawnera:is_in_water"
+        ],
+        "FoodEat": {
+          "Actions": [
+            "dawnera:play_random_action,ActionController,eat_conditional"
+          ]
+        }
+      },
+      {
+        "Priority": 2,
+        "ID": "dawnera:melee_attack",
+        "Speed": 1.2,
+        "ShouldSeeTarget": false,
+        "CanUse": [
+          "dawnera:is_in_water"
+        ],
+        "StartAggression": {
+          "Conditions": [
+            "dawnera:random_chance,30"
+          ],
+          "Actions": [
+            "dawnera:look_at_target",
+            "dawnera:play_action,ActionController,roar"
+          ]
+        },
+        "PerformAttack": {
+          "Conditions": [
+            "dawnera:is_no_action"
+          ],
+          "Actions": [
+            "dawnera:focus_on_target",
+            "dawnera:play_random_action,ActionController,attack_random"
+          ]
+        }
+      },
+      {
+        "Priority": 3,
+        "ID": "dawnera:breed_pregnancy",
+        "Speed": 0.8
+      },
+      {
+        "Priority": 3,
+        "ID": "dawnera:follow_owner",
+        "Speed": 1.0,
+        "StartFollowDistance": 10,
+        "StopFollowDistance": 5,
+        "TeleportDistance": 40,
+        "CanFly": false
+      },
+      {
+        "Priority": 6,
+        "ID": "dawnera:random_stroll",
+        "Speed": 1.0,
+        "Interval": 20,
+        "PositionChooser": "WATER_SEA"
+      }
+    ]
+  },
+  "StateMachine": [
+    {
+      "ID": "ActionController",
+      "Actions": [
+        {
+          "ID": "attack1",
+          "Length": 0.64
+        },
+        {
+          "ID": "attack2",
+          "Length": 0.64
+        },
+        {
+          "ID": "attack_land",
+          "Length": 0.48
+        },
+        {
+          "ID": "open",
+          "Length": 1.92
+        },
+        {
+          "ID": "close",
+          "Length": 0.96
+        },
+        {
+          "ID": "roar",
+          "Length": 2.16
+        },
+        {
+          "ID": "eat1",
+          "Length": 1.92
+        },
+        {
+          "ID": "eat2",
+          "Length": 1.92
+        }
+      ]
+    }
+  ],
+  "FoodRation": {
+    "Items": [
+      {
+        "Tag": "dawnera:meat_food"
+      }
+    ],
+    "Entities": [
+      {
+        "Tag": "dawnera:big_animal"
+      },
+      {
+        "Tag": "dawnera:medium_animal"
+      }
+    ]
+  },
+  "InputControls": {
+    "Buttons": [
+      {
+        "ID": "attack",
+        "Type": "mouse",
+        "Action": "on_click",
+        "Button": "mouse_button_left",
+        "Cooldown": 40
+      },
+      {
+        "ID": "roar",
+        "Type": "mouse",
+        "Action": "on_click",
+        "Button": "mouse_button_right",
+        "Cooldown": 40
+      },
+      {
+        "ID": "charge_start",
+        "Type": "key",
+        "Action": "on_press",
+        "Button": "key_space",
+        "Cooldown": 40
+      }
+    ]
+  }
+}

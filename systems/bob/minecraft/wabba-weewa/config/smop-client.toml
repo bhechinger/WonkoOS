@@ -1,0 +1,7 @@
+#Use the hand-drawn spawn egg textures from the newer Minecraft versions of the mod
+#instead of the two-colour vanilla-style eggs. Takes effect immediately.
+modernSpawnEggs = false
+#Camera effects from the mod's creatures: screen shakes (the Grand Tyrant's steps and
+#stomp, the Nirasmosaurus's dash), the dash's field-of-view punch, and the view turning with
+#a Nirasmosaurus that has you in its jaws. Turn off if they cause discomfort.
+cameraEffects = true

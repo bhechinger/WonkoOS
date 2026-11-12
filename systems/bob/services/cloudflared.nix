@@ -151,6 +151,13 @@ let
         absent = true;
       }
       {
+        type = "CNAME";
+        name = "wabba-weewa.4amlunch.net";
+        content = spectrumHost;
+        ttl = 1;
+        proxied = false;
+      }
+      {
         type = "A";
         name = "voice.4amlunch.net";
         content = "147.185.221.19";

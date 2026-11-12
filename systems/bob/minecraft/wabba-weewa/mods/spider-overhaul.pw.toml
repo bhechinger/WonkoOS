@@ -1,0 +1,13 @@
+name = "Spider Overhaul"
+filename = "SpiderOverhaul-0.1.0-Forge-v1.20.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "e19ebe144b480e3126bd5c0dbf42d3b963a57904"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 9310169
+project-id = 1619127

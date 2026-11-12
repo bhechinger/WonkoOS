@@ -1,0 +1,13 @@
+name = "Spectacular Mobs Of Peligoro Legacy Version"
+filename = "smop-1.0.1-1.20.1.jar"
+side = "both"
+
+[download]
+hash-format = "sha1"
+hash = "a1d300bca8bc7726f4084cfcff8e02f7f7549148"
+mode = "metadata:curseforge"
+
+[update]
+[update.curseforge]
+file-id = 9359534
+project-id = 1671283
