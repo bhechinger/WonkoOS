@@ -39,6 +39,7 @@ let
     "io42"
     "BennyPlayerX"
     "IanTheCerato"
+    "cormorant323"
   ];
   emptyWhitelistFile = (pkgs.formats.json { }).generate "pwppp-whitelist.json" [ ];
   whitelistCommands =
